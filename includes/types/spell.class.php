@@ -67,7 +67,7 @@ class SpellList extends BaseType
             return;
 
         // post processing
-        $foo = [];
+        $foo = DB::World()->selectCol('SELECT perfectItemType FROM skill_perfect_item_template WHERE spellId IN (?a)', $this->getFoundIDs());
         foreach ($this->iterate() as &$_curTpl)
         {
             // required for globals
@@ -176,7 +176,7 @@ class SpellList extends BaseType
                         if ($mv < 0)                        // all stats
                         {
                             for ($iMod = ITEM_MOD_AGILITY; $iMod <= ITEM_MOD_STAMINA; $iMod++)
-                                Util::arraySumByKey($stats, [iMod => $pts]);
+                                Util::arraySumByKey($stats, [$iMod => $pts]);
                         }
                         else if ($mv == STAT_STRENGTH)      // one stat
                             Util::arraySumByKey($stats, [ITEM_MOD_STRENGTH => $pts]);

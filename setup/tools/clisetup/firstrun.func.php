@@ -11,7 +11,7 @@ if (!CLI)
 /* string setup steps together for first use */
 /*********************************************/
 
-function firstrun($resume)
+function firstrun()
 {
     require_once 'setup/tools/sqlGen.class.php';
     require_once 'setup/tools/fileGen.class.php';
@@ -85,7 +85,7 @@ function firstrun($resume)
         ['FileGen::generate', 'realms',                   null, null, null],
         ['FileGen::generate', 'statistics',               null, null, null],
         ['FileGen::generate', 'simpleImg',                null, null, null],
-        ['FileGen::generate', 'talents',                  null, null, null],
+        ['FileGen::generate', 'talentCalc',               null, null, null],
         ['FileGen::generate', 'pets',                     null, null, null],
         ['FileGen::generate', 'talentIcons',              null, null, null],
         ['FileGen::generate', 'glyphs',                   null, null, null],
@@ -93,8 +93,6 @@ function firstrun($resume)
         ['FileGen::generate', 'enchants',                 null, null, null],
         ['FileGen::generate', 'gems',                     null, null, null],
         ['FileGen::generate', 'profiler',                 null, null, null],
-        ['FileGen::generate', 'statistics',               null, null, null],
-        ['FileGen::generate', 'statistics',               null, null, null],
         // apply sql-updates from repository
         ['update',            null,                       null, null, null],
         ['account',           null,                       'testAcc',  'Please create your admin account.', 'There is no user with administrator priviledges in the DB.'],
@@ -116,13 +114,19 @@ function firstrun($resume)
     {
         require 'config/config.php';
 
-        $error = [];
+        $error   = [];
+        $defPort = ini_get('mysqli.default_port');
+
         foreach (['world', 'aowow', 'auth'] as $what)
         {
             if ($what == 'auth' && (empty($AoWoWconf['auth']) || empty($AoWoWconf['auth']['host'])))
                 continue;
 
-            if ($link = @mysqli_connect($AoWoWconf[$what]['host'], $AoWoWconf[$what]['user'], $AoWoWconf[$what]['pass'], $AoWoWconf[$what]['db']))
+            $port = 0;
+            if (strstr($AoWoWconf[$what]['host'], ':'))
+                list($AoWoWconf[$what]['host'], $port) = explode(':', $AoWoWconf[$what]['host']);
+
+            if ($link = @mysqli_connect($AoWoWconf[$what]['host'], $AoWoWconf[$what]['user'], $AoWoWconf[$what]['pass'], $AoWoWconf[$what]['db'], $port ?: $defPort))
                 mysqli_close($link);
             else
                 $error[] = ' * '.$what.': '.'['.mysqli_connect_errno().'] '.mysqli_connect_error();
@@ -185,34 +189,30 @@ function firstrun($resume)
     /********************/
 
     $startStep = 0;
-    if ($resume)
+    if (file_exists('cache/firstrun'))
     {
-        if (file_exists('cache/firstrun'))
-        {
-            $rows = file('cache/firstrun');
-            if ((int)$rows[0] == AOWOW_REVISION)
-                $startStep = (int)$rows[1];
-            else
-                CLISetup::log('firstrun info is outdated! Starting from scratch.', CLISetup::LOG_WARN);
-        }
+        $rows = file('cache/firstrun');
+        if ((int)$rows[0] == AOWOW_REVISION)
+            $startStep = (int)$rows[1];
+    }
 
-        if (!$startStep)
-        {
-            CLISetup::log('no usable info found.', CLISetup::LOG_WARN);
-            $inp = ['x' => ['start from scratch? (y/n)', true, '/y|n/i']];
-            if (!CLISetup::readInput($inp, true) || !$inp || strtolower($inp['x']) == 'n')
-            {
-                CLISetup::log();
-                return;
-            }
+    if ($startStep)
+    {
 
-            CLISetup::log();
+        CLISetup::log('Found firstrun progression info. (Halted on subscript '.($steps[$startStep][1] ?: $steps[$startStep][0]).')', CLISetup::LOG_INFO);
+        $inp = ['x' => ['continue setup? (y/n)', true, '/y|n/i']];
+        $msg = '';
+        if (!CLISetup::readInput($inp, true) || !$inp || strtolower($inp['x']) == 'n')
+        {
+            $msg = 'Starting setup from scratch...';
+            $startStep = 0;
         }
         else
-        {
-            CLISetup::log('Resuming setup from step '.$startStep);
-            sleep(1);
-        }
+            $msg = 'Resuming setup from step '.$startStep.'...';
+
+        CLISetup::log();
+        CLISetup::log($msg);
+        sleep(1);
     }
 
     /*******/
@@ -264,16 +264,15 @@ function firstrun($resume)
             $inp = ['x' => ['['.CLISetup::bold('c').']ontinue anyway? ['.CLISetup::bold('r').']etry? ['.CLISetup::bold('a').']bort?', true, '/c|r|a/i']];
             if (CLISetup::readInput($inp, true) && $inp)
             {
+                CLISetup::log();
                 switch(strtolower($inp['x']))
                 {
                     case 'c':
                         $saveProgress($idx);
                         break 2;
                     case 'r':
-                        CLISetup::log();
                         break;
                     case 'a':
-                        CLISetup::log();
                         return;
                 }
             }

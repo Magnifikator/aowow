@@ -9,10 +9,11 @@ if (file_exists('config/config.php'))
 else
     $AoWoWconf = [];
 
+mb_internal_encoding('UTF-8');
+
 require_once 'includes/defines.php';
 require_once 'includes/libs/DbSimple/Generic.php';          // Libraray: http://en.dklab.ru/lib/DbSimple (using variant: https://github.com/ivan1986/DbSimple/tree/master)
 require_once 'includes/utilities.php';                      // misc™ data 'n func
-require_once 'includes/ajaxHandler.class.php';              // handles ajax and jsonp requests
 require_once 'includes/user.class.php';
 require_once 'includes/markup.class.php';                   // manipulate markup text
 require_once 'includes/database.class.php';                 // wrap DBSimple
@@ -32,18 +33,29 @@ spl_autoload_register(function ($class) {
     if (preg_match('/[^\w]/i', $class))                     // name should contain only letters
         return;
 
-    if (strpos($class, 'list'))
+    if (stripos($class, 'list'))
     {
-        if (!class_exists('BaseType'))
-            require_once 'includes/types/basetype.class.php';
+        require_once 'includes/basetype.class.php';
 
         if (file_exists('includes/types/'.strtr($class, ['list' => '']).'.class.php'))
             require_once 'includes/types/'.strtr($class, ['list' => '']).'.class.php';
+        else
+            throw new Exception('could not register type class: '.$class);
 
         return;
     }
+    else if (stripos($class, 'ajax') === 0)
+    {
+        require_once 'includes/ajaxHandler.class.php';      // handles ajax and jsonp requests
 
-    if (file_exists('pages/'.strtr($class, ['page' => '']).'.php'))
+        if (file_exists('includes/ajaxHandler/'.strtr($class, ['ajax' => '']).'.class.php'))
+            require_once 'includes/ajaxHandler/'.strtr($class, ['ajax' => '']).'.class.php';
+        else
+            throw new Exception('could not register ajaxHandler class: '.$class);
+
+        return;
+    }
+    else if (file_exists('pages/'.strtr($class, ['page' => '']).'.php'))
         require_once 'pages/'.strtr($class, ['page' => '']).'.php';
 });
 
