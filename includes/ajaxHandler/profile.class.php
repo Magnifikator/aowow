@@ -236,7 +236,7 @@ class AjaxProfile extends AjaxHandler
         if (!$this->_get['id'])
             return;
 
-        $pBase = DB::Aowow()->selectRow('SELECT *, UNIX_TIMESTAMP(lastupdated) AS lastupdated FROM ?_profiler_profiles WHERE id = ?d', $this->get('id'));
+        $pBase = DB::Aowow()->selectRow('SELECT *, UNIX_TIMESTAMP(lastupdated) AS lastupdated FROM ?_profiler_profiles WHERE id = ?d', $this->_get['id'][0]);
         if (!$pBase)
             return 'alert("whoops!");';
 
@@ -422,7 +422,7 @@ class AjaxProfile extends AjaxHandler
         // $buff .= "\n\ng_excludes = {};";
 
         // add profile to buffer
-        $buff .= "\n\n\$WowheadProfiler.registerProfile(".Util::toJSON(profile, JSON_UNESCAPED_UNICODE).");"; // can't use JSON_NUMERIC_CHECK or the talent-string becomes a float
+        $buff .= "\n\n\$WowheadProfiler.registerProfile(".Util::toJSON($profile, JSON_UNESCAPED_UNICODE).");"; // can't use JSON_NUMERIC_CHECK or the talent-string becomes a float
 
         return $buff."\n";
     }
