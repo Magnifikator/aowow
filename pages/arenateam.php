@@ -74,15 +74,12 @@ class ArenaTeamPage extends GenericPage
                 case 5: $info = PROFILEINFO_ARENA_5S; break;
             }
 
-            $this->lvTabs[] = array(
-                'file'   => 'profile',
-                'data'   => $member->getListviewData($info),
-                'params' => array(
-                    'sort'        => "$[-15]",
-                    'visibleCols' => "$['race','classs','level','talents','gearscore','achievementpoints','rating']",
-                    'hiddenCols'  => "$['arenateam','guild','location']"
-                )
-            );
+            $this->lvTabs[] = ['profile', array(
+                'data'        => array_values($member->getListviewData($info)),
+                'sort'        => "$[-15]",
+                'visibleCols' => "$['race','classs','level','talents','gearscore','achievementpoints','rating']",
+                'hiddenCols'  => "$['arenateam','guild','location']"
+            )];
         }
     }
 }

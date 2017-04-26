@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 if (!CLI)
     die('not in cli mode');
@@ -56,7 +56,7 @@ class CLISetup
 
             // alternative data source (no quotes, use forward slash)
             if (!empty($_['mpqDataDir']))
-                self::$srcDir = str_replace(['\\', '"', '\''], ['/', '', ''], $_['mpqDataDir']);
+                self::$srcDir = self::nicePath($_['mpqDataDir']);
 
             // optional limit handled locales
             if (!empty($_['locales']))
@@ -314,18 +314,69 @@ class CLISetup
         if (DB::Aowow()->selectCell('SHOW TABLES LIKE ?', 'dbc_'.$name) && DB::Aowow()->selectCell('SELECT count(1) FROM ?#', 'dbc_'.$name))
             return true;
 
-        $dbc = new DBC($name, self::$tmpDBC);
+        $dbc = new DBC($name, ['temporary' => self::$tmpDBC]);
         if ($dbc->error)
-            return false;
-
-        if ($dbc->readFromFile())
         {
-            $dbc->writeToDB();
-            return true;
+            self::log('SqlGen::generate() - required DBC '.$name.'.dbc not found!', self::LOG_ERROR);
+            return false;
         }
 
-        self::log('SqlGen::generate() - required DBC '.$name.'.dbc found neither in DB nor as file!', self::LOG_ERROR);
-        return false;
+        if (!$dbc->readFile())
+        {
+            self::log('SqlGen::generate() - DBC '.$name.'.dbc could not be written to DB!', self::LOG_ERROR);
+            return false;
+        }
+
+        return true;
+    }
+
+    public static function nicePath(/* $file = '', ...$pathParts */)
+    {
+        $path = '';
+
+        switch (func_num_args())
+        {
+            case 0:
+                return '';
+            case 1:
+                $path = func_get_arg(0);
+                break;
+            default:
+                $args = func_get_args();
+                $file = array_shift($args);
+                $path = implode(DIRECTORY_SEPARATOR, $args).DIRECTORY_SEPARATOR.$file;
+        }
+
+        if (DIRECTORY_SEPARATOR == '/')                     // *nix
+        {
+            $path = str_replace('\\', '/', $path);
+            $path = preg_replace('/\/+/i', '/', $path);
+        }
+        else if (DIRECTORY_SEPARATOR == '\\')               // win
+        {
+            $path = str_replace('/', '\\', $path);
+            $path = preg_replace('/\\\\+/i', '\\', $path);
+        }
+        else
+            CLISetup::log('Dafuq! Your directory separator is "'.DIRECTORY_SEPARATOR.'". Please report this!', CLISetup::LOG_ERROR);
+
+        $path = trim($path);
+
+        // resolve *nix home shorthand
+        if (!self::$win)
+        {
+            if (preg_match('/^~(\w+)\/.*/i', $path, $m))
+                $path = '/home/'.substr($path, 1);
+            else if (substr($path, 0, 2) == '~/')
+                $path = getenv('HOME').substr($path, 1);
+            else if ($path[0] == DIRECTORY_SEPARATOR && substr($path, 0, 6) != '/home/')
+                $path = substr($path, 1);
+        }
+
+        // remove quotes (from erronous user input)
+        $path = str_replace(['"', "'"], ['', ''], $path);
+
+        return $path;
     }
 
     /**************/
@@ -385,7 +436,8 @@ class CLISetup
                             continue;
 
                         $charBuff = mb_substr($charBuff, 0, -1);
-                        echo chr(self::CHR_BACK)." ".chr(self::CHR_BACK);
+                        if (!$isHidden && self::$hasReadline)
+                            echo chr(self::CHR_BACK)." ".chr(self::CHR_BACK);
                     }
                     else if ($keyId == self::CHR_LF)
                     {

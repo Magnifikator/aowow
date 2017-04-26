@@ -33,9 +33,12 @@ function items(array $ids = [])
             it.entry,
             class,                  class as classBak,
             subclass,               subclass AS subClassBak,
+            SoundOverrideSubclass,
             IFNULL(sg.id, 0) AS subSubClass,
-            name,                   name_loc2,              name_loc3,              name_loc6,              name_loc8,
+            name,                   IFNULL(li.name_loc2, ""), IFNULL(li.name_loc3, ""), IFNULL(li.name_loc6, ""), IFNULL(li.name_loc8, ""),
+            0 AS iconId,
             displayid,
+            0 AS spellVisualId,
             Quality,
             Flags,                  FlagsExtra,
             BuyCount,               BuyPrice,               SellPrice,
@@ -81,11 +84,12 @@ function items(array $ids = [])
             spellid_4,              spelltrigger_4,         spellcharges_4,         spellppmRate_4,         spellcooldown_4,        spellcategory_4,        spellcategorycooldown_4,
             spellid_5,              spelltrigger_5,         spellcharges_5,         spellppmRate_5,         spellcooldown_5,        spellcategory_5,        spellcategorycooldown_5,
             bonding,
-            it.description,         description_loc2,       description_loc3,       description_loc6,       description_loc8,
+            it.description,         IFNULL(li.description_loc2, ""), IFNULL(li.description_loc3, ""), IFNULL(li.description_loc6, ""), IFNULL(li.description_loc8, ""),
             PageText,
             LanguageID,
             startquest,
             lockid,
+            Material,
             IF(RandomProperty > 0, RandomProperty, -RandomSuffix) AS randomEnchant,
             itemset,
             MaxDurability,
@@ -107,6 +111,10 @@ function items(array $ids = [])
             FoodType,
             0 AS gemEnchantmentId,
             minMoneyLoot,           maxMoneyLoot,
+            0 AS pickUpSoundId,
+            0 AS dropDownSoundId,
+            0 AS sheatheSoundId,
+            0 AS unsheatheSoundId,
             flagsCustom
         FROM
             item_template it
@@ -116,19 +124,24 @@ function items(array $ids = [])
             spell_group sg ON sg.spell_id = it.spellid_1 AND it.class = 0 AND it.subclass = 2 AND sg.id IN (1, 2)
         LEFT JOIN
             game_event ge ON ge.holiday = it.HolidayId AND it.HolidayId > 0
-        {
         WHERE
-            ct.entry IN (?a)
+            it.entry > ?d
+        {
+            AND it.entry IN (?a)
         }
+        ORDER BY
+            it.entry ASC
         LIMIT
-           ?d, ?d';
+           ?d';
 
-    $offset = 0;
-    while ($items = DB::World()->select($baseQuery, $ids ?: DBSIMPLE_SKIP, $offset, SqlGen::$stepSize))
+    $lastMax = 0;
+    while ($items = DB::World()->select($baseQuery, $lastMax, $ids ?: DBSIMPLE_SKIP, SqlGen::$stepSize))
     {
-        CLISetup::log(' * sets '.($offset + 1).' - '.($offset + count($items)));
+        $newMax = max(array_column($items, 'entry'));
 
-        $offset += SqlGen::$stepSize;
+        CLISetup::log(' * sets '.($lastMax + 1).' - '.$newMax);
+
+        $lastMax = $newMax;
 
         foreach ($items as $item)
             DB::Aowow()->query('REPLACE INTO ?_items VALUES (?a)', array_values($item));
@@ -140,6 +153,9 @@ function items(array $ids = [])
 
     // get modelString
     DB::Aowow()->query('UPDATE ?_items i, dbc_itemdisplayinfo idi SET i.model = IF(idi.leftModelName = "", idi.rightModelName, idi.leftModelName) WHERE i.displayId = idi.id');
+
+    // get iconId
+    DB::Aowow()->query('UPDATE ?_items i, dbc_itemdisplayinfo idi, ?_icons ic SET i.iconId = ic.id WHERE i.displayId = idi.id AND LOWER(idi.inventoryIcon1) = ic.name');
 
     // unify slots:  Robes => Chest; Ranged (right) => Ranged
     DB::Aowow()->query('UPDATE ?_items SET slot = 15 WHERE slotbak = 26');
@@ -191,7 +207,7 @@ function items(array $ids = [])
     DB::Aowow()->query('UPDATE ?_items SET class = 12 WHERE classBak = 15 AND startQuest <> 0 AND name_loc0 NOT LIKE "sayge\'s fortune%"');
 
     // move perm. enchantments into appropriate cat/subcat
-    DB::Aowow()->query('UPDATE ?_items i, dbc_spell s SET i.class = 0, i.subClass = 6 WHERE s.Id = i.spellId1 AND s.effect1Id = 53 AND i.classBak = 12');
+    DB::Aowow()->query('UPDATE ?_items i, dbc_spell s SET i.class = 0, i.subClass = 6 WHERE s.id = i.spellId1 AND s.effect1Id = 53 AND i.classBak = 12');
 
     // move some generic recipes into appropriate sub-categories
     $skillz = array(

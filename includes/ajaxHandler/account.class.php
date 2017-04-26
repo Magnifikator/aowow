@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 class AjaxAccount extends AjaxHandler
 {
@@ -11,7 +11,7 @@ class AjaxAccount extends AjaxHandler
         'save'   => [FILTER_SANITIZE_NUMBER_INT, null],
         'delete' => [FILTER_SANITIZE_NUMBER_INT, null],
         'id'     => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkInt']],
-        'name'   => [FILTER_SANITIZE_STRING,     FILTER_FLAG_STRIP_LOW],
+        'name'   => [FILTER_CALLBACK,            ['options' => 'AjaxAccount::checkName']],
         'scale'  => [FILTER_CALLBACK,            ['options' => 'AjaxAccount::checkScale']],
     );
     protected $_get        = array(
@@ -50,19 +50,36 @@ class AjaxAccount extends AjaxHandler
             if (!$this->_post['scale'])
                 return 0;
 
-            if (!$this->_post['id'])
+            $id = 0;
+
+            if ($id = $this->_post['id'])
             {
-                $res = DB::Aowow()->selectRow('SELECT MAX(id) AS max, count(id) AS num FROM ?_account_weightscales WHERE userId = ?d', User::$id);
-                if ($res['num'] < 5)            // more or less hard-defined in LANG.message_weightscalesaveerror
-                    $this->post['id'] = ++$res['max'];
-                else
+                if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_account_weightscales WHERE userId = ?d AND id = ?d', User::$id, $id))
                     return 0;
+
+                DB::Aowow()->query('UPDATE ?_account_weightscales SET `name` = ? WHERE id = ?d', $this->_post['name'], $id);
+            }
+            else
+            {
+                $nScales = DB::Aowow()->selectCell('SELECT COUNT(id) FROM ?_account_weightscales WHERE userId = ?d', User::$id);
+                if ($nScales >= 5)                          // more or less hard-defined in LANG.message_weightscalesaveerror
+                    return 0;
+
+                $id = DB::Aowow()->query('INSERT INTO ?_account_weightscales (`userId`, `name`) VALUES (?d, ?)', User::$id, $this->_post['name']);
             }
 
-            if (DB::Aowow()->query('REPLACE INTO ?_account_weightscales VALUES (?d, ?d, ?, ?)', $this->_post['id'], User::$id, $this->_post['name'], $this->_post['scale']))
-                return $this->_post['id'];
-            else
-                return 0;
+            DB::Aowow()->query('DELETE FROM ?_account_weightscale_data WHERE id = ?d', $id);
+
+            foreach (explode(',', $this->_post['scale']) as $s)
+            {
+                list($k, $v) = explode(':', $s);
+                if (!in_array($k, Util::$weightScales) || $v < 1)
+                    continue;
+
+                DB::Aowow()->query('INSERT INTO ?_account_weightscale_data VALUES (?d, ?, ?d)', $id, $k, $v);
+            }
+
+            return $id;
         }
         else if ($this->_post['delete'] && $this->_post['id'])
             DB::Aowow()->query('DELETE FROM ?_account_weightscales WHERE id = ?d AND userId = ?d', $this->_post['id'], User::$id);
@@ -76,5 +93,12 @@ class AjaxAccount extends AjaxHandler
             return $val;
 
         return null;
+    }
+
+    protected function checkName($val)
+    {
+        $var = trim(urldecode($val));
+
+        return filter_var($var, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW);
     }
 }

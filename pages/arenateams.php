@@ -10,7 +10,7 @@ class ArenaTeamsPage extends GenericPage
 {
     use TrProfiler;
 
-    protected $tpl      = 'arena-teams';
+    protected $tpl      = 'gms';
     protected $js       = ['filters.js', 'profile_all.js', 'profile.js'];
     protected $css      = [['path' => 'Profiler.css']];
     protected $tabId    = 1;
@@ -81,10 +81,9 @@ class ArenaTeamsPage extends GenericPage
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
-        $data   = [];
-        $hCols  = ['arenateam', 'guild'];
-        $vCols  = ['rank', 'wins', 'losses', 'rating'];
-        $params = array(
+        $hCols   = ['arenateam', 'guild'];
+        $vCols   = ['rank', 'wins', 'losses', 'rating'];
+        $tabData = array(
             'id'          => 'arena-teams',
             'hideCount'   => 1,
             'roster'      => 3,
@@ -109,29 +108,25 @@ class ArenaTeamsPage extends GenericPage
             if (($dFields & 0x2))
                 $vCols[] = 'size';
 
-            $data = $teams->getListviewData();
+            $tabData['data'] = array_values($teams->getListviewData());
 
             // create note if search limit was exceeded
             if (0 /* filter were applied */)
             {
-                $params['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound2', $this->sumTeams, $teams->getMatches());
-                $params['_truncated'] = 1;
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound2', $this->sumTeams, $teams->getMatches());
+                $tabData['_truncated'] = 1;
             }
             else
-                $params['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound', $this->sumTeams, 0);
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound', $this->sumTeams, 0);
 
             if ($this->filterObj->error)
-                $params['_errors'] = '$1';
+                $tabData['_errors'] = '$1';
 
-            $params['hiddenCols']  = '$'.Util::toJSON($hCols);
-            $params['visibleCols'] = '$'.Util::toJSON($vCols);
+            $tabData['hiddenCols']  = '$'.Util::toJSON($hCols);
+            $tabData['visibleCols'] = '$'.Util::toJSON($vCols);
         }
 
-        $this->lvTabs[] = array(
-            'file'   => 'profile',
-            'data'   => $data,
-            'params' => $params
-        );
+        $this->lvTabs[] = ['profile', $tabData, 'membersCol'];
 
         Lang::sort('game', 'cl');
         Lang::sort('game', 'ra');

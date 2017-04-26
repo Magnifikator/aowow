@@ -403,6 +403,22 @@ var fi_filters = {
         { id: 20,  name: 'teamcontrib5v5',      type: 'num' }
     ],
 
+    icons: [
+        { id: 9999, name: 'sepuses' },
+        { id: 13,   name: 'used',                   type: 'num' },
+        { id: 1,    name: 'items',                  type: 'num' },
+        { id: 2,    name: 'spells',                 type: 'num' },
+        { id: 3,    name: 'achievements',           type: 'num' },
+     // { id: 4,    name: 'battlepets',             type: 'num' },
+     // { id: 5,    name: 'battlepetabilities',     type: 'num' },
+        { id: 6,    name: 'currencies',             type: 'num' },
+     // { id: 7,    name: 'garrisonabilities',      type: 'num' },
+     // { id: 8,    name: 'garrisonbuildings',      type: 'num' },
+        { id: 9,    name: 'hunterpets',             type: 'num' },
+     // { id: 10,   name: 'garrisonmissionthreats', type: 'num' },
+        { id: 11,   name: 'classes',                type: 'num' }
+    ],
+
     // custom
     enchantments: [
         { id: 1,   name: 'sepgeneral' },
@@ -1164,7 +1180,7 @@ function fi_presetClass(_this, stealth) {
         }
 
         if(!stealth && (_this.form.ub.selectedIndex == 0 || _this.form.ub.value == oldValue)) {
-            $('select[name=ub] option[value=' + _this.value + ']').attr('selected', 'selected');
+            $('select[name=ub] option[value="' + _this.value + '"]').attr('selected', 'selected');
         }
 
         while (_.firstChild) {
@@ -1338,8 +1354,8 @@ function fi_presetSave() {
 
     for (i = 0; i < _.childNodes.length; ++i) {
         var
-            w = fi_Lookup($('[name=wt[]]', _.childNodes[i]).val()),
-            v = $('[name=wtv[]]', _.childNodes[i]).val();
+            w = fi_Lookup($('[name="wt[]"]', _.childNodes[i]).val()),
+            v = $('[name="wtv[]"]', _.childNodes[i]).val();
 
         if (w && v != 0) {
             scale[w.name] = v;

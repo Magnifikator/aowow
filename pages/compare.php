@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 
 // tabId 1: Tools g_initHeader()
@@ -43,6 +43,12 @@ class ComparePage extends GenericPage
         // add conditional js
         $this->addJS('?data=weight-presets.gems.enchants.itemsets&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
 
+        $this->summary = array(
+            'template' => 'compare',
+            'id'       => 'compare',
+            'parent'   => 'compare-generic'
+        );
+
         if (!$this->compareString)
             return;
 
@@ -64,7 +70,8 @@ class ComparePage extends GenericPage
 
             $outSet[] = $outString;
         }
-        $this->summary = $outSet;
+
+        $this->summary['groups'] = $outSet;
 
         $iList = new ItemList(array(['i.id', $items]));
         $data  = $iList->getListviewData(ITEMINFO_SUBITEMS | ITEMINFO_JSON);
@@ -78,12 +85,11 @@ class ComparePage extends GenericPage
                 foreach ($data[$itemId]['subitems'] as &$si)
                     $si['enchantment'] = implode(', ', $si['enchantment']);
 
-            $this->cmpItems[] = [
-                $itemId,
-                $iList->getField('name', true),
-                $iList->getField('quality'),
-                $iList->getField('iconString'),
-                $data[$itemId]
+            $this->cmpItems[$itemId] = [
+                'name_'.User::$localeString => $iList->getField('name', true),
+                'quality'                   => $iList->getField('quality'),
+                'icon'                      => $iList->getField('iconString'),
+                'jsonequip'                 => $data[$itemId]
             ];
         }
     }

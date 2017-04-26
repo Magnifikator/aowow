@@ -9,7 +9,7 @@ if (!CLI)
 
 /* deps:
  * creature_template
- * locales_creature
+ * creature_template_locale
  * creature_classlevelstats
  * instance_encounters
 */
@@ -30,9 +30,10 @@ function creature(array $ids = [])
             modelid1, modelid2, modelid3, modelid4,
             "" AS textureString,                            -- textureString
             0 AS modelId,                                   -- modelId
+            0 AS humanoid,                                  -- uses creaturedisplayinfoextra
             "" AS iconString,                               -- iconString
-            ct.name, ctl2.`Name`  AS n2, ctl3.`Name`  AS n3, ctl6.`Name`  AS n6, ctl8.`Name`  AS n8,
-            subname, ctl2.`Title` AS t2, ctl3.`Title` AS t3, ctl6.`Title` AS t6, ctl8.`Title` AS t8,
+            ct.name, IFNULL(ctl2.`Name`, "")  AS n2, IFNULL(ctl3.`Name`, "")  AS n3, IFNULL(ctl6.`Name`, "")  AS n6, IFNULL(ctl8.`Name`, "")  AS n8,
+            subname, IFNULL(ctl2.`Title`, "") AS t2, IFNULL(ctl3.`Title`, "") AS t3, IFNULL(ctl6.`Title`, "") AS t6, IFNULL(ctl8.`Title`, "") AS t8,
             minLevel, maxLevel,
             exp,
             faction,
@@ -91,12 +92,15 @@ function creature(array $ids = [])
             creature_template_locale ctl8 ON ct.entry = ctl8.entry AND ctl8.`locale` = "ruRU"
         LEFT JOIN
             instance_encounters ie ON ie.creditEntry = ct.entry AND ie.creditType = 0
-        {
         WHERE
-            ct.entry IN (?a)
+            ct.entry > ?d
+        {
+            AND ct.entry IN (?a)
         }
+        ORDER BY
+            ct.entry ASC
         LIMIT
-           ?d, ?d';
+           ?d';
 
     $dummyQuery = '
         UPDATE
@@ -122,14 +126,17 @@ function creature(array $ids = [])
         SET
             c.textureString = IFNULL(cdie.textureString, cdi.skin1),
             c.modelId = cdi.modelId,
-            c.iconString = cdi.iconString';
+            c.iconString = cdi.iconString,
+            c.humanoid = IF(cdie.id IS NULL, 0, 1)';
 
-    $offset = 0;
-    while ($npcs = DB::World()->select($baseQuery, NPC_CU_INSTANCE_BOSS, $ids ?: DBSIMPLE_SKIP, $offset, SqlGen::$stepSize))
+    $lastMax = 0;
+    while ($npcs = DB::World()->select($baseQuery, NPC_CU_INSTANCE_BOSS, $lastMax, $ids ?: DBSIMPLE_SKIP, SqlGen::$stepSize))
     {
-        CLISetup::log(' * sets '.($offset + 1).' - '.($offset + count($npcs)));
+        $newMax = max(array_column($npcs, 'entry'));
 
-        $offset += SqlGen::$stepSize;
+        CLISetup::log(' * sets '.($lastMax + 1).' - '.$newMax);
+
+        $lastMax = $newMax;
 
         foreach ($npcs as $npc)
             DB::Aowow()->query('REPLACE INTO ?_creature VALUES (?a)', array_values($npc));
@@ -143,6 +150,9 @@ function creature(array $ids = [])
 
     // apply cuFlag: excludeFromListview [for trigger-creatures]
     DB::Aowow()->query('UPDATE ?_creature SET cuFlags = cuFlags | ?d WHERE flagsExtra & ?d', CUSTOM_EXCLUDE_FOR_LISTVIEW, 0x80);
+
+    // apply cuFlag: exCludeFromListview [for nameparts indicating internal usage]
+    DB::Aowow()->query('UPDATE ?_creature SET cuFlags = cuFlags | ?d WHERE name_loc0 LIKE "%[%" OR name_loc0 LIKE "%(%" OR name_loc0 LIKE "%visual%" OR name_loc0 LIKE "%trigger%" OR name_loc0 LIKE "%credit%" OR name_loc0 LIKE "%marker%"', CUSTOM_EXCLUDE_FOR_LISTVIEW);
 
     return true;
 }

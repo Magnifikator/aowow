@@ -85,14 +85,16 @@ class SpellsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->filterObj = new SpellListFilter();
         $this->getCategoryFromUrl($pageParam);;
+        $this->filterObj = new SpellListFilter(false, ['parentCats' => $this->category]);
 
         parent::__construct($pageCall, $pageParam);
 
         $this->name   = Util::ucFirst(Lang::game('spells'));
         $this->subCat = $pageParam !== null ? '='.$pageParam : '';
-        $this->filter = ['classPanel' => false, 'glyphPanel' => false];
+
+        $this->classPanel = false;
+        $this->glyphPanel = false;
     }
 
     protected function generateContent()
@@ -100,11 +102,7 @@ class SpellsPage extends GenericPage
         $conditions   = [];
         $visibleCols  = [];
         $hiddenCols   = [];
-        $tab = array(
-            'file'   => 'spell',
-            'data'   => [],
-            'params' => []
-        );
+        $tabData      = ['data' => []];
 
         // the next lengthy ~250 lines determine $conditions and lvParams
         if ($this->category)
@@ -112,7 +110,7 @@ class SpellsPage extends GenericPage
             switch ($this->category[0])
             {
                 case -2:                                    // Character Talents
-                    $this->filter['classPanel'] = true;
+                    $this->classPanel = true;
 
                     array_push($visibleCols, 'singleclass', 'level', 'schools', 'tier');
 
@@ -135,7 +133,7 @@ class SpellsPage extends GenericPage
                         $xCond = null;
                         for ($i = -2; $i < 0; $i++)
                         {
-                            foreach (Util::$skillLineMask[$i] as $idx => $pair)
+                            foreach (Game::$skillLineMask[$i] as $idx => $pair)
                             {
                                 if ($pair[1] == $this->category[1])
                                 {
@@ -200,10 +198,10 @@ class SpellsPage extends GenericPage
                                 break;
                         }
 
-                        $tab['params']['note'] = '$$WH.sprintf(LANG.lvnote_pettalents, "'.$url.'")';
+                        $tabData['note'] = '$$WH.sprintf(LANG.lvnote_pettalents, "'.$url.'")';
                     }
 
-                    $tab['params']['_petTalents'] = 1;      // not conviced, this is correct, but .. it works
+                    $tabData['_petTalents'] = 1;            // not conviced, this is correct, but .. it works
 
                     break;
                 case -11:                                   // Proficiencies ... the subIds are actually SkillLineCategories
@@ -222,8 +220,8 @@ class SpellsPage extends GenericPage
 
                     break;
                 case -13:                                   // Glyphs
-                    $this->filter['classPanel'] = true;
-                    $this->filter['glyphPanel'] = true;
+                    $this->classPanel = true;
+                    $this->glyphPanel = true;
 
                     array_push($visibleCols, 'singleclass', 'glyphtype');
 
@@ -234,7 +232,7 @@ class SpellsPage extends GenericPage
 
                     break;
                 case 7:                                     // Abilities
-                    $this->filter['classPanel'] = true;
+                    $this->classPanel = true;
 
                     array_push($visibleCols, 'level', 'singleclass', 'schools');
 
@@ -299,8 +297,8 @@ class SpellsPage extends GenericPage
                             if (is_array($note))
                                 $note = $note[0];
 
-                            $tab['params']['note'] = sprintf(Lang::spell('relItems', 'base'), $txt, $note);
-                            $tab['params']['sort'] = "$['skill', 'name']";
+                            $tabData['note'] = sprintf(Lang::spell('relItems', 'base'), $txt, $note);
+                            $tabData['sort'] = ['skill', 'name'];
                         }
                     }
 
@@ -339,8 +337,8 @@ class SpellsPage extends GenericPage
                             if (is_array($note))
                                 $note = $note[0];
 
-                            $tab['params']['note'] = sprintf(Lang::spell('relItems', 'base'), $txt, $note);
-                            $tab['params']['sort'] = "$['skill', 'name']";
+                            $tabData['note'] = sprintf(Lang::spell('relItems', 'base'), $txt, $note);
+                            $tabData['sort'] = ['skill', 'name'];
                         }
                     }
 
@@ -367,30 +365,38 @@ class SpellsPage extends GenericPage
         $spells = new SpellList($conditions);
 
         $this->extendGlobalData($spells->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
-        $tab['data'] = $spells->getListviewData();
+        $tabData['data'] = array_values($spells->getListviewData());
 
         // recreate form selection
-        $this->filter          = array_merge($this->filterObj->getForm('form'), $this->filter);
-        $this->filter['query'] = isset($_GET['filter']) ? $_GET['filter'] : NULL;
-        $this->filter['fi']    =  $this->filterObj->getForm();
+        $this->filter             = $this->filterObj->getForm();
+        $this->filter['query']    = isset($_GET['filter']) ? $_GET['filter'] : NULL;
+        $this->filter['initData'] = ['init' => 'spells'];
 
-        if (!empty($this->filter['fi']['extraCols']))
-            $tab['params']['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
+        if ($ec = $this->filterObj->getExtraCols())
+        {
+            $this->filter['initData']['ec'] = $ec;
+            $tabData['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
+        }
+
+        if ($sc = $this->filterObj->getSetCriteria())
+        {
+            $this->filter['initData']['sc'] = $sc;
+
+            // add source to cols if explicitly searching for it
+            if (in_array(9, $sc['cr']) && !in_array('source', $visibleCols))
+                $visibleCols[] = 'source';
+        }
 
         // create note if search limit was exceeded; overwriting 'note' is intentional
         if ($spells->getMatches() > CFG_SQL_LIMIT_DEFAULT)
         {
-            $tab['params']['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_spellsfound', $spells->getMatches(), CFG_SQL_LIMIT_DEFAULT);
-            $tab['params']['_truncated'] = 1;
+            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_spellsfound', $spells->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+            $tabData['_truncated'] = 1;
         }
 
         if ($this->filterObj->error)
-            $tab['params']['_errors'] = '$1';
+            $tabData['_errors'] = 1;
 
-        // add source to cols if explicitly searching for it
-        if ($_ = $this->filterObj->getForm('setCriteria', true))
-            if (in_array(9, $_['cr']) && !in_array('source', $visibleCols))
-                $visibleCols[] = 'source';
 
         $mask = $spells->hasSetFields(['reagent1', 'skillLines', 'trainingCost', 'reqClassMask']);
         if ($mask & 0x1)
@@ -404,12 +410,12 @@ class SpellsPage extends GenericPage
 
 
         if ($visibleCols)
-            $tab['params']['visibleCols'] = '$'.Util::toJSON($visibleCols);
+            $tabData['visibleCols'] = $visibleCols;
 
         if ($hiddenCols)
-            $tab['params']['hiddenCols'] = '$'.Util::toJSON($hiddenCols);
+            $tabData['hiddenCols'] = $hiddenCols;
 
-        $this->lvTabs[] = $tab;
+        $this->lvTabs[] = ['spell', $tabData];
 
         // sort for dropdown-menus
         Lang::sort('game', 'ra');
@@ -448,8 +454,8 @@ class SpellsPage extends GenericPage
         foreach ($this->category as $c)
             $this->path[] = $c;
 
-        $form = $this->filterObj->getForm('form');
-        if (count($this->path) == 4 && $this->category[0] == -13 && isset($form['gl']) && !is_array($form['gl']))
+        $form = $this->filterObj->getForm();
+        if (count($this->path) == 4 && $this->category[0] == -13 && isset($form['gl']) && count($form['gl']) == 1)
             $this->path[] = $form['gl'];
     }
 }

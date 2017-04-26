@@ -9,6 +9,10 @@ class ArenaTeamList extends BaseType
 {
     use listviewHelper, profilerHelper;
 
+    public static   $type      = 0;
+    public static   $brickFile = 'profile';
+    public static   $dataTable = '';                        // doesn't have community content
+
     protected   $queryBase = 'SELECT `at`.*, `at`.`arenaTeamId` AS ARRAY_KEY FROM arena_team at';
     protected   $queryOpts = array(
                     'at'  => [['atm', 'c'], 'g' => 'ARRAY_KEY', 'o' => 'rating DESC'],
@@ -73,7 +77,7 @@ class ArenaTeamList extends BaseType
             }
 
             // faction
-            $curTpl['faction'] = Util::sideByRaceMask($curTpl['raceMask']) - 1;
+            $curTpl['faction'] = Game::sideByRaceMask($curTpl['raceMask']) - 1;
             unset($curTpl['raceMask']);
 
             // team members

@@ -54,7 +54,7 @@ class ItemPage extends genericPage
 
             // allow lookup by name for xml
             if (!is_numeric($param))
-                $conditions = [['name_loc'.User::$localeId, utf8_encode(urldecode($param))]];
+                $conditions = [['name_loc'.User::$localeId, urldecode($param)]];
         }
 
         $this->subject = new ItemList($conditions);
@@ -330,25 +330,7 @@ class ItemPage extends genericPage
 
         // pageText
         $pageText = [];
-        if ($next = $this->subject->getField('pageTextId'))
-        {
-            while ($next)
-            {
-                if ($row = DB::World()->selectRow('SELECT *, Text as Text_loc0 FROM page_text pt LEFT JOIN locales_page_text lpt ON pt.ID = lpt.entry WHERE pt.ID = ?d', $next))
-                {
-                    $next = $row['NextPageID'];
-                    $pageText = Util::parseHtmlText(Util::localizedString($row, 'Text'));
-                }
-                else
-                {
-                    trigger_error('Referenced PageTextId #'.$next.' is not in DB', E_USER_WARNING);
-                    break;
-                }
-            }
-        }
-
-        // add conditional js & css
-        if ($pageText)
+        if ($this->pageText = Game::getPageText($this->subject->getField('pageTextId')))
         {
             $this->addJS('Book.js');
             $this->addCSS(['path' => 'Book.css']);
@@ -356,19 +338,24 @@ class ItemPage extends genericPage
 
         $this->headIcons  = [$this->subject->getField('iconString'), $this->subject->getField('stackable')];
         $this->infobox    = $infobox ? '[ul][li]'.implode('[/li][li]', $infobox).'[/li][/ul]' : null;
-        $this->pageText   = $pageText;
         $this->tooltip    = $this->subject->renderTooltip(true);
         $this->redButtons = array(
             BUTTON_WOWHEAD => true,
-            BUTTON_LINKS   => ['color' => 'ff'.Util::$rarityColorStings[$this->subject->getField('quality')], 'linkId' => 'item:'.$this->typeId.':0:0:0:0:0:0:0:0'],
             BUTTON_VIEW3D  => in_array($_slot, $_visSlots) && $_model ? ['displayId' => $this->subject->getField('displayId'), 'slot' => $_slot, 'type' => TYPE_ITEM, 'typeId' => $this->typeId] : false,
             BUTTON_COMPARE => $_cu,
             BUTTON_EQUIP   => in_array($_class, [ITEM_CLASS_WEAPON, ITEM_CLASS_ARMOR]),
-            BUTTON_UPGRADE => $_cu ? ['class' => $_class, 'slot' => $_slot] : false
+            BUTTON_UPGRADE => ($_cu ? ['class' => $_class, 'slot' => $_slot] : false),
+            BUTTON_LINKS   => array(
+                'linkColor' => 'ff'.Game::$rarityColorStings[$this->subject->getField('quality')],
+                'linkId'    => 'item:'.$this->typeId.':0:0:0:0:0:0:0:0',
+                'linkName'  => $this->name,
+                'type'      => $this->type,
+                'typeId'    => $this->typeId
+            )
         );
 
         // availablility
-        $this->disabled = false;    // todo (med): get itemSources (which are not yet in DB :x) or
+        $this->unavailable = $this->subject->getField('cuFlags') & CUSTOM_UNAVAILABLE;
 
         // subItems
         $this->subject->initSubItems();
@@ -438,15 +425,12 @@ class ItemPage extends genericPage
                     $this->extendGlobalIDs(TYPE_SPELL, $perfItem[$sId]['requiredSpecialization']);
                 }
 
-                $this->lvTabs[] = array(
-                    'file'   => 'spell',
-                    'data'   => $lvData,
-                    'params' => [
-                        'name'       => '$LANG.tab_createdby',
-                        'id'         => 'created-by',       // should by exclusive with created-by from spell_loot
-                        'extraCols'  => '$[Listview.extraCols.percent, Listview.extraCols.condition]'
-                    ]
-                );
+                $this->lvTabs[] = ['spell', array(
+                    'data'      => array_values($lvData),
+                    'name'      => '$LANG.tab_createdby',
+                    'id'        => 'created-by',            // should by exclusive with created-by from spell_loot
+                    'extraCols' => ['$Listview.extraCols.percent', '$Listview.extraCols.condition']
+                )];
             }
         }
 
@@ -457,34 +441,24 @@ class ItemPage extends genericPage
         {
             $this->extendGlobalData($lootTabs->jsGlobals);
 
-            foreach ($lootTabs->iterate() as $idx => $tab)
+            foreach ($lootTabs->iterate() as $idx => list($file, $tabData))
             {
-                if (!$tab[1])
+                if (!$tabData['data'])
                     continue;
 
                 if ($idx == 16)
-                    $createdBy = array_column($tab[1], 'id');
+                    $createdBy = array_column($tabData['data'], 'id');
 
-                $this->lvTabs[] = array(
-                    'file'   => $tab[0],
-                    'data'   => $tab[1],
-                    'params' => [
-                        'name'        => $tab[2],
-                        'id'          => $tab[3],
-                        'extraCols'   => $tab[4] ? '$['.implode(', ', array_unique($tab[4])).']' : null,
-                        'hiddenCols'  => $tab[5] ? '$ '.Util::toJSON( array_unique($tab[5]))     : null,
-                        'visibleCols' => $tab[6] ? '$'. Util::toJSON( array_unique($tab[6]))     : null
-                    ]
-                );
+                $this->lvTabs[] = [$file, $tabData];
             }
         }
 
         // tabs: this item contains..
         $sourceFor = array(
-             [LOOT_ITEM,        $this->subject->id,                       '$LANG.tab_contains',      'contains',      ['Listview.extraCols.percent'], []                          , []],
-             [LOOT_PROSPECTING, $this->subject->id,                       '$LANG.tab_prospecting',   'prospecting',   ['Listview.extraCols.percent'], ['side', 'slot', 'reqlevel'], []],
-             [LOOT_MILLING,     $this->subject->id,                       '$LANG.tab_milling',       'milling',       ['Listview.extraCols.percent'], ['side', 'slot', 'reqlevel'], []],
-             [LOOT_DISENCHANT,  $this->subject->getField('disenchantId'), '$LANG.tab_disenchanting', 'disenchanting', ['Listview.extraCols.percent'], ['side', 'slot', 'reqlevel'], []]
+             [LOOT_ITEM,        $this->subject->id,                       '$LANG.tab_contains',      'contains',      ['$Listview.extraCols.percent'], []                          , []],
+             [LOOT_PROSPECTING, $this->subject->id,                       '$LANG.tab_prospecting',   'prospecting',   ['$Listview.extraCols.percent'], ['side', 'slot', 'reqlevel'], []],
+             [LOOT_MILLING,     $this->subject->id,                       '$LANG.tab_milling',       'milling',       ['$Listview.extraCols.percent'], ['side', 'slot', 'reqlevel'], []],
+             [LOOT_DISENCHANT,  $this->subject->getField('disenchantId'), '$LANG.tab_disenchanting', 'disenchanting', ['$Listview.extraCols.percent'], ['side', 'slot', 'reqlevel'], []]
         );
 
         $reqQuest = [];
@@ -508,17 +482,22 @@ class ItemPage extends genericPage
                     $lv['condition'][0][$this->typeId][] = [[CND_QUESTTAKEN, &$reqQuest[$lv['id']]]];
                 }
 
-                $this->lvTabs[] = array(
-                    'file'   => 'item',
-                    'data'   => $lootTab->getResult(),
-                    'params' => [
-                        'name'        => $sf[2],
-                        'id'          => $sf[3],
-                        'extraCols'   => $sf[4] ? "$[".implode(', ', array_unique($sf[4]))."]" : null,
-                        'hiddenCols'  => $sf[5] ? "$".Util::toJSON($sf[5]) : null,
-                        'visibleCols' => $sf[6] ? '$'.Util::toJSON($sf[6]) : null
-                    ]
+                $tabData = array(
+                    'data' => array_values($lootTab->getResult()),
+                    'name' => $sf[2],
+                    'id'   => $sf[3],
                 );
+
+                if ($sf[4])
+                    $tabData['extraCols']   = array_unique($sf[4]);
+
+                if ($sf[5])
+                    $tabData['hiddenCols']  = array_unique($sf[5]);
+
+                if ($sf[6])
+                    $tabData['visibleCols'] = array_unique($sf[6]);
+
+                $this->lvTabs[] = ['item', $tabData];
             }
         }
 
@@ -558,15 +537,12 @@ class ItemPage extends genericPage
                 if (!$contains->hasSetFields(['slot']))
                     $hCols[] = 'slot';
 
-                $this->lvTabs[] = array(
-                    'file'   => 'item',
-                    'data'   => $contains->getListviewData(),
-                    'params' => [
-                        'name'       => '$LANG.tab_cancontain',
-                        'id'         => 'can-contain',
-                        'hiddenCols' => '$'.Util::toJSON($hCols)
-                    ]
-                );
+                $this->lvTabs[] = ['item', array(
+                    'data'       => array_values($contains->getListviewData()),
+                    'name'       => '$LANG.tab_cancontain',
+                    'id'         => 'can-contain',
+                    'hiddenCols' => $hCols
+                )];
             }
         }
 
@@ -578,15 +554,12 @@ class ItemPage extends genericPage
             {
                 $this->extendGlobalData($contains->getJSGlobals(GLOBALINFO_SELF));
 
-                $this->lvTabs[] = array(
-                    'file'   => 'item',
-                    'data'   => $contains->getListviewData(),
-                    'params' => [
-                        'name'       => '$LANG.tab_canbeplacedin',
-                        'id'         => 'can-be-placed-in',
-                        'hiddenCols' => "$['side']"
-                    ]
-                );
+                $this->lvTabs[] = ['item', array(
+                    'data'       => array_values($contains->getListviewData()),
+                    'name'       => '$LANG.tab_canbeplacedin',
+                    'id'         => 'can-be-placed-in',
+                    'hiddenCols' => ['side']
+                )];
             }
         }
 
@@ -599,22 +572,19 @@ class ItemPage extends genericPage
         $criteriaOf = new AchievementList($conditions);
         if (!$criteriaOf->error)
         {
-                $this->extendGlobalData($criteriaOf->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_REWARDS));
+            $this->extendGlobalData($criteriaOf->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_REWARDS));
 
-                $hCols = [];
-                if (!$criteriaOf->hasSetFields(['reward_loc0']))
-                    $hCols = ['rewards'];
+            $tabData = array(
+                'data'        => array_values($criteriaOf->getListviewData()),
+                'name'        => '$LANG.tab_criteriaof',
+                'id'          => 'criteria-of',
+                'visibleCols' => ['category']
+            );
 
-                $this->lvTabs[] = array(
-                    'file'   => 'achievement',
-                    'data'   => $criteriaOf->getListviewData(),
-                    'params' => [
-                        'name'        => '$LANG.tab_criteriaof',
-                        'id'          => 'criteria-of',
-                        'visibleCols' => "$['category']",
-                        'hiddenCols'  => '$'.Util::toJSON($hCols)
-                    ]
-                );
+            if (!$criteriaOf->hasSetFields(['reward_loc0']))
+                $tabData['hiddenCols'] = ['rewards'];
+
+            $this->lvTabs[] = ['achievement', $tabData];
         }
 
         // tab: reagent for
@@ -629,15 +599,12 @@ class ItemPage extends genericPage
         {
             $this->extendGlobalData($reagent->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
-            $this->lvTabs[] = array(
-                'file'   => 'spell',
-                'data'   => $reagent->getListviewData(),
-                'params' => [
-                    'name'        => '$LANG.tab_reagentfor',
-                    'id'          => 'reagent-for',
-                    'visibleCols' => "$['reagents']"
-                ]
-            );
+            $this->lvTabs[] = ['spell', array(
+                'data'        => array_values($reagent->getListviewData()),
+                'name'        => '$LANG.tab_reagentfor',
+                'id'          => 'reagent-for',
+                'visibleCols' => ['reagents']
+            )];
         }
 
         // tab: unlocks (object or item)
@@ -654,14 +621,11 @@ class ItemPage extends genericPage
             $lockedObj = new GameObjectList(array(['lockId', $lockIds]));
             if (!$lockedObj->error)
             {
-                $this->lvTabs[] = array(
-                    'file'   => 'object',
-                    'data'   => $lockedObj->getListviewData(),
-                    'params' => [
-                        'name' => '$LANG.tab_unlocks',
-                        'id'   => 'unlocks-object'
-                    ]
-                );
+                $this->lvTabs[] = ['object', array(
+                    'data' => array_values($lockedObj->getListviewData()),
+                    'name' => '$LANG.tab_unlocks',
+                    'id'   => 'unlocks-object'
+                )];
             }
 
             // items (generally unused. It's the spell on the item, that unlocks stuff)
@@ -670,14 +634,11 @@ class ItemPage extends genericPage
             {
                 $this->extendGlobalData($lockedItm->getJSGlobals(GLOBALINFO_SELF));
 
-                $this->lvTabs[] = array(
-                    'file'   => 'item',
-                    'data'   => $lockedItm->getListviewData(),
-                    'params' => [
-                        'name' => '$LANG.tab_unlocks',
-                        'id'   => 'unlocks-item'
-                    ]
-                );
+                $this->lvTabs[] = ['item', array(
+                    'data' => array_values($lockedItm->getListviewData()),
+                    'name' => '$LANG.tab_unlocks',
+                    'id'   => 'unlocks-item'
+                )];
             }
         }
 
@@ -705,14 +666,11 @@ class ItemPage extends genericPage
         {
             $this->extendGlobalData($saItems->getJSGlobals(GLOBALINFO_SELF));
 
-            $this->lvTabs[] = array(
-                'file'   => 'item',
-                'data'   => $saItems->getListviewData(),
-                'params' => [
-                    'name' => '$LANG.tab_seealso',
-                    'id'   => 'see-also'
-                ]
-            );
+            $this->lvTabs[] = ['item', array(
+                'data' => array_values($saItems->getListviewData()),
+                'name' => '$LANG.tab_seealso',
+                'id'   => 'see-also'
+            )];
         }
 
         // tab: starts (quest)
@@ -723,14 +681,11 @@ class ItemPage extends genericPage
             {
                 $this->extendGlobalData($starts->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_REWARDS));
 
-                $this->lvTabs[] = array(
-                    'file'   => 'quest',
-                    'data'   => $starts->getListviewData(),
-                    'params' => [
-                        'name' => '$LANG.tab_starts',
-                        'id'   => 'starts-quest'
-                    ]
-                );
+                $this->lvTabs[] = ['quest', array(
+                    'data' => array_values($starts->getListviewData()),
+                    'name' => '$LANG.tab_starts',
+                    'id'   => 'starts-quest'
+                )];
             }
         }
 
@@ -745,14 +700,11 @@ class ItemPage extends genericPage
         {
             $this->extendGlobalData($objective->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_REWARDS));
 
-            $this->lvTabs[] = array(
-                'file'   => 'quest',
-                'data'   => $objective->getListviewData(),
-                'params' => [
-                    'name' => '$LANG.tab_objectiveof',
-                    'id'   => 'objective-of-quest'
-                ]
-            );
+                $this->lvTabs[] = ['quest', array(
+                'data' => array_values($objective->getListviewData()),
+                'name' => '$LANG.tab_objectiveof',
+                'id'   => 'objective-of-quest'
+            )];
         }
 
         // tab: provided for (quest)
@@ -766,14 +718,11 @@ class ItemPage extends genericPage
         {
             $this->extendGlobalData($provided->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_REWARDS));
 
-            $this->lvTabs[] = array(
-                'file'   => 'quest',
-                'data'   => $provided->getListviewData(),
-                'params' => [
-                    'name' => '$LANG.tab_providedfor',
-                    'id'   => 'provided-for-quest'
-                ]
-            );
+                $this->lvTabs[] = ['quest', array(
+                'data' => array_values($provided->getListviewData()),
+                'name' => '$LANG.tab_providedfor',
+                'id'   => 'provided-for-quest'
+            )];
         }
 
         // tab: same model as
@@ -785,15 +734,12 @@ class ItemPage extends genericPage
             {
                 $this->extendGlobalData($sameModel->getJSGlobals(GLOBALINFO_SELF));
 
-                $this->lvTabs[] = array(
-                    'file'   => 'genericmodel',
-                    'data'   => $sameModel->getListviewData(ITEMINFO_MODEL),
-                    'params' => [
-                        'name'            => '$LANG.tab_samemodelas',
-                        'id'              => 'same-model-as',
-                        'genericlinktype' => 'item'
-                    ]
-                );
+                $this->lvTabs[] = ['genericmodel', array(
+                    'data'            => array_values($sameModel->getListviewData(ITEMINFO_MODEL)),
+                    'name'            => '$LANG.tab_samemodelas',
+                    'id'              => 'same-model-as',
+                    'genericlinktype' => 'item'
+                )];
             }
         }
 
@@ -807,7 +753,7 @@ class ItemPage extends genericPage
                 $sbData = $soldBy->getListviewData();
                 $this->extendGlobalData($soldBy->getJSGlobals(GLOBALINFO_SELF));
 
-                $extraCols = ['Listview.extraCols.stock', "Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack')", 'Listview.extraCols.cost'];
+                $extraCols = ['$Listview.extraCols.stock', "\$Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack')", '$Listview.extraCols.cost'];
 
                 $holidays = [];
                 foreach ($sbData as $k => &$row)
@@ -837,7 +783,7 @@ class ItemPage extends genericPage
                     if ($e = $vendors[$k]['event'])
                     {
                         if (count($extraCols) == 3)
-                            $extraCols[] = 'Listview.extraCols.condition';
+                            $extraCols[] = '$Listview.extraCols.condition';
 
                         $this->extendGlobalIds(TYPE_WORLDEVENT, $e);
                         $row['condition'][0][$this->typeId][] = [[CND_ACTIVE_EVENT, $e]];
@@ -860,16 +806,13 @@ class ItemPage extends genericPage
                 }
 
 
-                $this->lvTabs[] = array(
-                    'file'   => 'creature',
-                    'data'   => $sbData,
-                    'params' => [
-                        'name'       => '$LANG.tab_soldby',
-                        'id'         => 'sold-by-npc',
-                        'extraCols'  => '$['.implode(', ', $extraCols).']',
-                        'hiddenCols' => "$['level', 'type']"
-                    ]
-                );
+                $this->lvTabs[] = ['creature', array(
+                    'data'       => array_values($sbData),
+                    'name'       => '$LANG.tab_soldby',
+                    'id'         => 'sold-by-npc',
+                    'extraCols'  => $extraCols,
+                    'hiddenCols' => ['level', 'type']
+                )];
             }
         }
 
@@ -898,23 +841,22 @@ class ItemPage extends genericPage
             $boughtBy = new ItemList(array(['id', $boughtBy]));
             if (!$boughtBy->error)
             {
-                if ($boughtBy->getMatches() <= CFG_SQL_LIMIT_DEFAULT)
-                    $n = null;
-
                 $iCur   = new CurrencyList(array(['itemId', $this->typeId]));
                 $filter = $iCur->error ? [TYPE_ITEM => $this->typeId] : [TYPE_CURRENCY => $iCur->id];
 
-                $this->lvTabs[] = array(
-                    'file'   => 'item',
-                    'data'   => $boughtBy->getListviewData(ITEMINFO_VENDOR, $filter),
-                    'params' => [
-                        'name'      => '$LANG.tab_currencyfor',
-                        'id'        => 'currency-for',
-                        'extraCols' => "$[Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack'), Listview.extraCols.cost]",
-                        'note'      => $n ? sprintf(Util::$filterResultString, $n) : null
-                    ]
+                $tabData = array(
+                    'data'      => array_values($boughtBy->getListviewData(ITEMINFO_VENDOR, $filter)),
+                    'name'      => '$LANG.tab_currencyfor',
+                    'id'        => 'currency-for',
+                    'extraCols' => ["\$Listview.funcBox.createSimpleCol('stack', 'stack', '10%', 'stack')", '$Listview.extraCols.cost'],
                 );
-                $this->extendGlobalData($boughtBy->getJSGlobals(GLOBALINFO_ANY));
+
+                if ($boughtBy->getMatches() > CFG_SQL_LIMIT_DEFAULT && $n)
+                    $tabData['note'] = sprintf(Util::$filterResultString, $n);
+
+                $this->lvTabs[] = ['item', $tabData];
+
+                $this->extendGlobalData($boughtBy->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
             }
         }
 
@@ -937,7 +879,7 @@ class ItemPage extends genericPage
                     foreach ($_ as $idx)
                         $ids[] = $indirectSpells->getField('effect'.$idx.'TriggerSpell');
 
-            $ids = array_merge($ids, Util::getTaughtSpells($indirect));
+            $ids = array_merge($ids, Game::getTaughtSpells($indirect));
         }
 
         if ($ids)
@@ -951,15 +893,12 @@ class ItemPage extends genericPage
                 if ($taughtSpells->hasSetFields(['reagent1']))
                     $visCols[] = 'reagents';
 
-                $this->lvTabs[] = array(
-                    'file'   => 'spell',
-                    'data'   => $taughtSpells->getListviewData(),
-                    'params' => [
-                        'name'        => '$LANG.tab_teaches',
-                        'id'          => 'teaches',
-                        'visibleCols' => '$'.Util::toJSON($visCols)
-                    ]
-                );
+                $this->lvTabs[] = ['spell', array(
+                    'data'        => array_values($taughtSpells->getListviewData()),
+                    'name'        => '$LANG.tab_teaches',
+                    'id'          => 'teaches',
+                    'visibleCols' => $visCols
+                )];
             }
         }
 
@@ -972,28 +911,67 @@ class ItemPage extends genericPage
         if ($cdCats)
         {
             $conditions = array(
-                'OR',
-                ['spellCategory1', $cdCats],
-                ['spellCategory2', $cdCats],
-                ['spellCategory3', $cdCats],
-                ['spellCategory4', $cdCats],
-                ['spellCategory5', $cdCats]
+                ['id', $this->typeId, '!'],
+                [
+                    'OR',
+                    ['spellCategory1', $cdCats],
+                    ['spellCategory2', $cdCats],
+                    ['spellCategory3', $cdCats],
+                    ['spellCategory4', $cdCats],
+                    ['spellCategory5', $cdCats],
+                ]
             );
             $cdItems = new ItemList($conditions);
             if (!$cdItems->error)
             {
-                $this->lvTabs[] = array(
-                    'file'   => 'item',
-                    'data'   => $cdItems->getListviewData(),
-                    'params' => [
-                        'name' => '$LANG.tab_sharedcooldown',
-                        'id'   => 'shared-cooldown'
-                    ]
-                );
+                $this->lvTabs[] = ['item', array(
+                    'data' => array_values($cdItems->getListviewData()),
+                    'name' => '$LANG.tab_sharedcooldown',
+                    'id'   => 'shared-cooldown'
+                )];
 
                 $this->extendGlobalData($cdItems->getJSGlobals(GLOBALINFO_SELF));
             }
         }
+
+
+        // tab: sounds
+        $soundIds = [];
+        if ($_class == ITEM_CLASS_WEAPON)
+        {
+            $scm = (1 << $_subClass);
+            if ($this->subject->getField('soundOverrideSubclass') > 0)
+                $scm = (1 << $this->subject->getField('soundOverrideSubclass'));
+
+            $soundIds = DB::Aowow()->selectCol('SELECT soundId FROM ?_items_sounds WHERE subClassMask & ?d', $scm);
+        }
+
+        $fields = ['pickUpSoundId', 'dropDownSoundId', 'sheatheSoundId', 'unsheatheSoundId'];
+        foreach ($fields as $f)
+            if ($x = $this->subject->getField($f))
+                $soundIds[] = $x;
+
+        if ($x = $this->subject->getField('spellVisualId'))
+        {
+            if ($spellSounds = DB::Aowow()->selectRow('SELECT * FROM ?_spell_sounds WHERE id = ?d', $x))
+            {
+                array_shift($spellSounds);                  // bye 'id'-field
+                foreach ($spellSounds as $ss)
+                    if ($ss)
+                        $soundIds[] = $ss;
+            }
+        }
+
+        if ($soundIds)
+        {
+            $sounds = new SoundList(array(['id', $soundIds]));
+            if (!$sounds->error)
+            {
+                $this->extendGlobalData($sounds->getJSGlobals(GLOBALINFO_SELF));
+                $this->lvTabs[] = ['sound', ['data' => array_values($sounds->getListviewData())]];
+            }
+        }
+
 
         // // todo - tab: taught by
         // use var $createdBy to find source of this spell
@@ -1011,9 +989,9 @@ class ItemPage extends genericPage
             return '$WowheadPower.registerItem(\''.$itemString.'\', '.User::$localeId.', {})';
 
         $x  = '$WowheadPower.registerItem(\''.$itemString.'\', '.User::$localeId.", {\n";
-        $x .= "\tname_".User::$localeString.": '".Util::jsEscape($this->subject->getField('name', true, $this->enhancedTT))."',\n";
+        $x .= "\tname_".User::$localeString.": '".Util::jsEscape($this->subject->getField('name', true, false, $this->enhancedTT))."',\n";
         $x .= "\tquality: ".$this->subject->getField('quality').",\n";
-        $x .= "\ticon: '".urlencode($this->subject->getField('iconString'))."',\n";
+        $x .= "\ticon: '".rawurlencode($this->subject->getField('iconString', true, true))."',\n";
         $x .= "\ttooltip_".User::$localeString.": '".Util::jsEscape($this->subject->renderTooltip(false, 0, $this->enhancedTT))."'\n";
         $x .= "});";
 
@@ -1030,7 +1008,7 @@ class ItemPage extends genericPage
         {
             // item root
             $xml = $root->addChild('item');
-            $xml->addAttribute('id', $this->subject->id);
+            $xml->addAttribute('id', $this->typeId);
 
             // name
             $xml->addChild('name')->addCData($this->subject->getField('name', true));
@@ -1054,50 +1032,62 @@ class ItemPage extends genericPage
             $this->subject->extendJsonStats();
 
             // json
-            $fields = ["classs", "displayid", "dps", "id", "level", "name", "reqlevel", "slot", "slotbak", "source", "sourcemore", "speed", "subclass"];
-            $json   = '';
+            $fields = ['classs', 'displayid', 'dps', 'id', 'level', 'name', 'reqlevel', 'slot', 'slotbak', 'speed', 'subclass'];
+            $json   = [];
             foreach ($fields as $f)
             {
-                if (isset($this->subject->json[$this->subject->id][$f]))
+                if (isset($this->subject->json[$this->typeId][$f]))
                 {
-                    $_ = $this->subject->json[$this->subject->id][$f];
+                    $_ = $this->subject->json[$this->typeId][$f];
                     if ($f == 'name')
                         $_ = (7 - $this->subject->getField('quality')).$_;
 
-                    $json .= ',"'.$f.'":'.$_;
+                    $json[$f] = $_;
                 }
             }
-            $xml->addChild('json')->addCData(substr($json, 1));
 
-            // jsonEquip missing: avgbuyout, cooldown, source, sourcemore
-            $json = '';
+            // itemsource
+            if ($this->subject->getSources($s, $m))
+            {
+                $json['source'] = $s;
+                if ($m)
+                    $json['sourcemore'] = $m;
+            }
+
+            $xml->addChild('json')->addCData(substr(json_encode($json), 1, -1));
+
+            // jsonEquip missing: avgbuyout
+            $json = [];
             if ($_ = $this->subject->getField('sellPrice'))          // sellprice
-                $json .= ',"sellprice":'.$_;
+                $json['sellprice'] = $_;
 
             if ($_ = $this->subject->getField('requiredLevel'))      // reqlevel
-                $json .= ',"reqlevel":'.$_;
+                $json['reqlevel'] = $_;
 
             if ($_ = $this->subject->getField('requiredSkill'))      // reqskill
-                $json .= ',"reqskill":'.$_;
+                $json['reqskill'] = $_;
 
             if ($_ = $this->subject->getField('requiredSkillRank'))  // reqskillrank
-                $json .= ',"reqskillrank":'.$_;
+                $json['reqskillrank'] = $_;
 
-            foreach ($this->subject->itemMods[$this->subject->id] as $mod => $qty)
-                $json .= ',"'.$mod.'":'.$qty;
+            if ($_ = $this->subject->getField('cooldown'))           // cooldown
+                $json['cooldown'] = $_ / 1000;
 
-            foreach ($_ = $this->subject->json[$this->subject->id] as $name => $qty)
+            foreach ($this->subject->itemMods[$this->typeId] as $mod => $qty)
+                $json[$mod] = $qty;
+
+            foreach ($this->subject->json[$this->typeId] as $name => $qty)
                 if (in_array($name, Util::$itemFilter))
-                    $json .= ',"'.$name.'":'.$qty;
+                    $json[$name] = $qty;
 
-            $xml->addChild('jsonEquip')->addCData(substr($json, 1));
+            $xml->addChild('jsonEquip')->addCData(substr(json_encode($json), 1, -1));
 
             // jsonUse
             if ($onUse = $this->subject->getOnUseStats())
             {
                 $j = '';
                 foreach ($onUse as $idx => $qty)
-                    $j .= ',"'.Util::$itemMods[$idx].'":'.$qty;
+                    $j .= ',"'.Game::$itemMods[$idx].'":'.$qty;
 
                 $xml->addChild('jsonUse')->addCData(substr($j, 1));
             }
@@ -1105,9 +1095,9 @@ class ItemPage extends genericPage
             // reagents
             $cnd = array(
                 'OR',
-                ['AND', ['effect1CreateItemId', $this->subject->id], ['OR', ['effect1Id', SpellList::$effects['itemCreate']], ['effect1AuraId', SpellList::$auras['itemCreate']]]],
-                ['AND', ['effect2CreateItemId', $this->subject->id], ['OR', ['effect2Id', SpellList::$effects['itemCreate']], ['effect2AuraId', SpellList::$auras['itemCreate']]]],
-                ['AND', ['effect3CreateItemId', $this->subject->id], ['OR', ['effect3Id', SpellList::$effects['itemCreate']], ['effect3AuraId', SpellList::$auras['itemCreate']]]],
+                ['AND', ['effect1CreateItemId', $this->typeId], ['OR', ['effect1Id', SpellList::$effects['itemCreate']], ['effect1AuraId', SpellList::$auras['itemCreate']]]],
+                ['AND', ['effect2CreateItemId', $this->typeId], ['OR', ['effect2Id', SpellList::$effects['itemCreate']], ['effect2AuraId', SpellList::$auras['itemCreate']]]],
+                ['AND', ['effect3CreateItemId', $this->typeId], ['OR', ['effect3Id', SpellList::$effects['itemCreate']], ['effect3AuraId', SpellList::$auras['itemCreate']]]],
             );
 
             $spellSource = new SpellList($cnd);
@@ -1119,7 +1109,7 @@ class ItemPage extends genericPage
                 {
                     foreach ($spellSource->canCreateItem() as $idx)
                     {
-                        if ($spellSource->getField('effect'.$idx.'CreateItemId') != $this->subject->id)
+                        if ($spellSource->getField('effect'.$idx.'CreateItemId') != $this->typeId)
                             continue;
 
                         $splNode = $cbNode->addChild('spell');
@@ -1182,7 +1172,7 @@ class ItemPage extends genericPage
             return parent::display($override);
     }
 
-    public function notFound()
+    public function notFound($title = '', $msg = '')
     {
         if ($this->mode == CACHE_TYPE_TOOLTIP)
         {
@@ -1197,7 +1187,7 @@ class ItemPage extends genericPage
             exit();
         }
         else
-            return parent::notFound(Lang::game('item'), Lang::item('notFound'));
+            return parent::notFound($title ?: Lang::game('item'), $msg ?: Lang::item('notFound'));
     }
 }
 

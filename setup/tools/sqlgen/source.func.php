@@ -356,8 +356,8 @@ function source(array $ids = [])
 
     $spellBuff   = [];
     $itemBuff    = [];
-    $xCostH      = DB::Aowow()->selectCol('SELECT Id FROM dbc_itemextendedcost WHERE reqHonorPoints > 0 AND reqArenaPoints = 0');
-    $xCostA      = DB::Aowow()->selectCol('SELECT Id FROM dbc_itemextendedcost WHERE reqArenaPoints > 0');
+    $xCostH      = DB::Aowow()->selectCol('SELECT id FROM dbc_itemextendedcost WHERE reqHonorPoints > 0 AND reqArenaPoints = 0');
+    $xCostA      = DB::Aowow()->selectCol('SELECT id FROM dbc_itemextendedcost WHERE reqArenaPoints > 0');
     $vendorQuery = 'SELECT n.item AS ARRAY_KEY, SUM(n.qty) AS qty, it.class, it.subclass, it.spellid_1, it.spelltrigger_1, it.spellid_2, it.spelltrigger_2 FROM (
                         SELECT item, COUNT(1) AS qty FROM npc_vendor WHERE ExtendedCost IN (?a) GROUP BY item
                         UNION
@@ -406,7 +406,8 @@ function source(array $ids = [])
             SELECT RewardItem1         AS item, ID, COUNT(1) AS qty, IF(AllowableRaces & 0x2B2 AND !(AllowableRaces & 0x44D), 2, IF(AllowableRaces & 0x44D AND !(AllowableRaces & 0x2B2), 1, 3)) AS side FROM quest_template WHERE RewardItem1         > 0 GROUP BY item UNION
             SELECT RewardItem2         AS item, ID, COUNT(1) AS qty, IF(AllowableRaces & 0x2B2 AND !(AllowableRaces & 0x44D), 2, IF(AllowableRaces & 0x44D AND !(AllowableRaces & 0x2B2), 1, 3)) AS side FROM quest_template WHERE RewardItem2         > 0 GROUP BY item UNION
             SELECT RewardItem3         AS item, ID, COUNT(1) AS qty, IF(AllowableRaces & 0x2B2 AND !(AllowableRaces & 0x44D), 2, IF(AllowableRaces & 0x44D AND !(AllowableRaces & 0x2B2), 1, 3)) AS side FROM quest_template WHERE RewardItem3         > 0 GROUP BY item UNION
-            SELECT RewardItem4         AS item, ID, COUNT(1) AS qty, IF(AllowableRaces & 0x2B2 AND !(AllowableRaces & 0x44D), 2, IF(AllowableRaces & 0x44D AND !(AllowableRaces & 0x2B2), 1, 3)) AS side FROM quest_template WHERE RewardItem4         > 0 GROUP BY item
+            SELECT RewardItem4         AS item, ID, COUNT(1) AS qty, IF(AllowableRaces & 0x2B2 AND !(AllowableRaces & 0x44D), 2, IF(AllowableRaces & 0x44D AND !(AllowableRaces & 0x2B2), 1, 3)) AS side FROM quest_template WHERE RewardItem4         > 0 GROUP BY item UNION
+            SELECT StartItem           AS item, ID, COUNT(1) AS qty, IF(AllowableRaces & 0x2B2 AND !(AllowableRaces & 0x44D), 2, IF(AllowableRaces & 0x44D AND !(AllowableRaces & 0x2B2), 1, 3)) AS side FROM quest_template WHERE StartItem           > 0 GROUP BY item
         ) n JOIN item_template it ON it.entry = n.item
         GROUP BY item'
     );
@@ -476,7 +477,7 @@ function source(array $ids = [])
 
     $spellBuff  = [];
     $itemBuff   = [];
-    $xCostIds   = DB::Aowow()->selectCol('SELECT Id FROM dbc_itemextendedcost WHERE reqHonorPoints <> 0 OR reqArenaPoints <> 0');
+    $xCostIds   = DB::Aowow()->selectCol('SELECT id FROM dbc_itemextendedcost WHERE reqHonorPoints <> 0 OR reqArenaPoints <> 0');
     $vendors    = DB::World()->select(
         'SELECT n.item AS ARRAY_KEY, n.npc, SUM(n.qty) AS qty, it.class, it.subclass, it.spellid_1, it.spelltrigger_1, it.spellid_2, it.spelltrigger_2 FROM (
             SELECT item, entry AS npc, COUNT(1) AS qty FROM npc_vendor WHERE ExtendedCost NOT IN (?a) GROUP BY item
@@ -993,6 +994,7 @@ function source(array $ids = [])
     if ($spellBuff)
         DB::Aowow()->query(queryfy('[V]', $spellBuff, $insMore), 22, 22, 22);
 
+
     ###############
     # 23: Skinned #
     ###############
@@ -1044,6 +1046,9 @@ function source(array $ids = [])
         DB::Aowow()->query(queryfy('[V]', $spellBuff, $insMore), 23, 23, 23);
 
 
+    // flagging aowow_items for source (note: this is not exact! creatures dropping items may not be spawnd, quests granting items may be disabled)
+    DB::Aowow()->query('UPDATE ?_items SET cuFlags = cuFlags & ?d', ~CUSTOM_UNAVAILABLE);
+    DB::Aowow()->query('UPDATE ?_items i LEFT JOIN ?_source s ON s.typeId = i.id AND s.type = ?d SET i.cuFlags = i.cuFlags | ?d WHERE s.typeId IS NULL', TYPE_ITEM, CUSTOM_UNAVAILABLE);
 
     /*********/
     /* Spell */
@@ -1083,7 +1088,7 @@ function source(array $ids = [])
     CLISetup::log('   * #6  Trainer');
     if ($tNpcs = DB::World()->select('SELECT SpellID AS ARRAY_KEY, ID AS entry, COUNT(1) AS qty FROM npc_trainer WHERE SpellID > 0 GROUP BY ARRAY_KEY'))
     {
-        $tSpells = DB::Aowow()->select('SELECT Id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE Id IN (?a)', array_keys($tNpcs));
+        $tSpells = DB::Aowow()->select('SELECT id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE id IN (?a)', array_keys($tNpcs));
         $buff    = [];
 
         // todo (med): this skips some spells (e.g. riding)
@@ -1121,9 +1126,9 @@ function source(array $ids = [])
     #  9: Talent
     CLISetup::log('   * #9  Talent');
     $tSpells = DB::Aowow()->select('
-        SELECT s.Id AS ARRAY_KEY, s.effect1Id, s.effect2Id, s.effect3Id, s.effect1TriggerSpell, s.effect2TriggerSpell, s.effect3TriggerSpell
+        SELECT s.id AS ARRAY_KEY, s.effect1Id, s.effect2Id, s.effect3Id, s.effect1TriggerSpell, s.effect2TriggerSpell, s.effect3TriggerSpell
         FROM   dbc_talent t
-        JOIN   dbc_spell s ON s.Id = t.rank1
+        JOIN   dbc_spell s ON s.id = t.rank1
         WHERE  t.rank2 < 1 AND (t.talentSpell = 1 OR (s.effect1Id = 36 OR s.effect2Id = 36 OR s.effect3Id = 36))
     ');
 
@@ -1150,7 +1155,7 @@ function source(array $ids = [])
         if (!$recurse)
             break;
 
-        $tSpells = DB::Aowow()->select('SELECT Id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE Id IN (?a)', array_keys($recurse));
+        $tSpells = DB::Aowow()->select('SELECT id AS ARRAY_KEY, effect1Id, effect2Id, effect3Id, effect1TriggerSpell, effect2TriggerSpell, effect3TriggerSpell FROM dbc_spell WHERE id IN (?a)', array_keys($recurse));
     }
 
     DB::Aowow()->query(queryfy('[V]', $buff, $insBasic), 9, 9, 9);
@@ -1181,14 +1186,19 @@ function source(array $ids = [])
     # 12: Achievement
     CLISetup::log('   * #12 Achievement');
     $sets = DB::World()->select('
-        SELECT ?d, IF (title_A <> 0, title_A, title_H) AS title, 1, ?d, entry FROM achievement_reward WHERE title_A <> 0 OR title_H <> 0 GROUP BY title
-        UNION
-        SELECT ?d, title_H AS title, 1, ?d, entry FROM achievement_reward WHERE title_A <> title_H AND title_A <> 0 AND title_H <> 0',
-        TYPE_TITLE, TYPE_ACHIEVEMENT,
-        TYPE_TITLE, TYPE_ACHIEVEMENT
+        SELECT titleId AS ARRAY_KEY, MIN(entry) AS srcId, NULLIF(MAX(entry), MIN(entry)) AS altSrcId FROM (
+            SELECT title_A as `titleId`, entry FROM achievement_reward WHERE title_A <> 0
+            UNION
+            SELECT title_H as `titleId`, entry FROM achievement_reward WHERE title_H <> 0
+        ) AS x GROUP BY titleId'
     );
-    if ($sets)
-        DB::Aowow()->query(queryfy('[V]', $sets, $insMore), 12, 12, 12);
+    foreach ($sets as $tId => $set)
+    {
+        DB::Aowow()->query(queryfy('[V]', [[TYPE_TITLE, $tId, 1, TYPE_ACHIEVEMENT, $set['srcId']]], $insMore), 12, 12, 12);
+
+        if ($set['altSrcId'])
+            DB::Aowow()->query('UPDATE ?_titles SET src12Ext = ?d WHERE id = ?d', $set['altSrcId'], $tId);
+    }
 
     # 13: Source-String
     CLISetup::log('   * #13 cuStrings');

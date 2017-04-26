@@ -194,26 +194,7 @@ class ObjectPage extends GenericPage
         /****************/
 
         // pageText
-        $pageText = [];
-        if ($next = $this->subject->getField('pageTextId'))
-        {
-            while ($next)
-            {
-                if ($row = DB::World()->selectRow('SELECT *, Text as Text_loc0 FROM page_text pt LEFT JOIN locales_page_text lpt ON pt.ID = lpt.entry WHERE pt.ID = ?d', $next))
-                {
-                    $next = $row['NextPageID'];
-                    $pageText[] = Util::parseHtmlText(Util::localizedString($row, 'Text'));
-                }
-                else
-                {
-                    trigger_error('Referenced PageTextId #'.$next.' is not in DB', E_USER_WARNING);
-                    break;
-                }
-            }
-        }
-
-        // add conditional js & css
-        if ($pageText)
+        if ($this->pageText = Game::getPageText($next = $this->subject->getField('pageTextId')))
         {
             $this->addCSS(['path' => 'Book.css']);
             $this->addJS('Book.js');
@@ -244,12 +225,11 @@ class ObjectPage extends GenericPage
         }
 
         $this->infobox     = $infobox ? '[ul][li]'.implode('[/li][li]', $infobox).'[/li][/ul]' : null;
-        $this->pageText    = $pageText;
         $this->map         = $map;
         $this->relBoss     = $relBoss;
         $this->redButtons  = array(
             BUTTON_WOWHEAD => true,
-            BUTTON_LINKS   => true,
+            BUTTON_LINKS   => ['type' => $this->type, 'typeId' => $this->typeId],
             BUTTON_VIEW3D  => ['displayId' => $this->subject->getField('displayId'), 'type' => TYPE_OBJECT, 'typeId' => $this->typeId]
         );
 
@@ -271,14 +251,11 @@ class ObjectPage extends GenericPage
         {
             $this->extendGlobalData($summons->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
-            $this->lvTabs[] = array(
-                'file'   => 'spell',
-                'data'   => $summons->getListviewData(),
-                'params' => array(
-                    'id'   => 'summoned-by',
-                    'name' => '$LANG.tab_summonedby'
-                )
-            );
+            $this->lvTabs[] = ['spell', array(
+                'data' => array_values($summons->getListviewData()),
+                'id'   => 'summoned-by',
+                'name' => '$LANG.tab_summonedby'
+            )];
         }
 
         // tab: related spells
@@ -293,16 +270,13 @@ class ObjectPage extends GenericPage
                 foreach ($data as $relId => $d)
                     $data[$relId]['trigger'] = array_search($relId, $_);
 
-                $this->lvTabs[] = array(
-                    'file'   => 'spell',
-                    'data'   => $data,
-                    'params' => array(
-                        'id'         => 'spells',
-                        'name'       => '$LANG.tab_spells',
-                        'hiddenCols' => "$['skill']",
-                        'extraCols'  => "$[Listview.funcBox.createSimpleCol('trigger', 'Condition', '10%', 'trigger')]"
-                    )
-                );
+                $this->lvTabs[] = ['spell', array(
+                    'data'       => array_values($data),
+                    'id'         => 'spells',
+                    'name'       => '$LANG.tab_spells',
+                    'hiddenCols' => ['skill'],
+                    'extraCols'  => ["\$Listview.funcBox.createSimpleCol('trigger', 'Condition', '10%', 'trigger')"]
+                )];
             }
         }
 
@@ -312,14 +286,11 @@ class ObjectPage extends GenericPage
         {
             $this->extendGlobalData($acvs->getJSGlobals(GLOBALINFO_SELF | GLOBALINFO_RELATED));
 
-            $this->lvTabs[] = array(
-                'file'   => 'achievement',
-                'data'   => $acvs->getListviewData(),
-                'params' => array(
-                    'id'   => 'criteria-of',
-                    'name' => '$LANG.tab_criteriaof'
-                )
-            );
+            $this->lvTabs[] = ['achievement', array(
+                'data' => array_values($acvs->getListviewData()),
+                'id'   => 'criteria-of',
+                'name' => '$LANG.tab_criteriaof'
+            )];
         }
 
         // tab: starts quest
@@ -341,28 +312,18 @@ class ObjectPage extends GenericPage
             }
 
             if ($_[0])
-            {
-                $this->lvTabs[] = array(
-                    'file'   => 'quest',
-                    'data'   => $_[0],
-                    'params' => array(
-                        'name' => '$LANG.tab_starts',
-                        'id'   => 'starts'
-                    )
-                );
-            }
+                $this->lvTabs[] = ['quest', array(
+                    'data' => array_values($_[0]),
+                    'name' => '$LANG.tab_starts',
+                    'id'   => 'starts'
+                )];
 
             if ($_[1])
-            {
-                $this->lvTabs[] = array(
-                    'file'   => 'quest',
-                    'data'   => $_[1],
-                    'params' => array(
-                        'name' => '$LANG.tab_ends',
-                        'id'   => 'ends'
-                    )
-                );
-            }
+                $this->lvTabs[] = ['quest', array(
+                    'data' => array_values($_[1]),
+                    'name' => '$LANG.tab_ends',
+                    'id'   => 'ends'
+                )];
         }
 
         // tab: related quests
@@ -373,14 +334,11 @@ class ObjectPage extends GenericPage
             {
                 $this->extendGlobalData($relQuest->getJSGlobals());
 
-                $this->lvTabs[] = array(
-                    'file'   => 'quest',
-                    'data'   => $relQuest->getListviewData(),
-                    'params' => array(
-                        'name' => '$LANG.tab_quests',
-                        'id'   => 'quests'
-                    )
-                );
+                $this->lvTabs[] = ['quest', array(
+                    'data' => array_values($relQuest->getListviewData()),
+                    'name' => '$LANG.tab_quests',
+                    'id'   => 'quests'
+                )];
             }
         }
 
@@ -392,7 +350,7 @@ class ObjectPage extends GenericPage
             if ($goLoot->getByContainer(LOOT_GAMEOBJECT, $_))
             {
                 $extraCols   = $goLoot->extraCols;
-                $extraCols[] = 'Listview.extraCols.percent';
+                $extraCols[] = '$Listview.extraCols.percent';
                 $hiddenCols  = ['source', 'side', 'slot', 'reqlevel'];
 
                 $this->extendGlobalData($goLoot->jsGlobals);
@@ -412,17 +370,18 @@ class ObjectPage extends GenericPage
                     $lv['condition'][0][$this->typeId][] = [[CND_QUESTTAKEN, &$reqQuest[$lv['id']]]];
                 }
 
-                $this->lvTabs[] = array(
-                    'file'   => 'item',
-                    'data'   => $goLoot->getResult(),
-                    'params' => array(
-                        'name'       => '$LANG.tab_contains',
-                        'id'         => 'contains',
-                        'extraCols'  => "$[".implode(', ', array_unique($extraCols))."]",
-                        'hiddenCols' => $hiddenCols ? '$'.Util::toJSON(array_values($hiddenCols)) : null,
-                        'sort'       => "$['-percent', 'name']"
-                    )
+                $tabData = array(
+                    'data'      => array_values($goLoot->getResult()),
+                    'id'        => 'contains',
+                    'name'      => '$LANG.tab_contains',
+                    'sort'      => ['-percent', 'name'],
+                    'extraCols' => $extraCols
                 );
+
+                if ($hiddenCols)
+                    $tabData['hiddenCols'] = $hiddenCols;
+
+                $this->lvTabs[] = ['item', $tabData];
             }
         }
 
@@ -456,14 +415,11 @@ class ObjectPage extends GenericPage
         {
             $this->extendGlobalData($sameModel->getJSGlobals());
 
-            $this->lvTabs[] = array(
-                'file'   => 'object',
-                'data'   => $sameModel->getListviewData(),
-                'params' => array(
-                    'name' => '$LANG.tab_samemodelas',
-                    'id'   => 'same-model-as'
-                )
-            );
+            $this->lvTabs[] = ['object', array(
+                'data' => array_values($sameModel->getListviewData()),
+                'name' => '$LANG.tab_samemodelas',
+                'id'   => 'same-model-as'
+            )];
         }
     }
 
@@ -498,10 +454,10 @@ class ObjectPage extends GenericPage
         die($tt);
     }
 
-    public function notFound()
+    public function notFound($title = '', $msg = '')
     {
         if ($this->mode != CACHE_TYPE_TOOLTIP)
-            return parent::notFound(Lang::game('object'), Lang::gameObject('notFound'));
+            return parent::notFound($title ?: Lang::game('object'), $msg ?: Lang::gameObject('notFound'));
 
         header('Content-type: application/x-javascript; charset=utf-8');
         echo $this->generateTooltip(true);

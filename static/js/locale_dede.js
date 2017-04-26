@@ -780,7 +780,52 @@ var mn_enchantments = [
     [6,"DPS","?enchantments&filter=ty=6"],
     [4,"Verteidigung","?enchantments&filter=ty=4"]
 ];
-
+var mn_sounds = [
+    [1000, "Meine Playlist", "?sound&playlist"],
+    [, "Arten"],
+    [19,"Armor","?sounds&filter=ty=19"],
+    [16,"Death","?sounds&filter=ty=16"],
+    [25,"Doodads","?sounds&filter=ty=25"],
+    [52,"Emitters","?sounds&filter=ty=52"],
+    [29,"Emotes","?sounds&filter=ty=29"],
+    [12,"Errors","?sounds&filter=ty=12"],
+    [20,"Footstep Splash","?sounds&filter=ty=20"],
+    [3,"Footsteps","?sounds&filter=ty=3"],
+    [24,"Misc Ambience","?sounds&filter=ty=24"],
+    [10,"NPC Combat","?sounds&filter=ty=10"],
+    [17,"NPC Greetings","?sounds&filter=ty=17"],
+    [27,"NPC Loops","?sounds&filter=ty=27"],
+    [31,"Narration","?sounds&filter=ty=31"],
+    [30,"Narration Music","?sounds&filter=ty=30"],
+    [13,"Nature","?sounds&filter=ty=13"],
+    [14,"Objects","?sounds&filter=ty=14"],
+    [9,"Pick Up/Put Down","?sounds&filter=ty=9"],
+    [26,"Spell Fizzle","?sounds&filter=ty=26"],
+    [1,"Spells","?sounds&filter=ty=1"],
+    [23,"Tradeskills","?sounds&filter=ty=23"],
+    [2,"User Interface","?sounds&filter=ty=2"],
+    [53,"Vehicles","?sounds&filter=ty=53"],
+    [22,"Water","?sounds&filter=ty=22"],
+    [21,"Water (Character)","?sounds&filter=ty=21"],
+    [4,"Weapons Impacts","?sounds&filter=ty=4"],
+    [6,"Weapons Misses","?sounds&filter=ty=6"],
+    [50,"Zone Ambience","?sounds&filter=ty=50"],
+    [28,"Zone Music","?sounds&filter=ty=28"]
+];
+mn_icons = [
+    [3, "Erfolge", "?icons&filter=cr=3;crs=1;crv=0"],
+    // [4, "Kampfhaustiere", "?icons&filter=cr=4;crs=1;crv=0"],
+    // [5, "Kampfhaustier-Fähigkeiten", "?icons&filter=cr=5;crs=1;crv=0"],
+    [11, "Klassen", "?icons&filter=cr=11;crs=1;crv=0"],
+    [6, "Währungen", "?icons&filter=cr=6;crs=1;crv=0"],
+    // [7, "Garnisonsfähigkeiten", "?icons&filter=cr=7;crs=1;crv=0"],
+    // [8, "Garnisonsgebäude", "?icons&filter=cr=8;crs=1;crv=0"],
+    [1, "Gegenstände", "?icons&filter=cr=1;crs=1;crv=0"],
+    [9, "Begleiter", "?icons&filter=cr=9;crs=1;crv=0"],
+    [2, "Zauber", "?icons&filter=cr=2;crs=1;crv=0"],
+    // [10, "Bedrohungen", "?icons&filter=cr=10;crs=1;crv=0"],
+    [13, "Ungenutzt", "?icons&filter=cr=13;crs=3;crv=0"]
+];
 var mn_talentCalc = [
     [6,"Todesritter","?talent#j",,{className:"c6",tinyIcon:"class_deathknight"}],
     [11,"Druide","?talent#0",,{className:"c11",tinyIcon:"class_druid"}],
@@ -831,24 +876,30 @@ var mn_petCalc = [
     [42,"Wurm","?petcalc#mm",,{tinyIcon:"Ability_Hunter_Pet_Worm"}]
 ];
 var mn_database = [
+    [, "Gegenstände"],
     [2,"Ausrüstungssets","?itemsets",mn_itemSets],
+    [0,"Gegenstände","?items",mn_items],
+    [101,"Verzauberungen","?enchantments",mn_enchantments],
+    [, "Charakter"],
     [14,"Berufe & Fertigkeiten","?skills",mn_skills],
     [8,"Begleiter","?pets",mn_pets],
     [9,"Erfolge","?achievements",mn_achievements],
+    [12,"Klassen","?classes",mn_classes],
+    [10,"Titel","?titles",mn_titles],
+    [13,"Völker","?races",mn_races],
+    [1,"Zauber","?spells",mn_spells],
+    [100,"Emotes","?emotes",null],
+    [, "Welt"],
     [7,"Fraktionen","?factions",mn_factions],
     [6,"Gebiete","?zones",mn_zones],
-    [0,"Gegenstände","?items",mn_items],
-    [12,"Klassen","?classes",mn_classes],
     [4,"NPCs","?npcs",mn_npcs],
     [5,"Objekte","?objects",mn_objects],
     [3,"Quests","?quests",mn_quests],
-    [10,"Titel","?titles",mn_titles],
-    [13,"Völker","?races",mn_races],
     [15,"Währungen","?currencies",mn_currencies],
     [11,"Weltereignisse","?events",mn_holidays],
-    [1,"Zauber","?spells",mn_spells],
-    [100,"Emotes","?emotes",null],
-    [101,"Verzauberungen","?enchantments",mn_enchantments]
+    [, "Anderes"],
+    [19,"Klänge","?sounds",mn_sounds],
+    [31, "Icons", "?icons", mn_icons]
 ];
 var mn_tools = [
     [0,"Talentrechner","?talent",mn_talentCalc],
@@ -891,13 +942,33 @@ var mn_tools = [
         [4,"Zufällige Seite","?random"]
     ]]
 ];
+var mn_reputation = [
+    [0, "Alle Privilegien anzeigen", "?privileges"],
+    [, "Privilegien"],
+    [1, "Kommentare einsenden", "?privilege=1"],
+    // [2, "Webseitenexterne Links einsenden", "?privilege=2"],
+    // [4, "Kein CAPTCHA", "?privilege=4"],
+    [5, "Kommentarbewertungen zählen mehr", "?privilege=5"],
+    [9, "Mehr Wertungsfreiheit", "?privilege=9"],
+    [10, "Kommentare positiv bewerten", "?privilege=10"],
+    [11, "Kommentare negativ bewerten", "?privilege=11"],
+    [12, "Kommentarantwort einsenden", "?privilege=12"],
+    // [13, "Rahmen: Außergewöhnlich", "?privilege=13"],
+    // [14, "Rahmen: Selten", "?privilege=14"],
+    // [15, "Rahmen: Episch", "?privilege=15"],
+    // [16, "Rahmen: Legendär", "?privilege=16"],
+    [17, "AoWoW Premium", "?privilege=17"]
+];
 var mn_community = [
     [3,"Forum","http://forums.battle.net",null,{tinyIcon: g_staticUrl + "/images/icons/forum.png"}],
     [7,"Blog","http://worldpress.com",null,{tinyIcon: g_staticUrl + "/images/icons/blog.png"}],
     [4,"IRC-Channel","http://webchat.quakenet.org/",null,{tinyIcon: g_staticUrl + "/images/icons/irc.png"}],
+    [,"Community"],
+    [10,"Benutzerruf", "?reputation", mn_reputation],
+    [11,"Hilfreichste Benutzer", "?top-users"],
     [,"Soziales"],
-    [6,"Facebook-Seite","http://www.facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.gif"}],
-    [5,"Twitter-Seite","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.gif"}]
+    [6,"Facebook-Seite","http://www.facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.png"}],
+    [5,"Twitter-Seite","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.png"}]
 ];
 var mn_more = [
     [,"Alles über AoWoW"],
@@ -1311,7 +1382,7 @@ var g_pet_types = {
 
 var g_pet_foods = {
       1: 'Fleisch',
-      2: 'Fish',
+      2: 'Fisch',
       4: 'Käse',
       8: 'Brot',
      16: 'Fungus',
@@ -2207,7 +2278,9 @@ var g_user_roles = {
     10: 'Übersetzer',
     11: 'Handelsvertreter',
     12: 'Screenshot-Verwalter',
-    13: 'Video-Verwalter'
+    13: 'Video-Verwalter',
+    14: 'API-Partner',
+    15: 'Ausstehend'
 };
 
 var g_gem_colors = {
@@ -2290,7 +2363,7 @@ var g_conditions = {
      8: 'Der Spieler hat $1$: nicht; beendet',
      9: 'Der Spieler hat $1$: nicht; angenommen',
     10: 'Der Spieler ist$: nicht; $1',
-    11: 'Die Spielwelt hat einen bestimmten Zustand$: nicht;',                // nyi
+    11: 'WorldState #$1 ist$: nicht; $2',
     12: '$1 ist$: nicht; aktiv',
     13: 'Die Instanz hat einen bestimmten Zustand$: nicht;',                  // nyi
     14: 'Der Spieler hat $nie :;mit $1 interagiert',
@@ -2316,6 +2389,13 @@ var g_conditions = {
 /* end custom */
 
 var LANG = {
+    alltime_stc:   "Allzeit",
+    lastmonth_stc: "Letzter Monat",
+    lastweek_stc:  "Letzte Woche",
+
+    linkremoved:     "Link entfernt",
+    linkremoved_tip: "Neue Benutzer können nicht<br />zu nicht-weißgelisteten Seiten verlinken.",
+
     and:      " und ",
     or:       " oder ",                                     // custom
     comma:    ", ",
@@ -2332,7 +2412,7 @@ var LANG = {
     date_ago:    "vor $1",
     date_at:     " um ",
     date_to:     " bis ",
-    date_simple: "$3.$2.$1",
+    date_simple: "$1.$2.$3",
     unknowndate_stc: "Unbekanntes Datum",
     date_months: ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
     date_days:   ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
@@ -2340,6 +2420,7 @@ var LANG = {
     amount:                 "Menge",
     abilities:              "Fähigkeiten",
     activity:               "Aktivität",
+    add:                    "Hinzufügen",
     animation:              "Animation",
     armor:                  "Rüstung",
     text:                   "Text",
@@ -2361,9 +2442,11 @@ var LANG = {
     daily:                  "Täglich",
     weekly:                 "Wöchentlich",
     damage:                 "Schaden",
+    'delete':               "Löschen",
     diet:                   "Ernährung",
     dps:                    "DPS",
     earned:                 "Errungen",
+    entitycount:            "$1 $2",
     enchant:                "Verzaubern",
     exp:                    "Erf.",
     faction:                "Fraktion",
@@ -2457,6 +2540,7 @@ var LANG = {
     tp:                     "TP",
     trending:               "Aktuell",
     type:                   "Art",
+    unused:                 "Ungenutzt",
     up:                     "Hoch",
     cooldown:               "Abklingzeit",
     duration:               "Dauer",
@@ -2481,6 +2565,8 @@ var LANG = {
 
     male:   "Mann",
     female: "Frau",
+
+    searchdb: "Datenbank durchsuchen...",
 
     source_bossdrop: "Bossdrop",
     source_zonedrop: "Gebietsdrop",
@@ -2563,6 +2649,9 @@ var LANG = {
     lvpage_next:     "Nächste ",
     lvpage_last:     "Letzte ",
 
+    lvsearchresults:          "In Ergebnissen suchen...",
+    lvsearchdisplayedresults: "In angezeigten Ergebnissen suchen...",
+
     lvscreenshot_submit: "Einen Screenshot einsenden",
     lvscreenshot_from:   "Von ",
     lvscreenshot_hires:  "Ansicht",
@@ -2585,11 +2674,14 @@ var LANG = {
     lvnodata_vi2: "Ihr könntet der Erste sein, der für diese Seite ein <a>Video</a> vorschlägt!",
     lvnodata_vi3: "Bitte <a>meldet Euch an</a> um ein Video vorzuschlagen, oder <a>registriert Euch</a> falls Ihr noch nicht über einen Account verfügt.",
 
+    lvnote_sort: "Sortieren nach: ",
+
     lvnote_tryfiltering: "Versucht es mit <a>gefilterten</a> Suchergebnissen.",
     lvnote_trynarrowing: "Versucht, Eure Suche weiter einzugrenzen",
     lvnote_upgradesfor:  'Sucht nach Verbesserungen für <a href="?item=$1" class="q$2"><b>$3</b></a>.',
     lvnote_witherrors:   "Einige Filter in Eurer Suche waren nicht gültig und wurden ignoriert.",
 
+    lvnote_entitiesfound:     "$1 $2 gefunden ($3 angezeigt)",
     lvnote_itemsfound:        "$1 Gegenstände gefunden ($2 angezeigt)",
     lvnote_itemsetsfound:     "$1 Sets gefunden ($2 angezeigt)",
     lvnote_npcsfound:         "$1 NPCs gefunden ($2 angezeigt)",
@@ -2617,15 +2709,16 @@ var LANG = {
     lvnote_arenateamsfound2:  "Insgesamt $1 Arena-Teams, $2 passende",
     lvnote_currenciesfound:   "$1 Währungen gefunden ($2 angezeigt)",
     lvnote_enchantmentsfound: "$1 Verzauberungen gefunden ($2 angezeigt)",
+    lvnote_soundsfound:       "$1 Klänge gefunden ($2 angezeigt)",
 
     lvnote_createafilter:  '<small><a href="$1">Filter erstellen</a></small>',
     lvnote_filterresults:  '<small><a href="$1">Diese Ergebnisse filtern</a></small>',
     lvnote_questgivers:    '<small><a href="?zone=$1">Questgeber</a> in <b>$2</a> anzeigen &nbsp;<b>|</b>&nbsp; Nach <a href="?items&filter=cr=126;crs=$3;crv=0">Questbelohnungen</a> filtern</small>',
-    lvnote_allpets:        '<small>Alle Begleiter können alle <a href=&?spells=-3.270&>passiven Fertigkeiten</a> erlernen</small>',
+    lvnote_allpets:        '<small>Alle Begleiter können alle <a href="?spells=-3.270">passiven Fertigkeiten</a> erlernen</small>',
     lvnote_pettalents:     '<small><a href="$1">Begleiter anzeigen</a>, die diese Talente erlernen können</small>',
-    lvnote_zonequests:     '<small><a href=&?quests=$1.$2&>Quests</a> in der Kategorie <b>$3</b> durchsuchen &nbsp;<b>|</b>&nbsp; Nach <a href=&?items&filter=cr=126;crs=$4;crv=0&>Questbelohnungen</a> filtern</small>',
-    lvnote_crafteditems:   '<small>Nach <a href=&?items&filter=cr=86;crs=$1;crv=0&>hergestellten Gegenständen</a> filtern</small>',
-    lvnote_viewmoreslot:   '<small><a href=&?items$1&filter=$2&>Mehr Ergebnisse</a> für diesen Platz anzeigen</small>',
+    lvnote_zonequests:     '<small><a href="?quests=$1.$2">Quests</a> in der Kategorie <b>$3</b> durchsuchen &nbsp;<b>|</b>&nbsp; Nach <a href="?items&filter=cr=126;crs=$4;crv=0">Questbelohnungen</a> filtern</small>',
+    lvnote_crafteditems:   '<small>Nach <a href="?items&filter=cr=86;crs=$1;crv=0">hergestellten Gegenständen</a> filtern</small>',
+    lvnote_viewmoreslot:   '<small><a href="?items$1&filter=$2">Mehr Ergebnisse</a> für diesen Platz anzeigen</small>',
     lvnote_viewmorelevel:  '<small><a href="?items$1&filter=$2">Mehr Ergebnisse</a> für diese Gegenstandsstufe anzeigen</small>',
     lvnote_viewmoresource: '<small><a href="?items$1&filter=$2">Mehr Ergebnisse</a> für diese Quelle anzeigen</small>',
 
@@ -2712,6 +2805,7 @@ var LANG = {
     dialog_mouseovertoload: "Mouseover, um zu laden...",
 
     message_ajaxnotsupported:     "Bitte aktualisiert auf einen modernen Browser (zum Beispiel Firefox), welcher 'Ajax'-Anfragen unterstützt.",
+    message_browsernoaudio:       "Entschuldigung, dein Webbrowser kann leider das benötigte Audioformat nicht wiedergeben: $1",
     message_cantdeletecomment:    "Dieser Kommentar wurde aufgrund seiner negativen Wertung automatisch bereinigt und kann nicht gelöscht werden.",
     message_cantdetachcomment:    "Dieser Kommentar wurde bereits abgetrennt.",
     message_codenotentered:       "Ihr habt den Code nicht eingegeben.",
@@ -3150,7 +3244,7 @@ var LANG = {
     ct_dialog_reporttopic:    "Meldet das Thema von $1",
     ct_dialog_thanks:         "Eure Mitteilung wurde erhalten. Vielen Dank, dass Ihr uns kontaktiert habt!",
     ct_dialog_thanks_user:    "Eure Mitteilung wurde erhalten, $1. Vielen Dank, dass Ihr uns kontaktiert habt!",
-    ct_dialog_noemailwarning: "<b>Wichtig:</b> Wenn Ihr keine E-Mail-Adresse eingebt, können nicht weiter auf Eure Rückmeldungen eingehen. Wir werden Eure E-Mail-Adresse niemals verkaufen oder weitergeben.",
+    ct_dialog_noemailwarning: "<b>Wichtig:</b> Wenn Ihr keine E-Mail-Adresse eingebt, können wir nicht weiter auf Eure Rückmeldungen eingehen. Wir werden Eure E-Mail-Adresse niemals verkaufen oder weitergeben.",
 
     ct_dialog_error_captcha:    "Der CAPTCHA, den Ihr eingegeben habt, ist nicht gültig. Bitte versucht es erneut.",
     ct_dialog_error_desc:       "Bitte gebt eine genaue, nicht zu lange Beschreibung an.",
@@ -3205,6 +3299,8 @@ var LANG = {
          15: ["Fertigkeit",      "Fertigkeit",       "Fertigkeiten",     "Fertigkeiten"],
          16: ["Statistik",       "Statistik",        "Statistiken",      "Statistiken"],
          17: ["Währung",         "Währung",          "Währungen",        "Währungen"],
+         19: ["Klang",           "Klang",            "Klänge",           "Klänge"],
+         29: ["Icon",            "Icon",             "Icons",            "Icons"],
         501: ["Emote",           "Emote",            "Emotes",           "Emotes"],
         502: ["Verzauberung",    "Verzauberung",     "Verzauberungen",   "Verzauberungen"]
     },
@@ -3880,6 +3976,23 @@ var LANG = {
         teamcontrib5v5:       "5v5 Arena-Teambeteiligung"
     },
 
+    fiicons: {                                              // derived from from LANG.filters_icons
+        sepgeneral:         "Allgemein",
+        sepuses:            "Verwendungen",
+        used:               "Anzahl Verwendungen",
+        items:              "Genutzt von Gegenstände",
+        spells:             "Genutzt von Zauber",
+        achievements:       "Genutzt von Erfolge",
+     // battlepets:         "Genutzt von Kampfhaustiere",
+     // battlepetabilities: "Genutzt von Kampfhaustier-Fähigkeiten",
+        currencies:         "Genutzt von Währungen",
+     // missionabilities:   "Genutzt von Missionsfähigkeiten",
+     // garrisonbuildings:  "Genutzt von Garnisonsgebäude",
+        hunterpets:         "Genutzt von Begleiter",
+     // threats:            "Genutzt von Bedrohungen",
+        classes:            "Genutzt von Klassen"
+    },
+
     // custom
     fienchantments: {
         id:             "ID",
@@ -4367,6 +4480,54 @@ var LANG = {
     build:       "Version",
     calculators: "Rechner",
     patch:       "Patch",
+
+    sound_activities: {
+        greeting:          "Begrüßung",
+        farewell:          "Auf Wiedersehen",
+        angry:             "Verärgert",
+        exertion:          "Angriff",
+        exertioncritical:  "Kritischer Treffer",
+        injury:            "Verletzung",
+        injurycritical:    "Kritische Verletzung",
+        death:             "Tod",
+        stun:              "Betäubt",
+        stand:             "Stehen",
+        footstep:          "Schritt",
+        aggro:             "Bedrohung",
+        wingflap:          "Flügelschlagen",
+        wingglide:         "Gleiten",
+        alert:             "Warnung",
+        fidget:            "Herumzappeln",
+        customattack:      "benutzerdefiniert",
+        loop:              "Wiederholen",
+        jumpstart:         "Springen",
+        jumpend:           "Aufkommen",
+        petattack:         "Begleiterangriff",
+        petorder:          "Haustierbefehl",
+        petdismiss:        "Tierfreigabe",
+        birth:             "Erstellt",
+        spellcast:         "Zauber",
+        submerge:          "Abtauchen",
+        submerged:         "Abgetaucht",
+        transform:         "Transformieren",
+        transformanimated: "Transformieren",
+        animation:         "Animation",
+        ready:             "Bereit",
+        precast:           "Vorgezaubert",
+        cast:              "Zauber",
+        impact:            "Einschlag",
+        state:             "Status",
+        statedone:         "Fertig",
+        channel:           "Kanalisiert",
+        casterimpact:      "Auswirkungen auf den Caster",
+        targetimpact:      "Zielbeeinflussung",
+        castertargeting:   "Dauer der Zauberplatzierung",
+        missiletargeting:  "Geschoss-Zielfindung",
+        instantarea:       "Kurzzeitige Fläche",
+        persistentarea:    "Andauernde Fläche",
+        casterstate:       "Caster-Zustand",
+        targetstate:       "Zielzustand"
+    },
 
     /* custom */
     note_condition:       "Jede einzelne, der hier aufgeführte Bedingungen, muss erfüllt sein um die Gesamtbedingung zu erfüllen.",

@@ -15,7 +15,7 @@ class PetsPage extends GenericPage
     protected $path          = [0, 8];
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
-    protected $validCats     = [1, 2, 3];
+    protected $validCats     = [0, 1, 2];
 
     public function __construct($pageCall, $pageParam)
     {
@@ -36,21 +36,22 @@ class PetsPage extends GenericPage
         if ($this->category)
             $conditions[] = ['type', (int)$this->category[0]];
 
+        $data = [];
         $pets = new PetList($conditions);
         if (!$pets->error)
         {
             $this->extendGlobalData($pets->getJSGlobals(GLOBALINFO_RELATED));
 
-            $params = ['visibleCols' => "$['abilities']"];
-            if (!$pets->hasDiffFields(['type']))
-                $params['hiddenCols'] = "$['type']";
-
-            $this->lvTabs[] = array(
-                'file'   => 'pet',
-                'data'   => $pets->getListviewData(),
-                'params' => $params
+            $data = array(
+                'data'            => array_values($pets->getListviewData()),
+                'visibleCols'     => ['abilities'],
+                'computeDataFunc' => '$_'
             );
+
+            if (!$pets->hasDiffFields(['type']))
+                $data['hiddenCols'] = ['type'];
         };
+        $this->lvTabs[] = ['pet', $data, 'petFoodCol'];
     }
 
     protected function generateTitle()

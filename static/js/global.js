@@ -28,6 +28,7 @@ var U_GROUP_PENDING    = 0x4000;
 var U_GROUP_STAFF               = U_GROUP_ADMIN   | U_GROUP_EDITOR    | U_GROUP_MOD | U_GROUP_BUREAU | U_GROUP_DEV | U_GROUP_BLOGGER | U_GROUP_LOCALIZER | U_GROUP_SALESAGENT;
 var U_GROUP_EMPLOYEE            = U_GROUP_ADMIN   | U_GROUP_BUREAU    | U_GROUP_DEV;
 var U_GROUP_GREEN_TEXT          = U_GROUP_MOD     | U_GROUP_BUREAU    | U_GROUP_DEV;
+var U_GROUP_PREMIUMISH          = U_GROUP_PREMIUM | U_GROUP_EDITOR;
 var U_GROUP_MODERATOR           = U_GROUP_ADMIN   | U_GROUP_MOD       | U_GROUP_BUREAU;
 var U_GROUP_COMMENTS_MODERATOR  = U_GROUP_BUREAU  | U_GROUP_MODERATOR | U_GROUP_LOCALIZER;
 var U_GROUP_PREMIUM_PERMISSIONS = U_GROUP_PREMIUM | U_GROUP_STAFF     | U_GROUP_VIP;
@@ -404,7 +405,7 @@ var PageTemplate = new function()
         initFeedbackLink();
         initLanguageMenu();
 
-        initFilterDisclosure();                             // sarjuuk: custom (visibility toggle for filters was removed at some point)
+        initFilterDisclosure();                             // aowow: custom (visibility toggle for filters was removed at some point)
 
         // UI before page contents
         initFloatingStuff();
@@ -645,7 +646,7 @@ var PageTemplate = new function()
             var menuItem = [
                 locale.id,
                 locale.description,
-                g_host + '/?locale=' + locale.id,                           // sarjuuk: edited for unsupported subdomains # linkBefore + locale.domain + linkAfter
+                g_host + '/?locale=' + locale.id,                           // aowow: edited for unsupported subdomains # linkBefore + locale.domain + linkAfter
                 null,                                                       // more custom
                 null                                                        // also custom
             ];
@@ -719,26 +720,9 @@ var PageTemplate = new function()
         // Search
         var $search = $('div.topbar-search', $topBar);
 
-        // custom start (note: html5 supports placeholder attribute)
-        var inp = $WH.ge('livesearch-generic');
-        if (inp.value == '') {
-            inp.className = 'search-database';
-        }
-        inp.onmouseover = function() {
-            if ($WH.trim(this.value) != '') {
-                this.className = '';
-            }
-        };
-        inp.onfocus = function() {
-            this.className = '';
-        };
-        inp.onblur = function() {
-            if ($WH.trim(this.value) == '') {
-                this.className = 'search-database';
-                this.value = '';
-            }
-        };
-        // custom end
+        // aowow: custom start
+        $('#livesearch-generic').attr('placeholder', LANG.searchdb);
+        // aowow: custom end
 
         // Icon
         var $icon = $('<a></a>').attr('href', 'javascript:;');
@@ -1031,12 +1015,7 @@ function g_addTooltip(element, text, className) {
         className = 'q';
     }
 
-    element.onmouseover = function(d) {
-        $WH.Tooltip.showAtCursor(d, text, 0, 0, className);
-    };
-
-    element.onmousemove = $WH.Tooltip.cursorUpdate;
-    element.onmouseout  = $WH.Tooltip.hide;
+    $WH.Tooltip.simple(element, text, className);
 }
 
 function g_addStaticTooltip(icon, text, className) {
@@ -1102,6 +1081,9 @@ function g_GetStaffColorFromRoles(roles) {
         return 'comment-green';
     }
     if (roles & U_GROUP_VIP) { // VIP
+        return 'comment-gold';
+    }
+    if (roles & U_GROUP_PREMIUMISH) { // Premium, Editor
         return 'comment-gold';
     }
 
@@ -1470,7 +1452,7 @@ function g_getMoneyHtml(money, side, costItems, costCurrency, achievementPoints)
                 side = 1;
             }
 
-            // sarjuuk: custom start
+            // aowow: custom start
             if (currencyId == 103) {                        // arena
                 html += '<a href="?currency=' + currencyId + '" class="moneyarena tip" onmouseover="Listview.funcBox.moneyArenaOver(event)" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()">' + $WH.number_format(count) + '</a>';
             }
@@ -1480,7 +1462,7 @@ function g_getMoneyHtml(money, side, costItems, costCurrency, achievementPoints)
             else {                                          // tokens
                 html += '<a href="?currency=' + currencyId + '" class="icontinyr tip q1" onmouseover="Listview.funcBox.moneyCurrencyOver(' + currencyId + ', ' + count + ', event)" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()" style="background-image: url(' + g_staticUrl + '/images/wow/icons/tiny/' + icon[0].toLowerCase() + '.gif)">' +  count + '</a>';
             }
-            // sarjuuk: custom end
+            // aowow: custom end
             // html += '<a href="?currency=' + currencyId + '" class="icontinyr tip q1" onmouseover="Listview.funcBox.moneyCurrencyOver(' + currencyId + ', ' + count + ', event)" onmousemove="$WH.Tooltip.cursorUpdate(event)" onmouseout="$WH.Tooltip.hide()" style="background-image: url(' + g_staticUrl + '/images/icons/tiny/' + icon[(side == 3 ? 1 : side - 1)].toLowerCase() + '.gif)">' + (side == 3 ? '<span class="icontinyr" style="background-image: url(' + g_staticUrl + '/images/icons/tiny/' + icon[0].toLowerCase() + '.gif)">' : '') + count + (side == 3 ? '</span>' : '') + '</a>';
         }
     }
@@ -1706,7 +1688,7 @@ function g_disclose(el, _this) {
 
 function g_setupChangeWarning(form, elements, warningMessage) {
     /* Still skip IE since it triggers this when anchor links are clicked. */
-    if ($.browser.msie) {
+    if ($WH.Browser.ie) {
         return;
     }
 
@@ -3683,6 +3665,10 @@ var
                 }
             }
 
+            if (field.placeholder) {
+                f.placeholder = field.placeholder;
+            }
+
             if (field.type != 'checkbox' && field.type != 'radio') {
                 if (field.width) {
                     f.style.width = field.width;
@@ -4895,6 +4881,10 @@ function Listview(opt) {
         this.createNote = this.template.createNote;
     }
 
+    if (this.sortOptions == null && this.template.sortOptions != null) {
+        this.sortOptions = this.template.sortOptions;
+    }
+
     if (this.customFilter == null && this.template.customFilter != null) {
         this.customFilter = this.template.customFilter;
     }
@@ -5057,12 +5047,23 @@ function Listview(opt) {
         });
     }
 
-    for (var i = 0, len = this.columns.length; i < len; ++i) {
-        var col = this.columns[i];
-        if (visibleCols[col.id] != null || (!col.hidden && hiddenCols[col.id] == null)) {
-            this.visibility.push(i);
+    if ($.isArray(this.sortOptions)) {
+        for (var i = 0, len = this.sortOptions.length; i < len; ++i) {
+            var sortOpt = this.sortOptions[i];
+            if (visibleCols[sortOpt.id] != null || (!sortOpt.hidden && hiddenCols[sortOpt.id] == null)) {
+                this.visibility.push(i);
+            }
         }
     }
+    else {
+        for (var i = 0, len = this.columns.length; i < len; ++i) {
+            var col = this.columns[i];
+            if (visibleCols[col.id] != null || (!col.hidden && hiddenCols[col.id] == null)) {
+                this.visibility.push(i);
+            }
+        }
+    }
+
 
     // ************************
     // Sort
@@ -5175,6 +5176,7 @@ Listview.MODE_CHECKBOX = 1;
 Listview.MODE_DIV      = 2;
 Listview.MODE_TILED    = 3;
 Listview.MODE_CALENDAR = 4;
+Listview.MODE_FLEXGRID = 5;
 
 Listview.prototype = {
     initialize: function() {
@@ -5219,6 +5221,29 @@ Listview.prototype = {
                 this.mainContainer.className = 'listview-mode-div';
             }
         }
+        else if (this.mode == Listview.MODE_FLEXGRID) {
+            /* iconDB todo evaluate */
+            this.mainContainer = this.mainDiv = $WH.ce('div', { className: 'listview-mode-flexgrid' });
+            this.mainContainer.setAttribute('data-cell-min-width', this.template.cellMinWidth);
+            if (this.clickable)
+                this.mainContainer.className += ' clickable';
+
+            var layout = $('.layout');
+            var totalWidth = parseInt(layout.css('max-width')) - (parseInt(layout.css('padding-left')) || 0) - (parseInt(layout.css('padding-right')) || 0);
+            var slots = Math.floor(totalWidth / this.template.cellMinWidth);
+            var extraStyle = '.listview-mode-flexgrid[data-cell-min-width="' + this.template.cellMinWidth + '"] > div {min-width:' + this.template.cellMinWidth + "px;width:" + (100 / slots) + "%}";
+            while (slots--)
+            {
+                if (slots)
+                {
+                    extraStyle += "\n@media screen and (max-width: " + (((slots + 1) * this.template.cellMinWidth) - 1 + 40) + "px) {";
+                    extraStyle += '\n    .listview-mode-flexgrid[data-cell-min-width="' + this.template.cellMinWidth + '"] > div {width:' + (100 / slots) + "%}";
+                    extraStyle += "\n}"
+                }
+            }
+
+            $("<style/>").text(extraStyle).appendTo(document.head)
+        }
         else {
             this.mainContainer = this.table = $WH.ce('table');
             this.thead = $WH.ce('thead');
@@ -5244,6 +5269,9 @@ Listview.prototype = {
                 }
 
                 $WH.ae(this.mainContainer, colGroup);
+
+                if (this.sortOptions)
+                    setTimeout((function() { this.updateSortArrow() }).bind(this), 0);
             }
             else {
                 if (!this.noStyle) {
@@ -5354,6 +5382,51 @@ Listview.prototype = {
         $WH.ae(this.thead, tr);
     },
 
+    createSortOptions: function(parent) {
+        if (!$.isArray(this.sortOptions))
+            return;
+
+        var div = $WH.ce('div');
+        div.className = 'listview-sort-options';
+        div.innerHTML = LANG.lvnote_sort;
+        var sp = $WH.ce('span');
+        sp.className = 'listview-sort-options-choices';
+        var activeSort = null;
+        if ($.isArray(this.sort))
+            activeSort = this.sort[0];
+
+        var a;
+        var sorts = [];
+        for (var i = 0; i < this.sortOptions.length; i++)
+        {
+            if (this.sortOptions[i].hidden)
+                continue;
+
+            a = $WH.ce('a');
+            a.href = 'javascript:;';
+            a.innerHTML = this.sortOptions[i].name;
+            a.onclick = this.sortGallery.bind(this, a, i + 1);
+            if (activeSort === i + 1)
+                a.className = 'active';
+
+            sorts.push(a)
+        }
+
+        for (i = 0; i < sorts.length; i++)
+            $WH.ae(sp, sorts[i]);
+
+
+        $WH.ae(div, sp);
+        $WH.aef(parent, div);
+    },
+
+    sortGallery: function(el, colNo) {
+        var btn = $(el);
+        btn.siblings('a').removeClass('active');
+        btn.addClass('active');
+        this.sortBy(colNo);
+    },
+
     createBands: function() {
         var
             bandTop = $WH.ce('div'),
@@ -5384,6 +5457,8 @@ Listview.prototype = {
         else if (this.createNote) {
             this.createNote(noteTop, noteBot);
         }
+
+        this.createSortOptions(noteTop);
 
         if (this.debug) {
             $WH.ae(noteTop, $WH.ct(" ("));
@@ -5421,12 +5496,12 @@ Listview.prototype = {
         $WH.ae(bandTop, this.navTop);
         if (this.searchable) {
             var
-                FI_FUNC  = this.updateFilters.bind(this, true),
-                FI_CLASS = (this._truncated ? 'search-within-results2' : 'search-within-results'),
-                sp       = $WH.ce('span'),
-                em       = $WH.ce('em'),
-                a        = $WH.ce('a'),
-                input    = $WH.ce('input');
+                FI_FUNC = this.updateFilters.bind(this, true),
+                FI_PH   = (this._truncated ? LANG.lvsearchdisplayedresults : LANG.lvsearchresults),
+                sp      = $WH.ce('span'),
+                em      = $WH.ce('em'),
+                a       = $WH.ce('a'),
+                input   = $WH.ce('input');
 
             sp.className = 'listview-quicksearch';
 
@@ -5440,7 +5515,7 @@ Listview.prototype = {
             a.onclick = function() {
                 var foo = this.nextSibling;
                 foo.value = '';
-                foo.className = FI_CLASS;
+                foo.placeholder = FI_PH;
                 FI_FUNC();
             };
             a.style.display = 'none';
@@ -5449,7 +5524,7 @@ Listview.prototype = {
             $WH.ns(a);
 
             input.setAttribute('type', 'text');
-            input.className = FI_CLASS;
+            input.placeholder = FI_PH;
             input.style.width = (this._truncated ? '19em': '15em');
             g_onAfterTyping(input, FI_FUNC, this.searchDelay);
 
@@ -5465,7 +5540,6 @@ Listview.prototype = {
 
             input.onblur = function() {
                 if ($WH.trim(this.value) == '') {
-                    this.className = FI_CLASS;
                     this.value = '';
                 }
             };
@@ -5624,7 +5698,20 @@ Listview.prototype = {
     },
 
     refreshRows: function() {
-        var target = (this.mode == Listview.MODE_DIV ? this.mainContainer : this.tbody);
+        var target = null;
+        switch (this.mode) {
+            case Listview.MODE_DIV:
+                target = this.mainContainer;
+                break;
+            case Listview.MODE_FLEXGRID:
+                target = this.mainDiv;
+                break;
+            default:
+                target = this.tbody
+        }
+        if (!target)
+            return;
+
         $WH.ee(target);
 
         if (this.nRowsVisible == 0) {
@@ -5685,6 +5772,24 @@ Listview.prototype = {
         var nItemsToDisplay = endi - starti;
 
         if (this.mode == Listview.MODE_DIV) {
+            for (var j = 0; j < nItemsToDisplay; ++j) {
+                var
+                    i = starti + j,
+                    row = this.data[i];
+
+                if (!row) {
+                    break;
+                }
+
+                if (row.__hidden || row.__deleted) {
+                    ++nItemsToDisplay;
+                    continue;
+                }
+
+                $WH.ae(this.mainDiv, this.getDiv(i));
+            }
+        }
+        else if (this.mode == Listview.MODE_FLEXGRID) {
             for (var j = 0; j < nItemsToDisplay; ++j) {
                 var
                     i = starti + j,
@@ -6360,7 +6465,8 @@ Listview.prototype = {
     },
 
     sortBy: function(colNo) {
-        if (colNo <= 0 || colNo > this.columns.length) {
+        var sorts = this.sortOptions || this.columns;
+        if (colNo <= 0 || colNo > sorts.length) {
             return;
         }
 
@@ -6369,7 +6475,7 @@ Listview.prototype = {
         }
         else {
             var defaultSort = -1;
-            if (this.columns[colNo-1].type == 'text') {
+            if (sorts[colNo-1].type == 'text') {
                 defaultSort = 1;
             }
 
@@ -6389,6 +6495,7 @@ Listview.prototype = {
 
         Listview.sort = this.sort;
         Listview.columns = this.columns;
+        Listview.sortOptions = this.sortOptions;
 
         if (this.indexCreated) {
             this.data.sort(Listview.sortIndexedRows.bind(this));
@@ -6441,10 +6548,11 @@ Listview.prototype = {
                 var sort = [];
                 var matches= _.match(/(\+|\-)[0-9]+/g);
                 if (matches != null) {
+                    var sorts = this.sortOptions || this.columns;
                     for (var i = matches.length - 1; i >= 0; --i) {
                         var colNo = parseInt(matches[i]) | 0;
                         var _ = Math.abs(colNo);
-                        if (_ <= 0 || _ > this.columns.length) {
+                        if (_ <= 0 || _ > sorts.length) {
                             break;
                         }
                         this.addSort(sort, colNo);
@@ -6525,13 +6633,26 @@ Listview.prototype = {
     },
 
     updateSortArrow: function() {
-        if (!this.sort.length || !this.thead || this.mode == Listview.MODE_TILED || this.mode == Listview.MODE_CALENDAR) {
+        if (!this.sort.length || !this.thead || this.mode == Listview.MODE_CALENDAR /* || this.searchSort */) {
             return;
         }
 
         var i = $WH.in_array(this.visibility, Math.abs(this.sort[0]) - 1);
 
         if (i == -1) {
+            return;
+        }
+
+        if (this.mode == Listview.MODE_TILED) {
+            if (!this.sortOptions)
+                return;
+
+            var a = $('.listview-sort-options a', this.noteTop).get(i);
+            if (this.lsa && this.lsa != a)
+                this.lsa.className = '';
+
+            a.className = this.sort[0] < 0 ? 'active sortdesc' : 'active sortasc';
+            this.lsa = a;
             return;
         }
 
@@ -6890,7 +7011,7 @@ Listview.sortRows = function(a, b) {
 Listview.sortIndexedRows = function(a, b) {
     var
         sort = Listview.sort,
-        cols = Listview.columns,
+        cols = Listview.sortOptions || Listview.columns,
         res;
 
     for (var idx in sort) {
@@ -7323,7 +7444,7 @@ Listview.extraCols = {
             }
 
             // var value = parseFloat(row.percent.toFixed(row.percent >= 1.95 ? 0 : (row.percent >= 0.195 ? 1 : 2)));
-            var value = parseFloat(row.percent.toFixed(row.percent >= 1.95 ? 1 : 2)); // sarjuuk: doesn't look as nice but i prefer accuracy
+            var value = parseFloat(row.percent.toFixed(row.percent >= 1.95 ? 1 : 2)); // aowow: doesn't look as nice but i prefer accuracy
 
             if (row.pctstack) {
                 var sp = $WH.ce('span');
@@ -8478,12 +8599,16 @@ Listview.funcBox = {
                 break;
 
             case 3: // Post reply (forums)
+                if (comment.roles & U_GROUP_PREMIUMISH)
+                    return ' comment-gold';
             case 4: // Signature (account settings)
                 if(comment.roles & U_GROUP_ADMIN)
                     return ' comment-blue';
                 if(comment.roles & U_GROUP_GREEN_TEXT) // Mod, Bureau, Dev
                     return ' comment-green';
-                else if(comment.roles & U_GROUP_VIP) // VIP
+                if(comment.roles & U_GROUP_VIP) // VIP
+                    return ' comment-gold';
+                if (comment.roles & U_GROUP_PREMIUMISH) // Premium, Editor
                     return ' comment-gold';
                 break;
         }
@@ -8494,6 +8619,8 @@ Listview.funcBox = {
             return ' comment-green';
         else if(comment.rating < -2)
             return ' comment-bt';
+        else if(comment.roles & U_GROUP_PREMIUMISH)
+            return ' comment-gold';
 
         return '';
     },
@@ -8596,7 +8723,7 @@ Listview.funcBox = {
             Listview.templates.comment.updateCommentCell(comment);
             comment.deleted = true;
 
-            // sarjuuk: lets see....
+            // aowow: custom start
             comment.voteCell.hide();
             comment.repliesCell.hide();
             comment.commentBody.hide();
@@ -8616,7 +8743,7 @@ Listview.funcBox = {
                     comment.repliesControl.toggle();
                 });
             }
-            // nothing more to see here
+            // aowow: custom end
 
             return;
         }
@@ -8642,7 +8769,7 @@ Listview.funcBox = {
                     comment.deleted = false;
                     Listview.templates.comment.updateCommentCell(comment);
 
-                    // sarjuuk: lets see....
+                    // aowow: custom start
                     comment.voteCell.show();
                     comment.repliesCell.show();
                     comment.commentBody.show();
@@ -8652,7 +8779,7 @@ Listview.funcBox = {
                         comment.headerCell.css('cursor', 'auto');
                         comment.headerCell.unbind('click');
                     }
-                    // nothig mor to see here
+                    // aowow custom end
                 }
             }
             else
@@ -8662,7 +8789,7 @@ Listview.funcBox = {
 
     coEdit: function(comment, mode, blog)
     {
-        // sarjuuk: already editing
+        // aowow: custom
         if (comment.commentCell.find('.comment-edit')[0]) {
             return;
         }
@@ -9407,7 +9534,7 @@ Listview.funcBox = {
     moneyCurrencyOver: function(currencyId, count, e) {
         var buff = g_gatheredcurrencies[currencyId]['name_' + Locale.getName()];
 
-        // sarjuuk: justice / valor points handling removed
+        // aowow: justice / valor points handling removed
 
         $WH.Tooltip.showAtCursor(e, buff, 0, 0, 'q1');
     },
@@ -9505,7 +9632,7 @@ Listview.funcBox = {
                     icon = g_gatheredcurrencies[currencyId].icon;
                 }
 
-//  sarjuuk: replacement
+//  aowow: replacement
                 _ = $WH.ce('a');
                 _.href = '?currency=' + currencyId;
                 _.onmousemove = $WH.Tooltip.cursorUpdate;
@@ -9538,7 +9665,7 @@ Listview.funcBox = {
                     _.onmouseover = Listview.funcBox.moneyCurrencyOver.bind(_, currencyId, count);
                     $WH.ae(_, $WH.ct($WH.number_format(count)));
                 }
-/*  sarjuuk: original
+/*  aowow: original
                 if (side == 3 && icon[0] == icon[1]) {
                     side = 1;
                 }
@@ -11391,6 +11518,341 @@ Listview.templates = {
         ]
     },
 
+    icongallery: {
+        sort: [1],
+        mode: Listview.MODE_FLEXGRID,
+        clickable: false,
+        nItemsPerPage: 150,
+        cellMinWidth: 85,
+        poundable: 1,
+        sortOptions: [{
+            id: 'name',
+            name: LANG.name,
+            sortFunc: function(f, c) {
+                return $WH.stringCompare(f.name, c.name)
+            }
+        }],
+        columns: [],
+        value: 'name',
+        compute: function(_icon, td, tr) {
+            var cell = $WH.ce('div');
+            cell.className = 'icon-cell';
+            $(cell).mouseenter(function() {
+                setTimeout((function() { this.className += ' animate'; }).bind(this), 1);
+            }).mouseleave(function() {
+                this.className = this.className.replace(/ *animate\b/, '');
+            });
+
+            $WH.ae(cell, Icon.create(_icon.icon, 2, null, this.getItemLink(_icon)));
+
+            var overlay = $WH.ce('div', { className: 'icon-cell-overlay' });
+            $(overlay).mouseleave(function() {
+                $('.fa-check', this).removeClass('fa-check').addClass('fa-clipboard');
+            });
+            $WH.ae(overlay, Icon.create(_icon.icon, 2, null, this.getItemLink(_icon)));
+
+            var ovlName = $WH.ce('div', { className: 'icon-cell-overlay-name' });
+            var o = function()
+            {
+                this.focus();
+                this.select();
+            };
+
+            $WH.ae(ovlName, $WH.ce('input', {
+                type: 'text',
+                value: _icon.name,
+                onclick: o,
+                onfocus: o
+            }));
+
+
+            /* Aowow - we do not use FA
+            $WH.ae(ovlName, $WH.g_createButton(null, null, {
+                'class': 'fa fa-fw fa-clipboard',
+                'float': false,
+                'no-margin': true,
+                click: function() {
+                    var v = $(this);
+                    var y = v.siblings('input[type="text"]');
+                    y.focus().select();
+                    var w = false;
+                    try
+                    {
+                        if (!document.execCommand('copy'))
+                            w = true;
+                    }
+                    catch (u) { w = true; }
+
+                    y.blur();
+
+                    if (w)
+                    {
+                        v.css({ 'pointer-events': 'none' })
+                        .removeClass('fa-clipboard')
+                        .addClass('fa-exclamation-triangle')
+                        .blur()
+                        .effect('shake', { distance: 5 });
+
+                        setTimeout(function() { $('.icon-cell-overlay-name .btn').fadeOut(1000) }, 600);
+                    }
+                    else
+                        v.removeClass('fa-clipboard').addClass('fa-check');
+                }
+            }));
+            */
+
+            $WH.ae(ovlName, $WH.ce('input', {
+                type:      'button',
+                className: 'button-copy',
+                onclick:   function() {
+                    var btn = $(this);
+                    var iName = btn.siblings('input[type="text"]');
+                    iName.focus().select();
+                    var error = false;
+                    try
+                    {
+                        if (!document.execCommand('copy'))
+                            error = true;
+                    }
+                    catch (x) { error = true; }
+
+                    iName.blur();
+
+                    if (error)
+                    {
+                        btn.css({
+                            'pointer-events': 'none',
+                            'background-image': 'url(' + g_staticUrl + '/images/icons/report.png)'
+                        }).blur();
+
+                        setTimeout(function() { $('.icon-cell-overlay-name .button-copy').fadeOut(1000) }, 600);
+                    }
+                    else
+                        btn.css('background-image', 'url(' + g_staticUrl + '/images/icons/tick.png)');
+                }
+            }));
+            /* end replacement */
+
+            $WH.ae(overlay, ovlName);
+            var t = $WH.ce('div', { className: 'icon-cell-overlay-counts' });
+            var types = [3, 6, 10, 17, 9, 13];
+            var c = 0;
+            for (var h = 0, m; m = types[h]; h++) {
+                var p = g_types[m] + 'count';
+                if (_icon[p]) {
+                    c += _icon[p];
+                    var g = g_types[m];
+                    var s = _icon[p] == 1 ? LANG.types[m][1] : LANG.types[m][3];
+
+                    $WH.ae(t, $WH.ce('div', null, $WH.ce('a', {
+                        href: this.getItemLink(_icon) + '#used-by-' + g,
+                        innerHTML: $WH.sprintf(LANG.entitycount, _icon[p], s)
+                    })))
+                }
+            }
+
+            if (!c)
+                $WH.ae(t, $WH.ce('div', { innerHTML: LANG.unused }));
+
+            $WH.ae(overlay, t);
+            var k = $WH.ce('div', { className: 'icon-cell-overlay-placer' }, overlay);
+            $WH.ae(cell, k);
+            $WH.ae(td, cell);
+        },
+        sortFunc: function(a, b) {
+            return $WH.stringCompare(a.name, b.name);
+        },
+        getItemLink: function(icon) {
+            return "?icon=" + icon.id;
+        }
+    },
+
+    topusers: {
+        sort: ['reputation'],
+        searchable: 1,
+        filtrable: 0,
+
+        columns: [
+            {
+                id: 'username',
+                name: LANG.username,
+                type: 'text',
+                align: 'left',
+                compute: function(user, td) {
+                    var a = $('<a>');
+                    var color = g_GetStaffColorFromRoles(user.groups);
+                    if (color != '')
+                        a.addClass(color);
+                    else
+                        a.css('color', 'white');
+
+                    a.text(user.username);
+                    a.addClass('listview-cleartext');
+                    a.attr('href', '?user=' + user.username);
+                    $(td).append(a);
+                    return;
+                },
+                getVisibleText: function(user) {
+                    return user.username;
+                },
+                sortFunc: function(a, b) {
+                    return $WH.stringCompare(a.username, b.username);
+                },
+                getItemLink: function(user) {
+                    return '?user=' + user.username;
+                }
+            },
+            {
+                id: 'reputation',
+                name: LANG.reputation,
+                type: 'text',
+                compute: function(user, td) {
+                    $(td).append($WH.number_format(user.reputation));
+                    return;
+                },
+                sortFunc: function(a, b) {
+                    if (b.reputation == a.reputation)
+                        return 0;
+
+                    return a.reputation < b.reputation ? 1 : -1;
+                }
+            },
+            {
+                id: 'achievements',
+                name: LANG.achievements,
+                type: 'text',
+                compute: function(user, td) {
+                    var sp = $('<span>').addClass('wsach-pts').css('font-size', 'inherit');
+                    var buf = '';
+                    if (user.gold)
+                        buf += '<i>' + user.gold + '</i>&middot;';
+                    if (user.silver)
+                        buf += '<b>' + user.silver + '</b>&middot;';
+                    buf += '<u>' + user.copper + '</u>';
+
+                    sp.html(buf);
+                    $(td).append(sp);
+
+                    return;
+                },
+                sortFunc: function(a, b) {
+                    var sumA = (a.gold * 1000 * 1000) + (a.silver * 1000) + a.copper;
+                    var sumB = (b.gold * 1000 * 1000) + (b.silver * 1000) + b.copper;
+                    if (sumA == sumB)
+                        return 0;
+                    return sumA < sumB ? 1 : -1;
+                }
+            },
+            {
+                id: 'comments',
+                name: LANG.comments,
+                type: 'text',
+                compute: function(user, td) {
+                    $(td).append($WH.number_format(user.comments));
+                    return;
+                },
+                sortFunc: function(a, b) {
+                    if (a.comments == b.comments)
+                        return 0;
+                    return a.comments < b.comments ? 1 : -1;
+                }
+            },
+            {
+                id: 'posts',
+                name: LANG.posts,
+                type: 'text',
+                compute: function(user, td) {
+                    $(td).append($WH.number_format(user.posts));
+                    return;
+                },
+                sortFunc: function(a, b) {
+                    if (a.posts == b.posts)
+                        return 0;
+                    return a.posts < b.posts ? 1 : -1;
+                }
+            },
+            {
+                id: 'screenshots',
+                name: LANG.screenshots,
+                type: 'text',
+                compute: function(user, td) {
+                    $(td).append($WH.number_format(user.screenshots));
+                    return;
+                },
+                sortFunc: function(a, b) {
+                    if (a.screenshots == b.screenshots)
+                        return 0;
+                    return a.screenshots < b.screenshots ? 1 : -1;
+                }
+            },
+            {
+                id: 'reports',
+                name: LANG.reports,
+                type: 'text',
+                compute: function(user, td) {
+                    $(td).append($WH.number_format(user.reports));
+                    return;
+                },
+                sortFunc: function(a, b) {
+                    if (a.reports == b.reports)
+                        return 0;
+                    return a.reports < b.reports ? 1 : -1;
+                }
+            },
+            {
+                id: 'votes',
+                name: LANG.votes,
+                type: 'text',
+                compute: function(user, td) {
+                    $(td).append($WH.number_format(user.votes));
+                    return;
+                },
+                sortFunc: function(a, b) {
+                    if (a.votes == b.votes)
+                        return 0;
+                    return a.votes < b.votes ? 1 : -1;
+                }
+            },
+            {
+                id: 'uploads',
+                name: LANG.uploads,
+                type: 'text',
+                compute: function(user, c) {
+                    $(c).append($WH.number_format(user.uploads));
+                    return;
+                },
+                sortFunc: function(a, c) {
+                    if (a.uploads == c.uploads)
+                        return 0;
+                    return a.uploads < c.uploads ? 1 : -1;
+                }
+            },
+            {
+                id: 'created',
+                name: LANG.created,
+                type: 'text',
+                hidden: 1,
+                compute: function(user, td) {
+                    var date = new Date(user.creation),
+                        diff = (g_serverTime - date) / 1000;
+
+                    sp = $WH.ce('span');
+                    g_formatDate(sp, diff, date);
+                    $WH.ae(td, sp);
+                },
+                sortFunc: function(a, b) {
+                    if (a.creation == b.creation)
+                        return 0;
+                    return a.creation < b.creation ? 1 : -1;
+                }
+            }
+        ],
+
+        getItemLink: function(user) {
+            return '?user=' + user.username;
+        }
+    },
+
     skill: {
         sort: [1],
         searchable: 1,
@@ -12065,7 +12527,7 @@ Listview.templates = {
                     return buff;
                 },
                 sortFunc: function(a, b) {
-                /*  sarjuuk: behaves unpredictable if reqclass not set or 0
+                /*  aowow: behaves unpredictable if reqclass not set or 0
                     if (a.reqclass && b.reqclass) {
                         var reqClass = $WH.strcmp(g_chr_classes[(1 + Math.log(a.reqclass) / Math.LN2)], g_chr_classes[(1 + Math.log(b.reqclass) / Math.LN2)]);
                         if (reqClass) {
@@ -12108,7 +12570,7 @@ Listview.templates = {
                     return Listview.funcBox.assocArrCmp(a.skill, b.skill, g_spell_skills);
                 }
             },
-    /* sarjuuk
+    /* aowow
         todo: localize he next three cols
     */
             {
@@ -12903,7 +13365,7 @@ Listview.templates = {
                 comment.headerCell.css('cursor', 'pointer');
                 comment.headerCell.bind('click', function(e) {
                     if ($WH.$E(e)._target.nodeName == 'A') {
-                        return;                             // sarjuuk - custom: prevent toggle if using function buttons
+                        return;                             // aowow - custom: prevent toggle if using function buttons
                     }
 
                     comment.voteCell.toggle();
@@ -13041,7 +13503,7 @@ Listview.templates = {
                 var replyHtml = Markup.toHtml(reply.body, {allow: Markup.CLASS_USER, mode: Markup.MODE_REPLY, roles: 0, locale: comment.locale});
 
                 replyHtml = replyHtml.replace(/[^\s<>]{81,}/, function(text) {
-                    if(text.substring(0, 5) == 'href')
+                    if(text.substring(0, 4) == 'href' || text.substring(0, 3) == 'src')
                         return text;
 
                     var ret = '';
@@ -13133,6 +13595,7 @@ Listview.templates = {
             container.append($WH.sprintf('<a href="?user=$1">$2</a>', comment.user, comment.user));
             container.append(g_getReputationPlusAchievementText(user.gold, user.silver, user.copper, user.reputation));
             container.append($WH.sprintf(' <a class="q0" id="comments:id=$1" href="#comments:id=$2">$3</a>', comment.id, comment.id, g_formatDate(null, elapsed, postedOn)));
+            container.append(' ');
             container.append($WH.sprintf(LANG.lvcomment_patch, g_getPatchVersion(postedOn)));
         },
 
@@ -13749,7 +14212,7 @@ Listview.templates = {
                     td.className = 'q1';
 
                     var a = $WH.ce('a');
-                    a.href = '/user=' + reply.user;
+                    a.href = '?user=' + reply.user;
                     $WH.ae(a, $WH.ct(reply.user))
                     $WH.ae(td, a);
                 }
@@ -13773,7 +14236,7 @@ Listview.templates = {
 
         getItemLink: function(reply)
         {
-        /* sarjuuk: g_getCommentDomain returned a whole domain to ptr., old., ect.
+        /* aowow: g_getCommentDomain returned a whole domain to ptr., old., ect.
             if(reply.url)
                 return g_getCommentDomain(reply.domain) + '/' + reply.url;
             if(!g_types[reply.type])
@@ -13971,6 +14434,104 @@ Listview.templates = {
                     })
                 }).bind(this), 1);
             }
+        }
+    },
+
+    sound: {
+        searchable: 1,
+        filtrable: 1,
+        columns: [
+            {
+                id: 'name',
+                name: LANG.name,
+                type: 'text',
+                align: 'left',
+                value: 'name',
+                compute: function (sound, td) {
+                    var a = $WH.ce('a');
+                    a.className = 'listview-cleartext';
+                    a.href = '?sound=' + sound.id;
+                    $WH.st(a, sound.name);
+                    $WH.ae(td, a);
+                }
+            },
+            {
+                id: 'type',
+                name: LANG.type,
+                type: 'text',
+                compute: function (sound, td) {
+                    var type = '';
+                    if (!this.hasOwnProperty('soundtypecache')) {
+                        var cache = {};
+                        for (var i in mn_sounds)
+                            if (mn_sounds[i][0] < 1000)
+                                cache[mn_sounds[i][0]] = mn_sounds[i][1];
+
+                        this.soundtypecache = cache;
+                    }
+
+                    if (this.soundtypecache.hasOwnProperty(sound.type))
+                        type = this.soundtypecache[sound.type];
+
+                    $WH.st(td, type);
+                },
+                sortFunc: function (a, b) {
+                    if (!this.hasOwnProperty('soundtypecache')) {
+                        var cache = {};
+                        for (var i in mn_sounds)
+                            if (mn_sounds[i][0] < 1000)
+                                cache[mn_sounds[i][0]] = mn_sounds[i][1];
+
+                        this.soundtypecache = cache;
+                    }
+
+                    var aType = (this.soundtypecache.hasOwnProperty(a.type)) ? this.soundtypecache[a.type] : '';
+                    var bType = (this.soundtypecache.hasOwnProperty(b.type)) ? this.soundtypecache[b.type] : '';
+
+                    return $WH.strcmp(aType, bType) || $WH.strcmp(a.name, b.name);
+                }
+            },
+            {
+                id: 'activity',
+                name: LANG.activity,
+                hidden: true,
+                type: 'text',
+                compute: function (sound, td) {
+                    if (!sound.hasOwnProperty('activity'))
+                        return '';
+
+                    if (LANG.sound_activities.hasOwnProperty(sound.activity))
+                        return LANG.sound_activities[sound.activity];
+                    else
+                        return sound.activity;
+                },
+                sortFunc: function (a, b) {
+                    return $WH.strcmp(this.compute(a), this.compute(b));
+                }
+            },
+            {
+                id: 'sound',
+                name: LANG.types[19][2],
+                span: 2,
+                compute: function (sound, td, tr) {
+                    var td2 = $WH.ce('td');
+                    td2.className = 'nowrap';
+                    $WH.ae(tr, td2);
+
+                    td2.style.borderRight = 'none';
+                    td.className = 'nowrap';
+                    td.style.borderLeft = 'none';
+
+                    var div = $WH.ce('div');
+                    $WH.ae(td2, div);
+
+                    (new AudioControls()).init(sound.files, div, { listview: this, trackdisplay: td });
+                }
+            }
+        ],
+
+        getItemLink: function (sound) {
+            return '?sound=' + sound.id;
         }
     },
 
@@ -15326,7 +15887,7 @@ Listview.templates = {
 
             var a = $WH.ce('a');
             a.href = 'javascript:;';
-            // a.className = 'pet-zoom';   // sarjuuk: keep as reference only
+            // a.className = 'pet-zoom';   // aowow: keep as reference only
             a.onclick = this.template.modelShow.bind(this.template, model.npcId, model.displayId, false);
 
             var img = $WH.ce('img');
@@ -15450,7 +16011,7 @@ Listview.templates = {
             if (displayId) {
                 var a = $WH.ce('a');
                 a.href = 'javascript:;';
-                a.rel = this.genericlinktype + '=' + model.id;
+                a.rel = this.genericlinktype + '=' + model.id + ' domain=' + Locale.get().domain ;
                 a.onclick = this.template.modelShow.bind(this.template, type, typeId, displayId, slot, false);
 
                 var img = $WH.ce('img');
@@ -15609,7 +16170,7 @@ Listview.templates = {
                     td.style.borderLeft = 'none';
 
                     // force minimum width to fix overlap display bug
-                    td.style.width = '225px';
+                    td.style.width = '270px';
 
                     var wrapper = $WH.ce('div');
 
@@ -16307,7 +16868,7 @@ var Menu = new function()
             var $outerDiv = $('<div class="menu-outer"></div>');
             var $innerDiv = $('<div class="menu-inner"></div>');
 
-            $menuItems.appendTo($innerDiv);
+            $menuItems.each(function () { $innerDiv.append(this) });
             $outerDiv.append($innerDiv);
 
             return $outerDiv;
@@ -16329,7 +16890,7 @@ var Menu = new function()
             var start = nItemsAdded;
             var end   = start + nItemsToAdd;
 
-            $menuItems.slice(start, end).appendTo($innerDiv);
+            $menuItems.slice(start, end).each(function() { $innerDiv.append(this) });
             $outerDiv.append($innerDiv);
             $holder.append($outerDiv);
 
@@ -16774,12 +17335,12 @@ function MessageBox(parent, text) {
     box.addClass("message-box");
     box.html('<p class="message">' + text + '</p><p class="close">(Click on this box to close it)</p>');
 
-    setTimeout(function() {                                 // sarjuuk - custom: popups that never vanish are just insane
+    setTimeout(function() {                                 // aowow - custom: popups that never vanish are just insane
         box.fadeOut();
     }, 5000);
 
     box.click(function (e) {
-        $WH.sp(e);                                          // sarjuuk - custom: without this, the comment-header would also register the click
+        $WH.sp(e);                                          // aowow - custom: without this, the comment-header would also register the click
         $(this).fadeOut();
     });
 
@@ -16815,6 +17376,129 @@ function g_getProfileUrl(profile) {
 function g_getProfileRealmUrl(profile) {
     return '?profiles=' + profile.region + '.' + profile.realm;
 }
+
+var ProgressBar = function(opt)
+{
+    this.opts = {
+        text: '',
+        hoverText: '',
+        color: 'rep6',
+        width: 0,
+        progress: 0
+    };
+
+    this.elements = {
+        text: null,
+        hoverText: null,
+        textContainer: null,
+        progress: null,
+        container: null
+    };
+
+    $WH.cO(this.opts, opt);
+
+    this.build();
+};
+
+ProgressBar.prototype.build = function()
+{
+    var el = $('<a/>', { 'class': 'progressbar', href: 'javascript:;' });
+    if(this.opts.width > 0)
+        el.css('width', this.opts.width + 'px');
+    else
+        el.css('width', 'auto');
+
+    var textDiv = $('<div/>', { 'class': 'progressbar-text' });
+    if(this.opts.text)
+    {
+        this.elements.text = $('<del/>', { text: this.opts.text });
+        textDiv.append(this.elements.text);
+    }
+    if(this.opts.hoverText)
+    {
+        this.elements.hoverText = $('<ins/>', { text: this.opts.hoverText });
+        textDiv.append(this.elements.hoverText);
+    }
+    el.append(textDiv);
+
+    var div = $('<div/>', { 'class': 'progressbar-' + this.opts.color, css: { width: this.opts.progress + '%' }, text: String.fromCharCode(160) });
+    el.append(div);
+
+    if(this.opts.text)
+        textDiv.append($('<div/>', { 'class': 'progressbar-text progressbar-hidden', text: this.opts.text }));
+
+    this.elements.container = el;
+    this.elements.progress = div;
+    this.elements.textContainer = textDiv;
+
+    return el;
+};
+
+ProgressBar.prototype.setText = function(text)
+{
+    this.opts.text = text;
+
+    if(this.elements.text)
+        this.elements.text.text(this.opts.text);
+    else
+    {
+        this.elements.text = $('<del/>', { text: this.opts.text });
+        if(this.opts.hoverText)
+            this.opts.hoverText.before(this.elements.text);
+        else
+            this.elements.textContainer.append(this.elements.text);
+    }
+};
+
+ProgressBar.prototype.setHoverText = function(text)
+{
+    this.opts.hoverText = text;
+
+    if(this.elements.hoverText)
+        this.elements.hoverText.text(this.opts.hoverText);
+    else
+    {
+        this.elements.hoverText = $('<ins/>', { text: this.opts.hoverText });
+        this.elements.textContainer.append(this.elements.hoverText);
+    }
+};
+
+ProgressBar.prototype.setProgress = function(percent)
+{
+    this.opts.progress = percent;
+
+    this.elements.progress.css('width', this.opts.progress + '%');
+};
+
+ProgressBar.prototype.setWidth = function(width)
+{
+    this.opts.width = width;
+
+    if(this.opts.width > 0)
+        this.elements.container.css('width', this.opts.width + 'px');
+    else
+        this.elements.container.css('width', 'auto');
+};
+
+ProgressBar.prototype.getText = function()
+{
+    return this.opts.text;
+};
+
+ProgressBar.prototype.getHoverText = function()
+{
+    return this.opts.hoverText;
+};
+
+ProgressBar.prototype.getWidth = function()
+{
+    return this.opts.width;
+};
+
+ProgressBar.prototype.getContainer = function()
+{
+    return this.elements.container;
+};
 
 var Icon = {
     sizes: ['small', 'medium', 'large'],
@@ -18199,14 +18883,14 @@ Mapper.prototype = {
             var maxIdx = [false, -1];
             for(var i = 0; i < zoneList.length; ++i)
             {
-                if(i > 0) $WH.ae(span, (i == zoneList.length-1 ? LANG.and : LANG.comma));
+                if(i > 0) $WH.ae(span, $WH.ct(i == zoneList.length-1 ? LANG.and : LANG.comma));
                 var entry = null;
                 if(self.objectives[zoneList[i][0]].mappable > 0)
                 {
                     entry = $WH.ce('a');
                     entry.href = 'javascript:;';
                     $WH.ae(entry, $WH.ct(self.objectives[zoneList[i][0]].zone));
-                    entry.onClick = function(link, zone) {
+                    entry.onclick = function(link, zone) {
                         self.update({ zone: zone });
                         g_setSelectedLink(link, 'mapper');
                     }.bind(self, entry, zoneList[i][0]);
@@ -18226,20 +18910,20 @@ Mapper.prototype = {
                     if(types.start && types.end)
                     {
                         entry.className += ' icontiny';
-                        entry.style += ' background-image', 'url(' + g_staticUrl + '/images/wow/icons/tiny/quest_startend.gif)';
-                        entry.style += ' padding-left', '20px';
+                        entry.style.backgroundImage = 'url(' + g_staticUrl + '/images/wow/icons/tiny/quest_startend.gif)';
+                        entry.style.paddingLeft  = '20px';
                     }
                     else if(types.start)
                     {
                         entry.className += ' icontiny';
-                        entry.style += ' background-image', 'url(' + g_staticUrl + '/images/wow/icons/tiny/quest_start.gif)';
-                        entry.style += ' padding-left', '14px';
+                        entry.style.backgroundImage = 'url(' + g_staticUrl + '/images/wow/icons/tiny/quest_start.gif)';
+                        entry.style.paddingLeft  = '14px';
                     }
                     else if(types.end)
                     {
                         entry.className += ' icontiny';
-                        entry.style += ' background-image', 'url(' + g_staticUrl + '/images/wow/icons/tiny/quest_end.gif)';
-                        entry.style += ' padding-left', '16px';
+                        entry.style.backgroundImage = 'url(' + g_staticUrl + '/images/wow/icons/tiny/quest_end.gif)';
+                        entry.style.paddingLeft  = '16px';
                     }
                 }
                 $WH.ae(container, entry);
@@ -18323,121 +19007,121 @@ Mapper.prototype = {
                 var parts = LANG.mapper_happensin.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             else if(startEnd && types.objective.length == 0) // starts and ends in x
             {
                 var parts = LANG.mapper_objectives.sex.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             else if(startEnd) // objectives in x, starts and ends in y
             {
                 var parts = LANG.mapper_objectives.ox_sey.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, startZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
                 secondaryLink = zoneLinks(this, span, objZones, typesByZone);
-                $WH.ae(span, parts[2]);
+                $WH.ae(span, $WH.ct(parts[2]));
             }
             else if(startObj && types.end.length == 0) // objectives and starts in x
             {
                 var parts = LANG.mapper_objectives.osx.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             else if(startObj) // objectives and starts in x, ends in y
             {
                 var parts = LANG.mapper_objectives.osx_ey.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, objZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
                 secondaryLink = zoneLinks(this, span, endZones, typesByZone);
-                $WH.ae(span, parts[2]);
+                $WH.ae(span, $WH.ct(parts[2]));
             }
             else if(endObj && types.start.length == 0) // objectives and ends in x
             {
                 var parts = LANG.mapper_objectives.oex.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             else if(endObj) // objectives and ends in x, starts in y
             {
                 var parts = LANG.mapper_objectives.oex_sy.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
-                primaryLink = zoneLinks(this, span, startZones, typesByZone);
-                $WH.ae(span, parts[1]);
                 secondaryLink = zoneLinks(this, span, objZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
+                primaryLink = zoneLinks(this, span, startZones, typesByZone);
+                $WH.ae(span, $WH.ct(parts[2]));
             }
             else if(types.start.length > 0 && types.end.length > 0 && types.objective.length > 0) // objectives in x, starts in y, ends in z
             {
                 var parts = LANG.mapper_objectives.ox_sy_ez.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, startZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
                 secondaryLink = zoneLinks(this, span, objZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[2]));
                 tertiaryLink = zoneLinks(this, span, endZones, typesByZone);
-                $WH.ae(span, parts[3]);
+                $WH.ae(span, $WH.ct(parts[3]));
             }
             else if(types.start.length > 0 && types.end.length > 0) // starts in x, ends in y
             {
                 var parts = LANG.mapper_objectives.sx_ey.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, startZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
                 secondaryLink = zoneLinks(this, span, endZones, typesByZone);
-                $WH.ae(span, parts[2]);
+                $WH.ae(span, $WH.ct(parts[2]));
             }
             else if(types.start.length > 0 && types.objective.length > 0) // objectives in x, starts in y
             {
                 var parts = LANG.mapper_objectives.ox_sy.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, startZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
                 secondaryLink = zoneLinks(this, span, objZones, typesByZone);
-                $WH.ae(span, parts[2]);
+                $WH.ae(span, $WH.ct(parts[2]));
             }
             else if(types.end.length > 0 && types.objective.length > 0) // objectives in x, ends in y
             {
                 var parts = LANG.mapper_objectives.ox_ey.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, objZones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
                 secondaryLink = zoneLinks(this, span, endZones, typesByZone);
-                $WH.ae(span, parts[2]);
+                $WH.ae(span, $WH.ct(parts[2]));
             }
             else if(types.start.length > 0) // starts in x
             {
                 var parts = LANG.mapper_objectives.sx.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             else if(types.end.length > 0) // ends in x
             {
                 var parts = LANG.mapper_objectives.ex.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             else if(types.objective.length > 0) // objectives in x
             {
                 var parts = LANG.mapper_objectives.ox.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             else // wat?
             {
                 var parts = LANG.mapper_happensin.split('$$');
                 $WH.ae(span, $WH.ct(parts[0]));
                 primaryLink = zoneLinks(this, span, zones, typesByZone);
-                $WH.ae(span, parts[1]);
+                $WH.ae(span, $WH.ct(parts[1]));
             }
             $WH.ae(div, span);
 
@@ -18483,7 +19167,7 @@ Mapper.prototype = {
                 this.sZoom.style.display = 'none';
         }
 
-        /*  sarjuuk: check for e is custom as it should only affect the lightbox */
+        /*  aowow: check for e is custom as it should only affect the lightbox */
         if(this.zoom && e === undefined)
             MapViewer.show({ mapper: this });
     },
@@ -18873,7 +19557,7 @@ Mapper.prototype = {
     }
 };
 
-/* sarjuuk: already defined in locale_xx instead of being fetched later
+/* aowow: already defined in locale_xx instead of being fetched later
 var g_zone_areas = {};
 */
 
@@ -20490,6 +21174,10 @@ var Links = new function() {
         item: 1
     };
 
+    var extraTypes = {
+        29: 'icondb'
+    };
+
     this.onShow = function() {
         if (location.hash && location.hash != '#links') {
             oldHash = location.hash;
@@ -20530,7 +21218,13 @@ var Links = new function() {
         var link = '';
         if (opt.linkColor && opt.linkId && opt.linkName) {
             link = g_getIngameLink(opt.linkColor, opt.linkId, opt.linkName);
+        }
 
+        if (opt.sound)
+            link = '/script PlaySoundFile("' + opt.sound + '", "master")';
+            // link = '/script PlaySoundKitID(' + opt.sound + ')'; Aowow: not available in 3.3.5
+
+        if (link) {
             if (Dialog.templates.links.fields[Dialog.templates.links.fields.length - 2].id != 'ingamelink') {
                 Dialog.templates.links.fields.splice(Dialog.templates.links.fields.length - 1, 0, {
                     id: 'ingamelink',
@@ -20545,7 +21239,7 @@ var Links = new function() {
             'wowheadurl': g_host +'?' + type + '=' + opt.typeId,
             'armoryurl': 'http://us.battle.net/wow/en/' + type + '/' + opt.typeId,
             'ingamelink': link,
-            'markuptag': '[' + type + '=' + opt.typeId + ']'
+            'markuptag': '[' + (extraTypes[opt.type] || type) + '=' + opt.typeId + ']'
         };
 
         dialog.show('links', {
@@ -20765,6 +21459,343 @@ Announcement.prototype = {
     }
 };
 
+var g_audiocontrols = {
+    __windowloaded: false,
+};
+var g_audioplaylist = {};
+
+if (!window.JSON) {
+    window.JSON = {
+        parse: function (sJSON) {
+            return eval("(" + sJSON + ")");
+        },
+
+        stringify: function (obj) {
+            if (obj instanceof Object) {
+                var str = '';
+                if (obj.constructor === Array) {
+                    for (var i = 0; i < obj.length; str += this.stringify(obj[i]) + ',', i++) {}
+                    return '[' + str.substr(0, str.length - 1) + ']';
+                }
+                if (obj.toString !== Object.prototype.toString)
+                    return '"' + obj.toString().replace(/"/g, '\\$&') + '"';
+
+                for (var e in obj)
+                    str += '"' + e.replace(/"/g, '\\$&') + '":' + this.stringify(obj[e]) + ',';
+
+                return '{' + str.substr(0, str.length - 1) + '}';
+            }
+
+            return typeof obj === 'string' ? '"' + obj.replace(/"/g, '\\$&') + '"' : String(obj);
+        }
+    }
+}
+
+AudioControls = function () {
+    var fileIdx    = -1;
+    var canPlay    = false;
+    var looping    = false;
+    var fullPlayer = false;
+    var autoStart  = false;
+    var controls   = {};
+    var playlist   = [];
+    var url        = '';
+
+    function updatePlayer(_self, itr, doPlay) {
+        var elAudio = $WH.ce('audio');
+        elAudio.preload = 'none';
+        elAudio.controls = 'true';
+        $(elAudio).click(function (s) { s.stopPropagation() });
+        elAudio.style.marginTop = '5px';
+        controls.audio.parentNode.replaceChild(elAudio, controls.audio);
+        controls.audio = elAudio;
+        $WH.aE(controls.audio, 'ended', setNextTrack.bind(_self));
+
+        if (doPlay) {
+            elAudio.preload = 'auto';
+            autoStart = true;
+            $WH.aE(controls.audio, 'canplaythrough', autoplay.bind(this));
+        }
+
+        if (!canPlay)
+            controls.table.style.visibility = 'visible';
+
+        var file;
+        do {
+            fileIdx += itr;
+            if (fileIdx > playlist.length - 1) {
+                fileIdx = 0;
+                if (!canPlay) {
+                    var div = $WH.ce('div');
+                    // div.className = 'minibox'; Aowow custom
+                    div.className = 'minibox minibox-left';
+                    $WH.st(div, $WH.sprintf(LANG.message_browsernoaudio, file.type));
+                    controls.table.parentNode.replaceChild(div, controls.table);
+                    return
+                }
+            }
+
+            if (fileIdx < 0)
+                fileIdx = playlist.length - 1;
+
+            file = playlist[fileIdx];
+        }
+        while (controls.audio.canPlayType(file.type) == '');
+
+        var elSource = $WH.ce('source');
+        elSource.src = file.url;
+        elSource.type = file.type;
+        $WH.ae(controls.audio, elSource);
+        if (controls.hasOwnProperty('title')) {
+            if (url) {
+                $WH.ee(controls.title);
+                var a = $WH.ce('a');
+                a.href = url;
+                $WH.st(a, '"' + file.title + '"');
+                $WH.ae(controls.title, a);
+            }
+            else
+                $WH.st(controls.title, '"' + file.title + '"');
+        }
+
+        if (controls.hasOwnProperty('trackdisplay'))
+            $WH.st(controls.trackdisplay, '' + (fileIdx + 1) + ' / ' + playlist.length);
+
+        if (!canPlay) {
+            canPlay = true;
+            for (var i = fileIdx + 1; i <= playlist.length - 1; i++) {
+                if (controls.audio.canPlayType(playlist[i].type)) {
+                    $(controls.controlsdiv).children('a').removeClass('button-red-disabled');
+                    break;
+                }
+            }
+        }
+
+        if (controls.hasOwnProperty('addbutton')) {
+            $(controls.addbutton).removeClass('button-red-disabled');
+            // $WH.st(controls.addbutton, LANG.add);           Aowow: doesnt work with RedButtons
+            RedButton.setText(controls.addbutton, LANG.add);
+        }
+    }
+
+    function autoplay() {
+        if (!autoStart)
+            return;
+
+        autoStart = false;
+        controls.audio.play();
+    }
+
+    this.init = function (files, parent, opt) {
+        if (!$WH.is_array(files))
+            return;
+
+        if (files.length == 0)
+            return;
+
+        if ((parent.id == '') || g_audiocontrols.hasOwnProperty(parent.id)) {
+            var i = 0;
+            while (g_audiocontrols.hasOwnProperty('auto-audiocontrols-' + (++i))) {}
+            parent.id = 'auto-audiocontrols-' + i;
+        }
+
+        g_audiocontrols[parent.id] = this;
+
+        if (typeof opt == 'undefined')
+            opt = {};
+
+        looping = !!opt.loop;
+        if (opt.hasOwnProperty('url'))
+            url = opt.url;
+
+        playlist = files;
+        controls.div = parent;
+
+        if (!opt.listview) {
+            var tbl = $WH.ce('table', { className: 'audio-controls' });
+            controls.table = tbl;
+            controls.table.style.visibility = 'hidden';
+            $WH.ae(controls.div, tbl);
+
+            var tr = $WH.ce('tr');
+            $WH.ae(tbl, tr);
+
+            var td = $WH.ce('td');
+            $WH.ae(tr, td);
+
+            controls.audio = $WH.ce('div');
+            $WH.ae(td, controls.audio);
+
+            controls.title = $WH.ce('div', { className: 'audio-controls-title' });
+            $WH.ae(td, controls.title);
+
+            controls.controlsdiv = $WH.ce('div', { className: 'audio-controls-pagination' });
+            $WH.ae(td, controls.controlsdiv);
+
+            var prevBtn = createButton(LANG.previous, true);
+            $WH.ae(controls.controlsdiv, prevBtn);
+            $WH.aE(prevBtn, 'click', this.btnPrevTrack.bind(this));
+
+
+            controls.trackdisplay = $WH.ce('div', { className: 'audio-controls-pagination-track' });
+            $WH.ae(controls.controlsdiv, controls.trackdisplay);
+
+            var nextBtn = createButton(LANG.next, true);
+            $WH.ae(controls.controlsdiv, nextBtn);
+            $WH.aE(nextBtn, 'click', this.btnNextTrack.bind(this))
+        }
+        else {
+            fullPlayer = true;
+            var div = $WH.ce('div');
+            controls.table = div;
+            $WH.ae(controls.div, div);
+
+            controls.audio = $WH.ce('div');
+            $WH.ae(div, controls.audio);
+
+            controls.trackdisplay = opt.trackdisplay;
+            controls.controlsdiv = $WH.ce('span');
+            $WH.ae(div, controls.controlsdiv);
+        }
+
+        if (g_audioplaylist.isEnabled() && !opt.fromplaylist) {
+            var addBtn = createButton(LANG.add);
+            $WH.ae(controls.controlsdiv, addBtn);
+            $WH.aE(addBtn, 'click', this.btnAddToPlaylist.bind(this, addBtn));
+            controls.addbutton = addBtn;
+            if (fullPlayer)
+                addBtn.style.verticalAlign = '50%';
+        }
+
+        if (g_audiocontrols.__windowloaded)
+            this.btnNextTrack();
+    };
+
+    function setNextTrack() {
+        updatePlayer(this, 1, (looping || (fileIdx < (playlist.length - 1))));
+    }
+
+    this.btnNextTrack = function () {
+        updatePlayer(this, 1, (canPlay && (controls.audio.readyState > 1) && (!controls.audio.paused)));
+    };
+
+    this.btnPrevTrack = function () {
+        updatePlayer(this, -1, (canPlay && (controls.audio.readyState > 1) && (!controls.audio.paused)));
+    };
+
+    this.btnAddToPlaylist = function (_self) {
+        if (fullPlayer) {
+            for (var i = 0; i < playlist.length; i++)
+                g_audioplaylist.addSound(playlist[i]);
+        }
+        else
+            g_audioplaylist.addSound(playlist[fileIdx]);
+
+        _self.className += ' button-red-disabled';
+        // $WH.st(_self, LANG.added);                       // Aowow doesn't work with RedButtons
+        RedButton.setText(_self, LANG.added);
+    };
+
+    this.isPlaying = function () {
+        return !controls.audio.paused;
+    };
+
+    this.removeSelf = function () {
+        controls.table.parentNode.removeChild(controls.table);
+        delete g_audiocontrols[controls.div];
+    };
+
+    function createButton(text, disabled) {
+        return $WH.g_createButton(text, null, {
+            disabled: disabled,
+            // 'float': false,                              Aowow - adapted style
+            // style: 'margin:0 12px; display:inline-block'
+            style: 'margin:0 12px; display:inline-block; float:inherit; '
+        });
+    }
+};
+
+$WH.aE(window, 'load', function () {
+    g_audiocontrols.__windowloaded = true;
+    for (var i in g_audiocontrols)
+        if (i.substr(0, 2) != '__')
+            g_audiocontrols[i].btnNextTrack();
+});
+
+AudioPlaylist = function () {
+    var enabled  = false;
+    var playlist = [];
+    var player, container;
+
+    this.init = function () {
+        if (!$WH.localStorage.isSupported())
+            return;
+
+        enabled = true;
+
+        var tracks;
+        if (tracks = $WH.localStorage.get('AudioPlaylist'))
+            playlist = JSON.parse(tracks);
+    };
+
+    this.savePlaylist = function () {
+        if (!enabled)
+            return false;
+
+        $WH.localStorage.set('AudioPlaylist', JSON.stringify(playlist));
+    };
+
+    this.isEnabled = function () {
+        return enabled;
+    };
+
+    this.addSound = function (track) {
+        if (!enabled)
+            return false;
+
+        this.init();
+        playlist.push(track);
+        this.savePlaylist();
+    };
+
+    this.deleteSound = function (idx) {
+        if (idx < 0)
+            playlist = [];
+        else
+            playlist.splice(idx, 1);
+
+        this.savePlaylist();
+
+        if (!player.isPlaying()) {
+            player.removeSelf();
+            this.setAudioControls(container);
+        }
+
+        if (playlist.length == 0)
+            $WH.Tooltip.hide();
+    };
+
+    this.getList = function () {
+        var buf = [];
+        for (var i = 0; i < playlist.length; i++)
+            buf.push(playlist[i].title);
+
+        return buf;
+    };
+
+    this.setAudioControls = function (parent) {
+        if (!enabled)
+            return false;
+
+        container = parent;
+        player = new AudioControls();
+        player.init(playlist, container, { loop: true, fromplaylist: true });
+    };
+};
+
+g_audioplaylist = (new AudioPlaylist);
+g_audioplaylist.init();
+
 $WH.aE(window, 'load', function () {
     if (!(window.JSON && $WH.localStorage.isSupported())) {
         return;
@@ -20850,6 +21881,37 @@ $WH.aE(window, 'load', function () {
     }
 });
 
+
+function GetN5(num)
+{
+    var absNum = Math.abs(num);
+
+    if (absNum < 10000) // 1234 = 1,234
+        return $WH.number_format(num);
+
+    if (absNum < 100000) // 12345 = 12.3k
+        return (Math.round(num / 100) / 10) + 'k';
+
+    if (absNum < 1000000) // 123456 = 123k
+        return Math.round(num / 1000) + 'k';
+
+    if (absNum < 10000000) // 1234567 = 1.23m
+        return (Math.round(num / 1000 / 10) / 100) + 'm';
+
+    if (absNum < 100000000) // 12345678 = 12.3m
+        return (Math.round(num / 1000 / 100) / 10) + 'm';
+
+    if (absNum < 1000000000) // 123456789 = 123m
+        return Math.round(num / 1000 / 1000) + 'm';
+
+    if (absNum < 10000000000) // 1234567890 = 1,234,567,890 = 1.23b
+        return (Math.round(num / 1000 / 1000 / 10) / 100) + 'b';
+
+    if (absNum < 10000000000) // 1234567890 = 1,234,567,890 = 1.23b
+        return (Math.round(num / 1000 / 1000 / 100) / 10) + 'b';
+
+    return Math.round(num / 1000 / 1000 / 1000) + 'b';
+}
 
 function CreateAjaxLoader() {
     return $('<img>').attr('alt', '').attr('src', g_staticUrl + '/images/icons/ajax.gif').addClass('ajax-loader');
@@ -21328,6 +22390,8 @@ var
     g_races              = {},
     g_skills             = {},
     g_gatheredcurrencies = {},
+    g_sounds             = {},
+    g_icons              = {},
     g_enchantments       = {},
     g_emotes             = {};
 
@@ -21348,6 +22412,8 @@ var g_types = {
      14: 'race',
      15: 'skill',
      17: 'currency',
+     19: 'sound',
+     29: 'icon',
     501: 'emote',
     502: 'enchantment'
 };
@@ -21559,7 +22625,7 @@ var ConditionList = new function() {
             return 'unknown condition index ' + strIdx;
 
         // these cases are not (yet) handled in detail
-        if ($WH.in_array([11, 13, 21, 24, 33, 34], strIdx) != -1)
+        if ($WH.in_array([13, 21, 24, 33, 34], strIdx) != -1)
             return g_conditions[strIdx].replace(/\$([^\$:;]*):([^\$:;]*);/, '$' + (entry[0] > 0 ? 1 : 2));
 
         switch (Math.abs(entry[0])) {
@@ -21628,6 +22694,9 @@ var ConditionList = new function() {
                      break;
             case 35: param[0] = entry[2];
                      param[1] = g_operators[entry[3]];
+                     break;
+            case 11: param[0] = entry[1];
+                     param[1] = entry[2];
                      break;
             case 26:
                     var pIndex = 0;

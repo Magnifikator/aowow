@@ -780,6 +780,52 @@ var mn_enchantments = [
     [6,"DPS","?enchantments&filter=ty=6"],
     [4,"Défense","?enchantments&filter=ty=4"]
 ];
+var mn_sounds = [
+    [1000, "Ma playlist", "?sound&playlist"],
+    [, "Types"],
+    [19,"Armor","?sounds&filter=ty=19"],
+    [16,"Death","?sounds&filter=ty=16"],
+    [25,"Doodads","?sounds&filter=ty=25"],
+    [52,"Emitters","?sounds&filter=ty=52"],
+    [29,"Emotes","?sounds&filter=ty=29"],
+    [12,"Errors","?sounds&filter=ty=12"],
+    [20,"Footstep Splash","?sounds&filter=ty=20"],
+    [3,"Footsteps","?sounds&filter=ty=3"],
+    [24,"Misc Ambience","?sounds&filter=ty=24"],
+    [10,"NPC Combat","?sounds&filter=ty=10"],
+    [17,"NPC Greetings","?sounds&filter=ty=17"],
+    [27,"NPC Loops","?sounds&filter=ty=27"],
+    [31,"Narration","?sounds&filter=ty=31"],
+    [30,"Narration Music","?sounds&filter=ty=30"],
+    [13,"Nature","?sounds&filter=ty=13"],
+    [14,"Objects","?sounds&filter=ty=14"],
+    [9,"Pick Up/Put Down","?sounds&filter=ty=9"],
+    [26,"Spell Fizzle","?sounds&filter=ty=26"],
+    [1,"Spells","?sounds&filter=ty=1"],
+    [23,"Tradeskills","?sounds&filter=ty=23"],
+    [2,"User Interface","?sounds&filter=ty=2"],
+    [53,"Vehicles","?sounds&filter=ty=53"],
+    [22,"Water","?sounds&filter=ty=22"],
+    [21,"Water (Character)","?sounds&filter=ty=21"],
+    [4,"Weapons Impacts","?sounds&filter=ty=4"],
+    [6,"Weapons Misses","?sounds&filter=ty=6"],
+    [50,"Zone Ambience","?sounds&filter=ty=50"],
+    [28,"Zone Music","?sounds&filter=ty=28"]
+];
+mn_icons = [
+    [3, "Hauts faits", "?icons&filter=cr=3;crs=1;crv=0"],
+    // [4, "Mascottes de combat", "?icons&filter=cr=4;crs=1;crv=0"],
+    // [5, "Capacités de Familiers en Combat", "?icons&filter=cr=5;crs=1;crv=0"],
+    [11, "Classes", "?icons&filter=cr=11;crs=1;crv=0"],
+    [6, "Monnaies", "?icons&filter=cr=6;crs=1;crv=0"],
+    // [7, "Compétences de fief", "?icons&filter=cr=7;crs=1;crv=0"],
+    // [8, "Bâtiments de fief", "?icons&filter=cr=8;crs=1;crv=0"],
+    [1, "Objets", "?icons&filter=cr=1;crs=1;crv=0"],
+    [9, "Familiers de chasseur", "?icons&filter=cr=9;crs=1;crv=0"],
+    [2, "Sorts", "?icons&filter=cr=2;crs=1;crv=0"],
+    // [10, "Menaces", "?icons&filter=cr=10;crs=1;crv=0"],
+    [13, "Inutilisé", "?icons&filter=cr=13;crs=3;crv=0"]
+];
 var mn_talentCalc = [
     [6,"Chevalier de la mort","?talent#j",,{className:"c6",tinyIcon:"class_deathknight"}],
     [11,"Druide","?talent#0",,{className:"c11",tinyIcon:"class_druid"}],
@@ -830,24 +876,30 @@ var mn_petCalc = [
     [42,"Ver","?petcalc#mm",,{tinyIcon:"Ability_Hunter_Pet_Worm"}]
 ];
 var mn_database = [
-    [9,"Hauts faits","?achievements",mn_achievements],
-    [12,"Classes","?classes",mn_classes],
-    [15,"Monnaies","?currencies", mn_currencies],
-    [7,"Factions","?factions",mn_factions],
-    [8,"Familiers de chasseur","?pets",mn_pets],
+    [, "Objets"],
     [2,"Ensembles d'objets","?itemsets",mn_itemSets],
     [0,"Objets","?items",mn_items],
-    [4,"PNJs","?npcs",mn_npcs],
-    [5,"Entités","?objects",mn_objects],
+    [101,"Enchantements","?enchantments",mn_enchantments],
+    [, "Personnage"],
+    [9,"Hauts faits","?achievements",mn_achievements],
+    [12,"Classes","?classes",mn_classes],
+    [8,"Familiers de chasseur","?pets",mn_pets],
     [14,"Métiers & compétences","?skills",mn_skills],
-    [3,"Quêtes","?quests",mn_quests],
     [13,"Races","?races",mn_races],
     [1,"Sorts","?spells",mn_spells],
     [10,"Titres","?titles",mn_titles],
+    [100,"Emotes","?emotes",null],
+    [, "Monde"],
+    [15,"Monnaies","?currencies", mn_currencies],
+    [7,"Factions","?factions",mn_factions],
+    [4,"PNJs","?npcs",mn_npcs],
+    [5,"Entités","?objects",mn_objects],
+    [3,"Quêtes","?quests",mn_quests],
     [11,"Évènements mondiaux","?events",mn_holidays],
     [6,"Zones","?zones",mn_zones],
-    [100,"Emotes","?emotes",null],
-    [101,"Enchantements","?enchantments",mn_enchantments]
+    [, "Autre"],
+    [31, "Icônes", ":wowhead.com/icons", mn_icons],
+    [19,"Sons","?sounds", mn_sounds]
 ];
 var mn_tools = [
     [0,"Calculateur de talents","?talent",mn_talentCalc],
@@ -890,13 +942,33 @@ var mn_tools = [
         [4,"Page au hasard","?random"]
     ]]
 ];
+var mn_reputation = [
+    [0, "Montrer tous les privilèges", "?privileges"],
+    [, "Privilèges"],
+    [1, "Poster des commentaires", "?privilege=1"],
+    // [2, "Poster des liens externes", "?privilege=2"],
+    // [4, "Pas de CAPTCHA", "?privilege=4"],
+    [5, "Les votes des commentaires ont plus de valeur", "?privilege=5"],
+    [9, "Plus de votes par jour", "?privilege=9"],
+    [10, "Emettre des votes positifs pour les commentaires", "?privilege=10"],
+    [11, "Donner des votes négatifs aux commentaires", "?privilege=11"],
+    [12, "Envoyer des réponses aux commentaires", "?privilege=12"],
+    // [13, "Bordure : Bonne", "?privilege=13"],
+    // [14, "Bordure : Rare", "?privilege=14"],
+    // [15, "Bordure : Épique", "?privilege=15"],
+    // [16, "Bordure : Légendaire", "?privilege=16"],
+    [17, "AoWoW Premium", "?privilege=17"]
+];
 var mn_community = [
     [3,"Forum","http://forums.battle.net",null,{tinyIcon: g_staticUrl + "/images/icons/forum.png"}],
     [7,"Blog","http://worldpress.com",null,{tinyIcon: g_staticUrl + "/images/icons/blog.png"}],
     [4,"Canal IRC","http://webchat.quakenet.org/",null,{tinyIcon: g_staticUrl + "/images/icons/irc.png"}],
+    [,"Communauté"],
+    [10, "Réputation du site", "?reputation", mn_reputation],
+    [11, "Meilleurs Utilisateurs", "?top-users"],
     [,"Social"],
-    [6,"Page Facebook","http://facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.gif"}],
-    [5,"Page Twitter","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.gif"}]
+    [6,"Page Facebook","http://facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.png"}],
+    [5,"Page Twitter","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.png"}]
 ];
 var mn_more = [
     [,"Tout sur AoWoW"],
@@ -2195,7 +2267,9 @@ var g_user_roles = {
     10: 'Traducteur',
     11: 'Agent de ventes',
     12: 'Gestionnaire de capture d\'écran',
-    13: 'Gestionnaire de vidéos'
+    13: 'Gestionnaire de vidéos',
+    14: 'artenaire API',
+    15: 'En attente'
 };
 
 var g_gem_colors = {
@@ -2279,7 +2353,7 @@ var g_conditions = {
      8: 'The Player has$: not; finished $1',
      9: 'The Player has$: not; accepted $1',
     10: 'The Player is$: not; $1',
-    11: 'The game word is$: not; in a certain state',       // nyi
+    11: 'WorldState #$1 is$: not; $2',
     12: '$1 must$: not; be active',
     13: 'The instance $has:does not have; a certain state', // nyi
     14: 'The Player has $never:; interacted with $1',
@@ -2305,8 +2379,15 @@ var g_conditions = {
 /* end custom */
 
 var LANG = {
+    alltime_stc:   "A chaque fois",
+    lastmonth_stc: "Mois dernier",
+    lastweek_stc:  "Semaine dernière",
+
+    linkremoved:     "lien enlevé",
+    linkremoved_tip: "Les nouveaux utilisateurs ne peuvent pas donner de liens vers<br />des sites web non-approuvés.",
+
     and:      " et ",
-    or:       " ou ",
+    or:       " ou ",                                       // custom
     comma:    ", ",
     ellipsis: "…",
     dash:     " – ",
@@ -2321,7 +2402,7 @@ var LANG = {
     date_ago:    "il y a $1",
     date_at:     " à ",
     date_to:     " à ",
-    date_simple: "$3-$2-$1",
+    date_simple: "$1-$2-$3",
     unknowndate_stc: "Date inconnue",
     date_months: ["janvier", "février", "mars", "Avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
     date_days:   ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"],
@@ -2329,6 +2410,7 @@ var LANG = {
     amount:                 "Montant",
     abilities:              "Techniques",
     activity:               "Activité",
+    add:                    "Ajouter",
     animation:              "Animation",
     armor:                  "Armure",
     text:                   "Texte",
@@ -2350,10 +2432,12 @@ var LANG = {
     daily:                  "Journalière",
     weekly:                 "Chaque semaine",
     damage:                 "Dégâts",
+    'delete':               "Supprimer",
     diet:                   "Alimentation",
     dps:                    "DPS",
     earned:                 "Accomplis",
     enchant:                "Enchanter",
+    entitycount:            "$1 $2",
     exp:                    "Exp.",
     faction:                "Faction",
     gains:                  "Gains",
@@ -2398,7 +2482,7 @@ var LANG = {
     rejected:               "Rejeter",
     rep:                    "Rép.",
     req:                    "Req. ",
-    requires:               "Requière",
+    requires:               "Requiert",
     reputation:             "Réputation",
     rewards:                "Récompenses",
     petfamily:              "Familier",
@@ -2447,6 +2531,7 @@ var LANG = {
     tp:                     "PE",
     trending:               "Tendance",
     type:                   "Type",
+    unused:                 "Inutilisé",
     up:                     "Vers le haut",
     cooldown:               "Recharge",
     duration:               "Durée",
@@ -2471,6 +2556,8 @@ var LANG = {
 
     male:   "Homme",
     female: "Femme",
+
+    searchdb: "Rechercher dans la base de données...",
 
     source_bossdrop: "Butin de Boss",
     source_zonedrop: "Butin de zone",
@@ -2553,6 +2640,9 @@ var LANG = {
     lvpage_next:     "Suiv. ",
     lvpage_last:     "Dernière ",
 
+    lvsearchresults:          "Rechercher parmi les résultats...",
+    lvsearchdisplayedresults: "Rechercher parmi les résultats affichés...",
+
     lvscreenshot_submit: "Envoyer une capture d'écran",
     lvscreenshot_from:   "Par ",
     lvscreenshot_hires:  "Voir",
@@ -2575,11 +2665,14 @@ var LANG = {
     lvnodata_vi2: "Soyez le premier <a>suggérer un vidéo</a> pour cette page!",
     lvnodata_vi3: "Veuillez vous <a>connecter</a> pour suggérer un vidéo ou <a>enregistrez vous</a> si vous n'avez pas de compte.",
 
+    lvnote_sort: "Trier par : ",
+
     lvnote_tryfiltering: "Essayez de <a>filtrer</a> vos résultats",
     lvnote_trynarrowing: "Essayez de restreindre votre recherche",
     lvnote_upgradesfor:  'En train de trouver des améliorations pour <a href="?item=$1" class="q$2"><b>$3</b></a>.',
     lvnote_witherrors:   "Certains filtres dans votre recherche étaient invalides et on été ignorés.",
 
+    lvnote_entitiesfound:     "$1 $2 trouvés ($3 affichés)",
     lvnote_itemsfound:        "$1 objets trouvés ($2 affichés)",
     lvnote_itemsetsfound:     "$1 ensembles d'objets trouvés ($2 affichés)",
     lvnote_npcsfound:         "$1 PNJs trouvés ($2 affichés)",
@@ -2607,6 +2700,7 @@ var LANG = {
     lvnote_arenateamsfound2:  "Total de $1 équipes d'aréna, $2 qui coïncides",
     lvnote_currenciesfound:   "$1 monnaies trouvées ($2 affichées)",
     lvnote_enchantmentsfound: "$1 enchantements trouvés ($2 affichés)",
+    lvnote_soundsfound:       "$1 sons trouvés (2$ affichés)",
 
     lvnote_createafilter:  '<small><a href="$1">Créer un filtre</a></small>',
     lvnote_filterresults:  '<small><a href="$1">Filtrer ces résultats</a></small>',
@@ -2702,6 +2796,7 @@ var LANG = {
     dialog_mouseovertoload: "Passez votre curseur de souris pour charger...",
 
     message_ajaxnotsupported:     "Veuillez utiliser un navigateur plus moderne (tel que Firefox) qui supporte les requêtes 'Ajax'.",
+    message_browsernoaudio:       "Nous sommes désolés, mais votre navigateur ne peut pas lire le format audio obligatoire : $1",
     message_cantdeletecomment:    "Ce commentaire a été automatiquement effacé à cause d'une note négative. Il ne peut être supprimé.",
     message_cantdetachcomment:    "Ce commentaire a déjà été détaché.",
     message_codenotentered:       "Vous n'avez pas écrit le CAPTCHA.",
@@ -3195,6 +3290,8 @@ var LANG = {
          15: ["Compétence",        "compétence",        "Compétences",         "compétences"],
          16: ["Statistique",       "statistique",       "Statistiques",        "statistiques"],
          17: ["Monnaies",          "monnaie",           "Monnaies",            "monnaies"],
+         19: ["Son",               "Son",               "Sons",                "Sons"],
+         29: ["Icône",             "icône",             "Icônes",              "icônes"],
         501: ["Emote",             "emote",             "Emotes",              "emotes"],
         502: ["Enchantement",      "enchantement",      "Enchantements",       "enchantements"]
     },
@@ -3598,7 +3695,7 @@ var LANG = {
         relatedevent:            "Évènement mondial relié",
         repaircost:              "Cout de réparation (bronze)",
         reqskillrank:            "Niveau de compétence requis",
-        requiresevent:           "Requière un évènement mondial",
+        requiresevent:           "Requiert un évènement mondial",
         requiresprof:            "Requiert un métier",
         requiresprofspec:        "Requiert une spécialisation de métier",
         requiresrepwith:         "Requiert une réputation avec...",
@@ -3871,6 +3968,23 @@ var LANG = {
         teamcontrib5v5:       "Contribution d'un équipe d'aréna 5v5"
     },
 
+    fiicons: {                                              // derived from from LANG.filters_icons
+        sepgeneral:         "Général",
+        sepuses:            "Usages",
+        used:               "Nombre d'utilisations",
+        items:              "Utilisé par des Objets",
+        spells:             "Utilisé par des Sorts",
+        achievements:       "Utilisé par des Hauts faits",
+     // battlepets:         "Utilisé par des Mascottes de combat",
+     // battlepetabilities: "Utilisé par des Capacités de Familiers en Combat",
+        currencies:         "Utilisé par des Monnaies",
+     // missionabilities:   "Utilisé par des Capacités de la mission",
+     // garrisonbuildings:  "Utilisé par des Bâtiments de fief",
+        hunterpets:         "Utilisé par des Familiers de chasseur",
+     // threats:            "Utilisé par des Menaces",
+        classes:            "Utilisé par des Classes"
+    },
+
     // custom
     fienchantments: {
         id:             "ID",
@@ -3933,7 +4047,7 @@ var LANG = {
     dialog_promo:      "Obtenu a partir d'une promotion",
     dialog_nonus:      "Non disponible sur les serveurs US",
     dialog_faction:    "Favorisé par la faction rivale",
-    dialog_profession: "Requière une autre profession",
+    dialog_profession: "Requiert une autre profession",
     dialog_exclude:    "Exclure des entrées vous permet d'enlever les trucs que vous ne pouvez ou ne voulez pas compléter. Les inclusions/exclusions individuelles vont écraser les catégories rapides ci-dessous.<br /><br />Vos paramètres d'exclusions sont partagés entre tous les personnages.",
     dialog_noexalted:  "Impossible d'atteindre exalté",
 
@@ -4358,6 +4472,54 @@ var LANG = {
     build:       "Version",
     calculators: "Calculateurs",
     patch:       "Patch",
+
+    sound_activities: {
+        greeting:          "Salutation",
+        farewell:          "Adieu",
+        angry:             "En colère",
+        exertion:          "Attaque",
+        exertioncritical:  "Coup critique",
+        injury:            "Blessure",
+        injurycritical:    "Blessure critique",
+        death:             "Mort",
+        stun:              "Étourdi",
+        stand:             "Debout",
+        footstep:          "Trace de pas",
+        aggro:             "Menace",
+        wingflap:          "Battement d'ailes",
+        wingglide:         "Planer",
+        alert:             "Alerte",
+        fidget:            "Gigoter",
+        customattack:      "Personnalisé",
+        loop:              "Répéter",
+        jumpstart:         "Sauter",
+        jumpend:           "Atterissage",
+        petattack:         "Attaque de Mascotte",
+        petorder:          "Ordre au familier",
+        petdismiss:        "Renvoi de Mascotte",
+        birth:             "Créé",
+        spellcast:         "Sort",
+        submerge:          "Submerger",
+        submerged:         "Submergé",
+        transform:         "Transformer",
+        transformanimated: "Transformer",
+        animation:         "Animation",
+        ready:             "Prêt",
+        precast:           "Préincantation",
+        cast:              "Lancer",
+        impact:            "Impact",
+        state:             "État",
+        statedone:         "Terminé",
+        channel:           "Canalisée",
+        casterimpact:      "Impact sur le lanceur",
+        targetimpact:      "Impact sur la cible",
+        castertargeting:   "Choix de la cible par le lanceur",
+        missiletargeting:  "Missile en cours de ciblage",
+        instantarea:       "Zone instantanée",
+        persistentarea:    "Zone persistante",
+        casterstate:       "État du lanceur",
+        targetstate:       "État de la cible"
+    },
 
     /* custom */
     note_condition:       "Every one of these conditions must be met to satisfy the requirement.",

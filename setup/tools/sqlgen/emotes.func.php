@@ -9,31 +9,36 @@ if (!CLI)
 
 $customData = array(
 );
-$reqDBC = ['emotes', 'emotestext', 'emotestextdata' /*, 'emotestextsound' */];
+$reqDBC = ['emotes', 'emotestext', 'emotestextdata'];
 
 function emotes(/*array $ids = [] */)
 {
+    /**********/
+    /* Basics */
+    /**********/
+
     $globStrPath  = CLISetup::$srcDir.'%sInterface/FrameXML/GlobalStrings.lua';
     $allOK        = true;
     $locPath      = [];
 
+    DB::Aowow()->query('TRUNCATE ?_emotes_aliasses');
+
     foreach (CLISetup::$localeIds as $lId)
     {
-        DB::Aowow()->query('TRUNCATE ?_emotes_aliasses');
-
-        $path = sprintf($globStrPath, Util::$localeStrings[$lId].'/');
-        if (CLISetup::fileExists($path))
+        foreach (CLISetup::$expectedPaths as $xp => $locId)
         {
-            $locPath[$lId] = $path;
-            continue;
-        }
+            if ($lId != $locId)
+                continue;
 
-        // locale not found, try base mpqData
-        $path = sprintf($globStrPath, '');
-        if (CLISetup::fileExists($path))
-        {
-            $locPath[$lId] = $path;
-            continue;
+            if ($xp)                                        // if in subDir add trailing slash
+                $xp .= '/';
+
+            $path = sprintf($globStrPath, $xp);
+            if (CLISetup::fileExists($path))
+            {
+                $locPath[$lId] = $path;
+                continue 2;
+            }
         }
 
         CLISetup::log('GlobalStrings.lua not found for selected locale '.CLISetup::bold(Util::$localeStrings[$lId]), CLISetup::LOG_WARN);
@@ -41,7 +46,7 @@ function emotes(/*array $ids = [] */)
     }
 
     $_= DB::Aowow()->query('REPLACE INTO ?_emotes SELECT
-            et.Id,
+            et.id,
             LOWER(et.command),
             IF(e.animationId, 1, 0),
             0,                                              -- cuFlags
@@ -51,13 +56,13 @@ function emotes(/*array $ids = [] */)
         FROM
             dbc_emotestext et
         LEFT JOIN
-            dbc_emotes e ON e.Id = et.emoteId
+            dbc_emotes e ON e.id = et.emoteId
         LEFT JOIN
-            dbc_emotestextdata etdT  ON etdT.Id  = et.targetId
+            dbc_emotestextdata etdT  ON etdT.id  = et.targetId
         LEFT JOIN
-            dbc_emotestextdata etdNT ON etdNT.Id = et.noTargetId
+            dbc_emotestextdata etdNT ON etdNT.id = et.noTargetId
         LEFT JOIN
-            dbc_emotestextdata etdS  ON etdS.Id  = et.selfId'
+            dbc_emotestextdata etdS  ON etdS.id  = et.selfId'
     );
 
     if (!$_)

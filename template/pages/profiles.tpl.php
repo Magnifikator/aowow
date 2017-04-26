@@ -15,7 +15,7 @@ $this->brick('pageTemplate', ['fi' => empty($f['query']) ? null : ['query' => $f
 # for some arcane reason a newline (\n) means, the first childNode is a text instead of the form for the following div
 ?>
             <div id="fi" style="display: <?=(empty($f['query']) ? 'none' : 'block'); ?>;"><form
-                action="?profiles<?=$this->subCat; ?>&filter" method="post" name="fi" onsubmit="return fi_submit(this)" onreset="return fi_reset(this)">
+                action="?filter=profiles<?=$this->subCat; ?>" method="post" name="fi" onsubmit="return fi_submit(this)" onreset="return fi_reset(this)">
                     <div class="rightpanel">
                         <div style="float: left"><?=Util::ucFirst(Lang::game('class')).Lang::main('colon'); ?></div>
                         <small><a href="javascript:;" onclick="document.forms['fi'].elements['cl[]'].selectedIndex = -1; return false" onmousedown="return false"><?=Lang::main('clear'); ?></a></small>
@@ -99,16 +99,7 @@ endforeach;
                 <div class="pad"></div>
             </div>
 
-            <script type="text/javascript">//<![CDATA[
-                pr_setRegionRealm($WH.ge('fi').firstChild, '<?=$this->region; ?>', '<?=$this->realm; ?>');
-                pr_onChangeRace();
-                fi_init('profiles');
-<?php
-foreach ($f['fi'] as $str):
-    echo '                '.$str."\n";
-endforeach;
-?>
-            //]]></script>
+<?php $this->brick('filter', ['fi' => $f['initData']]); ?>
 
 <?php $this->brick('lvTabs'); ?>
 

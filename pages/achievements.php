@@ -42,8 +42,8 @@ class AchievementsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->filterObj = new AchievementListFilter();
         $this->getCategoryFromUrl($pageParam);
+        $this->filterObj = new AchievementListFilter(false, $this->category);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -63,9 +63,12 @@ class AchievementsPage extends GenericPage
             $conditions[] = ['category', (int)end($this->category)];
 
         // recreate form selection
-        $this->filter = $this->filterObj->getForm('form');
+        $this->filter = $this->filterObj->getForm();
         $this->filter['query'] = isset($_GET['filter']) ? $_GET['filter'] : null;
-        $this->filter['fi']    =  $this->filterObj->getForm();
+        $this->filter['initData'] = ['init' => 'achievements'];
+
+        if ($x = $this->filterObj->getSetCriteria())
+            $this->filter['initData']['sc'] = $x;
 
         if ($fiCnd = $this->filterObj->getConditions())
             $conditions[] = $fiCnd;
@@ -88,37 +91,33 @@ class AchievementsPage extends GenericPage
             $acvList = new AchievementList($conditions);
         }
 
-        $params = $data = [];
+        $tabData = [];
         if (!$acvList->error)
         {
-            $data = $acvList->getListviewData();
+            $tabData['data'] = array_values($acvList->getListviewData());
 
             // fill g_items, g_titles, g_achievements
             $this->extendGlobalData($acvList->getJSGlobals());
 
             // if we are have different cats display field
             if ($acvList->hasDiffFields(['category']))
-                $params['visibleCols'] = "$['category']";
+                $tabData['visibleCols'] = ['category'];
 
             if (!empty($this->filter['fi']['extraCols']))
-                $params['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
+                $tabData['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
 
             // create note if search limit was exceeded
             if ($acvList->getMatches() > CFG_SQL_LIMIT_DEFAULT)
             {
-                $params['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_achievementsfound', $acvList->getMatches(), CFG_SQL_LIMIT_DEFAULT);
-                $params['_truncated'] = 1;
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_achievementsfound', $acvList->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+                $tabData['_truncated'] = 1;
             }
 
             if ($this->filterObj->error)
-                $params['_errors'] = '$1';
+                $tabData['_errors'] = 1;
         }
 
-        $this->lvTabs[] = array(
-            'file'   => 'achievement',
-            'data'   => $data,
-            'params' => $params
-        );
+        $this->lvTabs[] = ['achievement', $tabData];
 
         // sort for dropdown-menus in filter
         Lang::sort('game', 'si');

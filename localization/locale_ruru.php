@@ -46,12 +46,14 @@ $lang = array(
         'forum'         => "Форум",
         'n_a'           => "нет",
         'siteRep'       => "Репутация",
+        'yourRepHistory'=> "История вашей репутации",
         'aboutUs'       => "О Aowow",
         'and'           => " и ",
         'or'            => " или ",
         'back'          => "Назад",
         'reputationTip' => "Очки репутации",
         'byUserTimeAgo' => 'От <a href="'.HOST_URL.'/?user=%s">%1s</a> %s назад',
+        'help'          => "Справка",
 
         // filter
         'extSearch'     => "Расширенный поиск",
@@ -134,6 +136,23 @@ $lang = array(
         'genericError'  => "Произошла ошибка; обновите страницу и попробуйте снова. Если ситуация повторяется, отправьте сообщение на <a href='#contact'>feedback</a>", # LANG.genericerror
         'bannedRating'  => "Вам была заблокирована возможность оценивать комментарии.", # LANG.tooltip_banned_rating
         'tooManyVotes'  => "Вы сегодня проголосовали слишком много раз! Вы сможете продолжить завтра.", # LANG.tooltip_too_many_votes
+
+        'moreTitles'    => array(
+            'reputation'    => "Репутация на сайте",
+            'whats-new'     => "Новости",
+            'searchbox'     => "Окно поиска",
+            'tooltips'      => "Всплывающие подсказки",
+            'faq'           => "[Frequently Asked Questions]",
+            'aboutus'       => "[What is AoWoW?]",
+            'searchplugins' => "Дополнения для браузеров",
+            'privileges'    => "Привилегии",
+            'top-users'     => "Лучшие пользователи",
+            'help'          => array(
+                'commenting-and-you' => "Комментарии и Вы",                 'modelviewer'       => "3D просмотр",               'screenshots-tips-tricks' => "Скриншоты: Секреты мастерства",
+                'stat-weighting'     => "Значимость характеристик",         'talent-calculator' => "Расчёт талантов",           'item-comparison'         => "Сравнение предметов",
+                'profiler'           => "Профили персонажей",               'markup-guide'      => "Markup Guide"
+            )
+        )
     ),
 
     'profiler' => array(
@@ -202,6 +221,8 @@ $lang = array(
         'faction'       => "фракция",
         'factions'      => "Фракции",
         'cooldown'      => "Восстановление: %s",
+        'icon'          => "иконка",
+        'icons'         => "Иконки",
         'item'          => "предмет",
         'items'         => "Предметы",
         'itemset'       => "комплект",
@@ -220,12 +241,13 @@ $lang = array(
         'requires'      => "Требует %s",
         'requires2'     => "Требуется:",
         'reqLevel'      => "Требуется уровень: %s",
-        'reqLevelHlm'   => "Требуется уровень: %s",
         'reqSkillLevel' => "Требуется уровень навыка",
         'level'         => "Уровень",
         'school'        => "Школа",
         'skill'         => "Уровень навыка",
         'skills'        => "Умения",
+        'sound'         => "Звук",
+        'sounds'        => "Звуки",
         'spell'         => "заклинание",
         'spells'        => "Заклинания",
         'type'          => "Тип",
@@ -313,7 +335,7 @@ $lang = array(
         'groups'        => array(
             -1 => "Нет",                    "Тестер",                       "Администратор",                "Редактор",                     "Модератор",                    "Бюрократ",
             "Разработчик",                  "VIP",                          "Блогер",                       "Учетная запись Премиум",       "Переводчик",                   "Агент по продажам",
-            "Менеджер изображений",         "Менеджер видео"
+            "Менеджер изображений",         "Менеджер видео",               "API партнер",                  "Ожидающее"
         ),
         // signIn
         'doSignIn'      => "Войти в вашу учетную запись Aowow",
@@ -359,7 +381,7 @@ $lang = array(
         'accActivated'  => 'Your account has been activated.<br>Proceed to <a href="?account=signin&token=%s">sign in</a>',
         'userNotFound'  => "The username you entered does not exists.",
         'wrongPass'     => "That password is not vaild.",
-        'accInactive'   => "That account has not yet been confirmed active.",
+        // 'accInactive'   => "That account has not yet been confirmed active.",
         'loginExceeded' => "The maximum number of logins from this IP has been exceeded. Please try again in %s.",
         'signupExceeded'=> "The maximum number of signups from this IP has been exceeded. Please try again in %s.",
         'errNameLength' => "Имя пользователя не должно быть короче 4 символов.", // message_usernamemin
@@ -424,6 +446,7 @@ $lang = array(
         'trap'          => "Ловушки",
         'triggeredBy'   => "Срабатывает от",
         'capturePoint'  => "Точка захвата",
+        'foundIn'       => "Этот НИП может быть найден в следующих зонах:",
         'restock'       => "[Restocks every %s.]"
     ),
     'npc' => array(
@@ -446,6 +469,7 @@ $lang = array(
         'melee'         => "Ближнего боя",
         'ranged'        => "Дальнего боя",
         'armor'         => "Броня",
+        'foundIn'       => "Этот объект может быть найден в следующих зонах:",
         'tameable'      => "Можно приручить (%s)",
         'waypoint'      => "Путевой точки",
         'wait'          => "Период ожидания",
@@ -508,6 +532,20 @@ $lang = array(
         'Miscellaneous' => "Разное",
         'Azeroth'       => "Азерот",
         'CosmicMap'     => "Звёздная карта",
+    ),
+    'privileges' => array(
+        'main'          => "Здесь на AoWoW вы можете зарабатывать <a href=\"?reputation\">репутацию</a>. Основной источник получения репутации — увеличение рейтинга ваших комментариев другими пользователями.<br><br>Репутация примерно измеряет количество вашего вклада в сообщество.<br><br>По мере того, как вы зарабатываете репутацию, вы получаете доверие сообщества и особые привилегии. Полный список привилегий расположен ниже.",
+        'privilege'     => "Привилегия",
+        'privileges'    => "Привилегии",
+        'requiredRep'   => "Необходима репутация",
+        'reqPoints'     => "Для этой привилегии требуется <b>%s</b> очков репутации.",
+        '_privileges'   => array(
+            null,                                   "Оставлять комментарии",                        "Оставлять внешние ссылки",                         null,
+            "Нет CAPTCHA",                          "Более сильные голоса",                         null,                                               null,
+            null,                                   "Больше голосов в день",                        "Голосовать за комментарии",                        "Голосовать против комментариев",
+            "Отвечать на комментарии",              "Граница: Необычный",                           "Граница: Редкий",                                  "Граница: Эпический",
+            "Граница: Легендарный",                 "AoWoW Premium"
+        )
     ),
     'zone' => array(
         'notFound'      => "Такая местность не существует.",
@@ -586,8 +624,9 @@ $lang = array(
         'receiveAlso'   => "Вы также получите",
         'spellCast'     => "Следующее заклинание будет наложено на вас",
         'spellLearn'    => "Вы изучите",
-        'bonusTalents'  => "очков талантов",
+        'bonusTalents'  => "%d |4очко талантов:очка талантов:очков талантов;",
         'spellDisplayed'=> ' (показано: <a href="?spell=%d">%s</a>)',
+        'attachment'    => "[Attachment]",
         'questInfo'     => array(
               0 => "Обычный",            1 => "Группа",             21 => "Жизнь",              41 => "PvP",                62 => "Рейд",               81 => "Подземелье",         82 => "Игровое событие",
              83 => "Легенда",           84 => "Сопровождение",      85 => "Героическое",        88 => "Рейд (10)",          89 => "Рейд (25)"
@@ -663,6 +702,9 @@ $lang = array(
            -2 => "Разное"
         )
     ),
+    'icon'  => array(
+        'notFound'      => "Этой иконки не существует"
+    ),
     'title' => array(
         'notFound'      => "Такое звание не существует.",
         '_transfer'     => 'Этот предмет превратится в <a href="?title=%d" class="q1">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
@@ -684,10 +726,25 @@ $lang = array(
             1 => "Разное", 2 => "PvP", 4 => "World of Warcraft", 21 => "Wrath of the Lich King", 22 => "Подземелья и рейды", 23 => "Burning Crusade", 41 => "Test", 3 => "Неактивно"
         )
     ),
+    'sound' => array(
+        'notFound'      => "Этот звук не существует.",
+        'foundIn'       => "Этот Звук может быть найден в следующих зонах:",
+        'goToPlaylist'  => "Перейти к плейлисту",
+        'music'         => "Музыка",
+        'intro'         => "Начальная музыка",
+        'ambience'      => "Атмосфера",
+        'cat'           => array(
+            null,              "Spells",            "User Interface", "Footsteps",   "Weapons Impacts", null,      "Weapons Misses", null,            null,         "Pick Up/Put Down",
+            "NPC Combat",      null,                "Errors",         "Nature",      "Objects",         null,      "Death",          "NPC Greetings", null,         "Armor",
+            "Footstep Splash", "Water (Character)", "Water",          "Tradeskills", "Misc Ambience",   "Doodads", "Spell Fizzle",   "NPC Loops",     "Zone Music", "Emotes",
+            "Narration Music", "Narration",         50 => "Zone Ambience", 52 => "Emitters", 53 => "Vehicles", 1000 => "Мой плейлист"
+        )
+    ),
     'pet'      => array(
         'notFound'      => "Такой породы питомцев не существует.",
         'exotic'        => "Экзотический",
-        'cat'           => ["Свирепость", "Упорство", "Хитрость"]
+        'cat'           => ["Свирепость", "Упорство", "Хитрость"],
+        'food'          => ["Мясо", "Рыба", "Сыр", "Хлеб", "Грибы", "Фрукты", "Сырое мясо", "Сырая рыба"]
     ),
     'faction' => array(
         'notFound'      => "Такая фракция не существует.",
@@ -751,7 +808,6 @@ $lang = array(
         '_collapseAll'  => "Свернуть все",
         '_expandAll'    => "Развернуть все",
         '_transfer'     => 'Этот предмет превратится в <a href="?spell=%d" class="q%d icontiny tinyspecial" style="background-image: url('.STATIC_URL.'/images/wow/icons/tiny/%s.gif)">%s</a>, если вы перейдете за <span class="icon-%s">%s</span>.',
-
         'discovered'    => "Изучается путём освоения местности",
         'ppm'           => "Срабатывает %s раз в минуту",
         'procChance'    => "Шанс срабатывания",
@@ -772,6 +828,8 @@ $lang = array(
         'pctCostOf'     => "от базовой %s",
         'costPerSec'    => ", плюс %s в секунду",
         'costPerLevel'  => ", плюс %s за уровень",
+        'stackGroup'    => "[Stack Group]",
+        'linkedWith'    => "[Linked with]",
         '_scaling'      => "[Scaling]",
         'scaling'       => array(
             'directSP' => "[+%.2f%% of spell power to direct component]",        'directAP' => "[+%.2f%% of attack power to direct component]",
@@ -870,36 +928,127 @@ $lang = array(
             "Начертание",                           "Открыть на ходу"
         ),
         'stealthType'   => ["GENERAL", "TRAP"],
-        'invisibilityType' => ["GENERAL", 3 => "TRAP", 6 => "DRUNK"]
+        'invisibilityType' => ["GENERAL", 3 => "TRAP", 6 => "DRUNK"],
+        'unkEffect'     => 'Unknown Effect',
+        'effects'       => array(
+/*0-5    */ 'None',                     'Instakill',                'School Damage',            'Dummy',                    'Portal Teleport',          'Teleport Units',
+/*6+     */ 'Apply Aura',               'Environmental Damage',     'Power Drain',              'Health Leech',             'Heal',                     'Bind',
+/*12+    */ 'Portal',                   'Ritual Base',              'Ritual Specialize',        'Ritual Activate Portal',   'Quest Complete',           'Weapon Damage NoSchool',
+/*18+    */ 'Resurrect',                'Add Extra Attacks',        'Dodge',                    'Evade',                    'Parry',                    'Block',
+/*24+    */ 'Create Item',              'Can Use Weapon',           'Defense',                  'Persistent Area Aura',     'Summon',                   'Leap',
+/*30+    */ 'Energize',                 'Weapon Damage Percent',    'Trigger Missile',          'Open Lock',                'Summon Change Item',       'Apply Area Aura Party',
+/*36+    */ 'Learn Spell',              'Spell Defense',            'Dispel',                   'Language',                 'Dual Wield',               'Jump',
+/*42+    */ 'Jump Dest',                'Teleport Units Face Caster','Skill Step',              'Add Honor',                'Spawn',                    'Trade Skill',
+/*48+    */ 'Stealth',                  'Detect',                   'Trans Door',               'Force Critical Hit',       'Guarantee Hit',            'Enchant Item Permanent',
+/*54+    */ 'Enchant Item Temporary',   'Tame Creature',            'Summon Pet',               'Learn Pet Spell',          'Weapon Damage Flat',       'Create Random Item',
+/*60+    */ 'Proficiency',              'Send Event',               'Power Burn',               'Threat',                   'Trigger Spell',            'Apply Area Aura Raid',
+/*66+    */ 'Create Mana Gem',          'Heal Max Health',          'Interrupt Cast',           'Distract',                 'Pull',                     'Pickpocket',
+/*72+    */ 'Add Farsight',             'Untrain Talents',          'Apply Glyph',              'Heal Mechanical',          'Summon Object Wild',       'Script Effect',
+/*78+    */ 'Attack',                   'Sanctuary',                'Add Combo Points',         'Create House',             'Bind Sight',               'Duel',
+/*84+    */ 'Stuck',                    'Summon Player',            'Activate Object',          'WMO Damage',               'WMO Repair',               'WMO Change',
+/*90+    */ 'Kill Credit',              'Threat All',               'Enchant Held Item',        'Force Deselect',           'Self Resurrect',           'Skinning',
+/*96+    */ 'Charge',                   'Cast Button',              'Knock Back',               'Disenchant',               'Inebriate',                'Feed Pet',
+/*102+   */ 'Dismiss Pet',              'Reputation',               'Summon Object Slot1',      'Summon Object Slot2',      'Summon Object Slot3',      'Summon Object Slot4',
+/*108+   */ 'Dispel Mechanic',          'Summon Dead Pet',          'Destroy All Totems',       'Durability Damage',        'Summon Demon',             'Resurrect Flat',
+/*114+   */ 'Attack Me',                'Durability Damage Percent','Skin Player Corpse',       'Spirit Heal',              'Skill',                    'Apply Area Aura Pet',
+/*120+   */ 'Teleport Graveyard',       'Weapon Damage Normalized', null,                       'Send Taxi',                'Pull Towards',             'Modify Threat Percent',
+/*126+   */ 'Steal Beneficial Buff',    'Prospecting',              'Apply Area Aura Friend',   'Apply Area Aura Enemy',    'Redirect Threat',          'Play Sound',
+/*132+   */ 'Play Music',               'Unlearn Specialization',   'Kill Credit2',             'Call Pet',                 'Heal Percent',             'Energize Percent',
+/*138+   */ 'Leap Back',                'Clear Quest',              'Force Cast',               'Force Cast With Value',    'Trigger Spell With Value', 'Apply Area Aura Owner',
+/*144+   */ 'Knock Back Dest',          'Pull Towards Dest',        'Activate Rune',            'Quest Fail',               null,                       'Charge Dest',
+/*150+   */ 'Quest Start',              'Trigger Spell 2',          null,                       'Create Tamed Pet',         'Discover Taxi',            'Dual Wield 2H Weapons',
+/*156+   */ 'Enchant Item Prismatic',   'Create Item 2',            'Milling',                  'Allow Rename Pet',         null,                       'Talent Spec Count',
+/*162-164*/ 'Talent Spec Select',       null,                       'Remove Aura'
+        ),
+        'unkAura'       => 'Unknown Aura',
+        'auras'         => array(
+/*0-   */   'None',                                 'Bind Sight',                           'Mod Possess',                          'Periodic Damage',                      'Dummy',
+/*5+   */   'Mod Confuse',                          'Mod Charm',                            'Mod Fear',                             'Periodic Heal',                        'Mod Attack Speed',
+            'Mod Threat',                           'Taunt',                                'Stun',                                 'Mod Damage Done Flat',                 'Mod Damage Taken Flat',
+            'Damage Shield',                        'Mod Stealth',                          'Mod Stealth Detection',                'Mod Invisibility',                     'Mod Invisibility Detection',
+            'Mod Health Percent',                   'Mod Power Percent',                    'Mod Resistance Flat',                  'Periodic Trigger Spell',               'Periodic Energize',
+/*25+  */   'Pacify',                               'Root',                                 'Silence',                              'Reflect Spells',                       'Mod Stat Flat',
+            'Mod Skill',                            'Mod Increase Speed',                   'Mod Increase Mounted Speed',           'Mod Decrease Speed',                   'Mod Increase Health',
+            'Mod Increase Power',                   'Shapeshift',                           'Spell Effect Immunity',                'Spell Aura Immunity',                  'School Immunity',
+            'Damage Immunity',                      'Dispel Immunity',                      'Proc Trigger Spell',                   'Proc Trigger Damage',                  'Track Creatures',
+            'Track Resources',                      'Mod Parry Skill',                      'Mod Parry Percent',                    null,                                   'Mod Dodge Percent',
+/*50+  */    'Mod Critical Healing Amount',          'Mod Block Percent',                    'Mod Physical Crit Percent',            'Periodic Health Leech',                'Mod Hit Chance',
+            'Mod Spell Hit Chance',                 'Transform',                            'Mod Spell Crit Chance',                'Mod Increase Swim Speed',              'Mod Damage Done Versus Creature',
+            'Pacify Silence',                       'Mod Scale',                            'Periodic Health Funnel',               'Periodic Mana Funnel',                 'Periodic Mana Leech',
+            'Mod Casting Speed (not stacking)',     'Feign Death',                          'Disarm',                               'Stalked',                              'School Absorb',
+            'Extra Attacks',                        'Mod Spell Crit Chance School',         'Mod Power Cost School Percent',        'Mod Power Cost School Flat',           'Reflect Spells School',
+/*75+  */   'Language',                             'Far Sight',                            'Mechanic Immunity',                    'Mounted',                              'Mod Damage Done Percent',
+            'Mod Stat Percent',                     'Split Damage Percent',                 'Water Breathing',                      'Mod Base Resistance Flat',             'Mod Health Regeneration',
+            'Mod Power Regeneration',               'Channel Death Item',                   'Mod Damage Taken Percent',             'Mod Health Regeneration Percent',      'Periodic Damage Percent',
+            'Mod Resist Chance',                    'Mod Detect Range',                     'Prevent Fleeing',                      'Unattackable',                         'Interrupt Regeneration',
+            'Ghost',                                'Spell Magnet',                         'Mana Shield',                          'Mod Skill Value',                      'Mod Attack Power',
+/*100+ */   'Auras Visible',                        'Mod Resistance Percent',               'Mod Melee Attack Power Versus',        'Mod Total Threat',                     'Water Walk',
+            'Feather Fall',                         'Hover',                                'Add Flat Modifier',                    'Add Percent Modifier',                 'Add Target Trigger',
+            'Mod Power Regeneration Percent',       'Add Caster Hit Trigger',               'Override Class Scripts',               'Mod Ranged Damage Taken Flat',         'Mod Ranged Damage Taken Percent',
+            'Mod Healing',                          'Mod Regeneration During Combat',       'Mod Mechanic Resistance',              'Mod Healing Taken Percent',            'Share Pet Tracking',
+            'Untrackable',                          'Empathy',                              'Mod Offhand Damage Percent',           'Mod Target Resistance',                'Mod Ranged Attack Power',
+/*125+ */   'Mod Melee Damage Taken Flat',          'Mod Melee Damage Taken Percent',       'Ranged Attack Power Attacker Bonus',   'Possess Pet',                          'Mod Speed Always',
+            'Mod Mounted Speed Always',             'Mod Ranged Attack Power Versus',       'Mod Increase Energy Percent',          'Mod Increase Health Percent',          'Mod Mana Regeneration Interrupt',
+            'Mod Healing Done Flat',                'Mod Healing Done Percent',             'Mod Total Stat Percentage',            'Mod Melee Haste',                      'Force Reaction',
+            'Mod Ranged Haste',                     'Mod Ranged Ammo Haste',                'Mod Base Resistance Percent',          'Mod Resistance Exclusive',             'Safe Fall',
+            'Mod Pet Talent Points',                'Allow Tame Pet Type',                  'Mechanic Immunity Mask',               'Retain Combo Points',                  'Reduce Pushback',
+/*150+ */   'Mod Shield Blockvalue Percent',        'Track Stealthed',                      'Mod Detected Range',                   'Split Damage Flat',                    'Mod Stealth Level',
+            'Mod Water Breathing',                  'Mod Reputation Gain',                  'Pet Damage Multi',                     'Mod Shield Blockvalue',                'No PvP Credit',
+            'Mod AoE Avoidance',                    'Mod Health Regeneration In Combat',    'Power Burn Mana',                      'Mod Crit Damage Bonus',                null,
+            'Melee Attack Power Attacker Bonus',    'Mod Attack Power Percent',             'Mod Ranged Attack Power Percent',      'Mod Damage Done Versus',               'Mod Crit Percent Versus',
+            'Change Model',                         'Mod Speed (not stacking)',             'Mod Mounted Speed (not stacking)',     null,                                   'Mod Spell Damage Of Stat Percent',
+/*175+ */   'Mod Spell Healing Of Stat Percent',    'Spirit Of Redemption',                 'AoE Charm',                            'Mod Debuff Resistance',                'Mod Attacker Spell Crit Chance',
+            'Mod Spell Damage Versus',              null,                                   'Mod Resistance Of Stat Percent',       'Mod Critical Threat',                  'Mod Attacker Melee Hit Chance',
+            'Mod Attacker Ranged Hit Chance',       'Mod Attacker Spell Hit Chance',        'Mod Attacker Melee Crit Chance',       'Mod Attacker Ranged Crit Chance',      'Mod Rating',
+            'Mod Faction Reputation Gain',          'Use Normal Movement Speed',            'Mod Melee Ranged Haste',               'Mod Haste',                            'Mod Target Absorb School',
+            'Mod Target Ability Absorb School',     'Mod Cooldown',                         'Mod Attacker Spell And Weapon Crit Chance', null,                              'Mod Increases Spell Percent to Hit',
+/*200+ */   'Mod XP Percent',                       'Fly',                                  'Ignore Combat Result',                 'Mod Attacker Melee Crit Damage',       'Mod Attacker Ranged Crit Damage',
+            'Mod School Crit Damage Taken',         'Mod Increase Vehicle Flight Speed',    'Mod Increase Mounted Flight Speed',    'Mod Increase Flight Speed',            'Mod Mounted Flight Speed Always',
+            'Mod Vehicle Speed Always',             'Mod Flight Speed (not stacking)',      'Mod Ranged Attack Power Of Stat Percent', 'Mod Rage from Damage Dealt',        'Tamed Pet Passive',
+            'Arena Preparation',                    'Haste Spells',                         'Killing Spree',                        'Haste Ranged',                         'Mod Mana Regeneration from Stat',
+            'Mod Rating from Stat',                 'Ignore Threat',                        null,                                   'Raid Proc from Charge',                null,
+/*225+ */   'Raid Proc from Charge With Value',     'Periodic Dummy',                       'Periodic Trigger Spell With Value',    'Detect Stealth',                       'Mod AoE Damage Avoidance',
+            'Mod Increase Health',                  'Proc Trigger Spell With Value',        'Mod Mechanic Duration',                'Mod Display Model',                    'Mod Mechanic Duration (not stacking)',
+            'Mod Dispel Resist',                    'Control Vehicle',                      'Mod Spell Damage Of Attack Power',     'Mod Spell Healing Of Attack Power',    'Mod Scale 2',
+            'Mod Expertise',                        'Force Move Forward',                   'Mod Spell Damage from Healing',        'Mod Faction',                          'Comprehend Language',
+            'Mod Aura Duration By Dispel',          'Mod Aura Duration By Dispel (not stacking)', 'Clone Caster',                   'Mod Combat Result Chance',             'Convert Rune',
+/*250+ */   'Mod Increase Health 2',                'Mod Enemy Dodge',                      'Mod Speed Slow All',                   'Mod Block Crit Chance',                'Mod Disarm Offhand',
+            'Mod Mechanic Damage Taken Percent',    'No Reagent Use',                       'Mod Target Resist By Spell Class',     'Mod Spell Visual',                     'Mod HoT Percent',
+            'Screen Effect',                        'Phase',                                'Ability Ignore Aurastate',             'Allow Only Ability',                   null,
+            null,                                   null,                                   'Mod Immune Aura Apply School',         'Mod Attack Power Of Stat Percent',     'Mod Ignore Target Resist',
+            'Mod Ability Ignore Target Resist',     'Mod Damage Taken Percent From Caster', 'Ignore Melee Reset',                   'X Ray',                                'Ability Consume No Ammo',
+/*275+ */   'Mod Ignore Shapeshift',                'Mod Mechanic Damage Done Percent',     'Mod Max Affected Targets',             'Mod Disarm Ranged',                    'Initialize Images',
+            'Mod Armor Penetration Percent',        'Mod Honor Gain Percent',               'Mod Base Health Percent',              'Mod Healing Received',                 'Linked',
+            'Mod Attack Power Of Armor',            'Ability Periodic Crit',                'Deflect Spells',                       'Ignore Hit Direction',                 null,
+            'Mod Crit Percent',                     'Mod XP Quest Percent',                 'Open Stable',                          'Override Spells',                      'Prevent Power Regeneration',
+            null,                                   'Set Vehicle Id',                       'Block Spell Family',                   'Strangulate',                          null,
+/*300+ */   'Share Damage Percent',                 'School Heal Absorb',                   null,                                   'Mod Damage Done Versus Aurastate',     'Mod Fake Inebriate',
+            'Mod Minimum Speed',                    null,                                   'Heal Absorb Test',                     'Hunter Trap',                          null,
+            'Mod Creature AoE Damage Avoidance',    null,                                   null,                                   null,                                   'Prevent Ressurection',
+/* -316*/   'Underwater Walking',                   'Periodic Haste'
+        )
     ),
     'item' => array(
         'notFound'      => "Такой предмет не существует.",
         'armor'         => "Броня: %s",
         'block'         => "Блок: %s",
-        'charges'       => "зарядов",
-        'locked'        => "Заперт",
+        'charges'       => "%d |4заряд:заряда:зарядов;",
+        'locked'        => "Заперто",
         'ratingString'  => "%s&nbsp;@&nbsp;L%s",
         'heroic'        => "Героический",
-        'unique'        => "Уникальный",
-        'uniqueEquipped'=> "Не более 1 в вооружении",
         'startQuest'    => "Этот предмет позволяет получить задание.",
-        'bagSlotString' => "%s (ячеек: %d)",
-        'dps'           => "ед. урона в секунду",
-        'dps2'          => "урон в секунду",
-        'addsDps'       => "Добавляет",
+        'bagSlotString' => '%2$s (%1$d |4ячейка:ячейки:ячеек;)',
         'fap'           => "Сила атаки зверя",
-        'durability'    => "Прочность:",
+        'durability'    => "Прочность: %d / %d",
         'realTime'      => "реальное время",
         'conjured'      => "Сотворенный предмет",
-        'damagePhys'    => "Урон: %s",
-        'damageMagic'   => "Урон: %s (%s)",
-        'speed'         => "Скорость",
         'sellPrice'     => "Цена продажи",
-        'itemLevel'     => "Уровень предмета:",
+        'itemLevel'     => "Уровень предмета: %d",
         'randEnchant'   => "&lt;Случайное зачарование&gt",
         'readClick'     => "&lt;Щелкните правой кнопкой мыши, чтобы прочитать.&gt",
         'openClick'     => "&lt;Щелкните правой кнопкой мыши, чтобы открыть.&gt",
-        'set'           => "Набор",
+        'setBonus'      => "Комплект (%d |4предмет:предмета:предметов;): %s",
+        'setName'       => "%s (%d/%d)",
         'partyLoot'     => "Добыча группы",
         'smartLoot'     => "Умное распределение добычи",
         'indestructible'=> "Невозможно выбросить",
@@ -932,6 +1081,18 @@ $lang = array(
         'buyout'        => "Цена выкупа",
         'each'          => "каждый",
         'tabOther'      => "Другое",
+        'reqMinLevel'   => "Требуется уровень: %d",
+        'reqLevelRange' => "Требуемый уровень: %d – %d (%d)",
+        'unique'        => ["Уникальный",                   "Уникальный (%d)",  "Уникальный: %s (%d)"                       ],
+        'uniqueEquipped'=> ["Уникальный использующийся",    null,               "Уникальный использующийся предмет: %s (%d)"],
+        'speed'         => "Скорость",
+        'dps'           => "(%.1f ед. урона в секунду)",
+        'damage'        => array(                           // *DAMAGE_TEMPLATE*
+                        //  basic,                              basic /w school,                            add basic,                                      add basic /w school
+            'single'    => ["Урон: %d",                         "%d ед. |3-6(%s)",                          "+ %d ед. урона",                               "+%d ед. урона (%s)"            ],
+            'range'     => ["Урон: %d - %d",                    "%d - %d ед. |3-6(%s)",                     "+ %d - %d ед. урона",                          "+%d - %d ед. урона (%s)"       ],
+            'ammo'      => ["Добавляет %g ед. урона в секунду", "Добавляет %g ед. урона (%s) в секунду",    "+ ед. урона в секунду от боеприпасов (%g)",    "+ %g %s ед. урона в секунду"   ]
+        ),
         'gems'          => "Самоцветы",
         'socketBonus'   => "При соответствии цвета",
         'socket'        => array(
@@ -941,14 +1102,14 @@ $lang = array(
             "Особый",               "Красный",          "Желтый",               "Синий"
         ),
         'gemConditions' => array(                           // ENCHANT_CONDITION_*      so whats that pipe-code..?
-            2 => ["меньше, чем %d камень %s цвета", "меньше, чем %d камня %s цвета"],   // меньше, чем %d |4камень:камня:камней; |3-1(%s) цвета
-            3 => "больше %s, чем %s камней",                                            // больше |3-7(%s), чем |3-7(%s) камней
-            5 => ["хотя бы %d камень %s цвета", "хотя бы %d камня %s цвета"]            // хотя бы %d |4камень:камня:камней; |3-1(%s) цвета; same here
+            2 => "меньше, чем %d |4камень:камня:камней; |3-1(%s) цвета",
+            3 => "больше |3-7(%s), чем |3-7(%s) камней",
+            5 => "хотя бы %d |4камень:камня:камней; |3-1(%s) цвета"
         ),
         'reqRating'     => array(                           // ITEM_REQ_ARENA_RATING*
             "Требуется личный и командный рейтинг на арене не ниже %d",
-            "Требуется личный рейтинг и рейтинг команды Арены %d<br>в команде 3 на 3 или 5 на 5",
-            "Требуется личный рейтинг и рейтинг команды Арены %d<br>в команде 5 на 5"
+            "Требуется личный рейтинг и рейтинг команды Арены %d|nв команде 3 на 3 или 5 на 5",
+            "Требуется личный рейтинг и рейтинг команды Арены %d|nв команде 5 на 5"
         ),
         'quality'       => array(
             "Низкий",               "Обычный",          "Необычный",            "Редкий",
@@ -1035,8 +1196,8 @@ $lang = array(
             13 => "Ключи",
         ),
         'statType'      => array(
-            "Увеличение запаса маны на %d ед.",
-            "Увеличение максимального запаса здоровья на %d ед.",
+            "к мане",
+            "к здоровью",
             null,
             "к ловкости",
             "к силе",

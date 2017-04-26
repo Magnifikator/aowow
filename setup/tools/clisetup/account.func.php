@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 if (!CLI)
     die('not in cli mode');
@@ -18,6 +18,9 @@ function account()
         'pass1' => ['Enter Password',   true ],
         'pass2' => ['Confirm Password', true ]
     );
+
+    User::useLocale(LOCALE_EN);
+    Lang::load(Util::$localeStrings[LOCALE_EN]);
 
     if (CLISetup::readInput($fields))
     {

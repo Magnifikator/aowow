@@ -36,18 +36,20 @@ class FileGen
         'itemScaling'     => ['item-scaling',   'datasets/',                      []]
     );
     public static $datasets   = array(                      // name => [AowowDeps, TCDeps]
-        'realms'      => [null, ['realmlist']],
-        'statistics'  => [null, ['player_levelstats', 'player_classlevelstats']],
-        'simpleImg'   => [null, null],
-        'complexImg'  => [null, null],
-        'talentCalc'  => [null, null],
-        'pets'        => [['spawns', 'creature'], null],
-        'talentIcons' => [null, null],
-        'glyphs'      => [['items', 'spell'], null],
-        'itemsets'    => [['itemset', 'spell'], null],
-        'enchants'    => [['items', 'spell', 'itemenchantment'], null],
-        'gems'        => [['items', 'spell', 'itemenchantment'], null],
-        'profiler'    => [['quests', 'quests_startend', 'spell', 'currencies', 'achievement', 'titles'], null]
+        'realms'        => [null, ['realmlist']],
+        'statistics'    => [null, ['player_levelstats', 'player_classlevelstats']],
+        'simpleImg'     => [null, null],
+        'complexImg'    => [null, null],
+        'talentCalc'    => [null, null],
+        'pets'          => [['spawns', 'creature'], null],
+        'talentIcons'   => [null, null],
+        'glyphs'        => [['items', 'spell'], null],
+        'itemsets'      => [['itemset', 'spell'], null],
+        'enchants'      => [['items', 'spell', 'itemenchantment'], null],
+        'gems'          => [['items', 'spell', 'itemenchantment'], null],
+        'profiler'      => [['quests', 'quests_startend', 'spell', 'currencies', 'achievement', 'titles'], null],
+        'weightPresets' => [null, null],
+        'soundfiles'    => [['sounds'], null]
     );
 
     public  static $defaultExecTime = 30;
@@ -59,7 +61,8 @@ class FileGen
         'static/uploads/screenshots/temp',
         'static/uploads/screenshots/thumb',
         'static/uploads/temp/',
-        'static/download/searchplugins/'
+        'static/download/searchplugins/',
+        'static/wowsounds/'
     );
 
     public static $txtConstants = array(
@@ -210,7 +213,7 @@ class FileGen
                     // check for required auxiliary DBC files
                     foreach ($reqDBC as $req)
                         if (!CLISetup::loadDBC($req))
-                            continue 2;
+                            continue;
 
                     // must generate content
                     // PH format: /*setup:<setupFunc>*/

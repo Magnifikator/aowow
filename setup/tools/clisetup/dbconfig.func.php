@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 if (!CLI)
     die('not in cli mode');
@@ -83,13 +83,16 @@ function dbconfig()
             {
                 if ($inp['idx'] >= 0 && $inp['idx'] <= (3 + $nCharDBs))
                 {
-                    $curFields = $dbFields;
+                    $curFields = $inp['idx'] ? $dbFields : array_splice($dbFields, 0, 4);
 
                     if ($inp['idx'] == 3 + $nCharDBs)       // add new realmDB
                         $curFields['realmId'] = ['Realm Id',  false, '/[1-9][0-9]*/'];
 
                     if (CLISetup::readInput($curFields))
                     {
+                        if ($inp['idx'] == 0 && $curFields)
+                            $curFields['prefix'] = 'aowow_';
+
                         // auth, world or aowow
                         if ($inp['idx'] < 3)
                             $AoWoWconf[$databases[$inp['idx']]] = $curFields ?: array_combine(array_keys($dbFields), ['', '', '', '', '']);
@@ -146,7 +149,7 @@ function dbconfig()
             else
             {
                 CLISetup::log();
-                CLISetup::log("db setup aborted", CLISetup::LOG_INFO);
+                CLISetup::log("leaving db setup...", CLISetup::LOG_INFO);
                 break 2;
             }
         }

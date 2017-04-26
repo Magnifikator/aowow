@@ -112,7 +112,7 @@ class User
                 );
 
                 // gain rep for daily visit
-                if (!(self::$banStatus & (ACC_BAN_TEMP | ACC_BAN_PERM)))
+                if (!(self::$banStatus & (ACC_BAN_TEMP | ACC_BAN_PERM)) && !self::isInGroup(U_GROUP_PENDING))
                     Util::gainSiteReputation(self::$id, SITEREP_ACTION_DAILYVISIT);
 
                 // increment consecutive visits (next day or first of new month and not more than 48h)
@@ -140,11 +140,11 @@ class User
                     $rawIp = explode(',', $rawIp)[0];       // [ip, proxy1, proxy2]
 
                 // check IPv4
-                if ($ipAddr = filter_var($rawIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE))
+                if ($ipAddr = filter_var($rawIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_RES_RANGE))
                     break;
 
                 // check IPv6
-                if ($ipAddr = filter_var($rawIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE))
+                if ($ipAddr = filter_var($rawIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 | FILTER_FLAG_NO_RES_RANGE))
                     break;
             }
         }
@@ -178,9 +178,18 @@ class User
             }
         }
 
-        // check
-        if ($loc != LOCALE_EN && !(CFG_LOCALES & (1 << $loc)))
-            $loc = LOCALE_EN;
+        // check; pick first viable if failed
+        if (CFG_LOCALES && !(CFG_LOCALES & (1 << $loc)))
+        {
+            foreach (Util::$localeStrings as $idx => $__)
+            {
+                if (CFG_LOCALES & (1 << $idx))
+                {
+                    $loc = $idx;
+                    break;
+                }
+            }
+        }
 
         // set
         if (self::$id)
@@ -244,9 +253,6 @@ class User
                 self::$passHash = $query['passHash'];
                 if (!self::verifyCrypt($pass))
                     return AUTH_WRONGPASS;
-
-                if ($query['status'] & ACC_STATUS_NEW)
-                    return AUTH_ACC_INACTIVE;
 
                 // successfull auth; clear bans for this IP
                 DB::Aowow()->query('DELETE FROM ?_account_bannedips WHERE type = 0 AND ip = ?', self::$ip);
@@ -352,7 +358,7 @@ class User
     public static function verifyCrypt($pass, $hash = '')
     {
         $_ = $hash ?: self::$passHash;
-        return $_ == crypt($pass, $_);
+        return $_ === crypt($pass, $_);
     }
 
     // sha1 used by TC / MaNGOS
@@ -363,16 +369,30 @@ class User
 
     private static function verifySHA1($name, $pass)
     {
-        return self::$passHash == self::hashSHA1($name, $pass);
+        return strtoupper(self::$passHash) === strtoupper(self::hashSHA1($name, $pass));
     }
 
     public static function isValidName($name, &$errCode = 0)
     {
         $errCode = 0;
 
-        if (mb_strlen($name) < 4 || mb_strlen($name) > 16)
+        // different auth modes require different usernames
+        $min = 0;                                           // external case
+        $max = 0;
+        if (CFG_ACC_AUTH_MODE == AUTH_MODE_SELF)
+        {
+            $min = 4;
+            $max = 16;
+        }
+        else if (CFG_ACC_AUTH_MODE == AUTH_MODE_REALM)
+        {
+            $min = 3;
+            $max = 32;
+        }
+
+        if (($min && mb_strlen($name) < $min) || ($max && mb_strlen($name) > $max))
             $errCode = 1;
-        else if (preg_match('/[^\w\d]/i', $name))
+        else if (preg_match('/[^\w\d\-]/i', $name))
             $errCode = 2;
 
         return $errCode == 0;
@@ -382,7 +402,8 @@ class User
     {
         $errCode = 0;
 
-        if (strlen($pass) < 6 || strlen($pass) > 16)
+        // only enforce for own passwords
+        if (mb_strlen($pass) < 6 && CFG_ACC_AUTH_MODE == AUTH_MODE_SELF)
             $errCode = 1;
      // else if (preg_match('/[^\w\d!"#\$%]/', $pass))    // such things exist..? :o
          // $errCode = 2;
@@ -430,6 +451,14 @@ class User
         return self::$perms || self::$reputation >= CFG_REP_REQ_COMMENT;
     }
 
+    public static function canReply()
+    {
+        if (!self::$id || self::$banStatus & (ACC_BAN_COMMENT | ACC_BAN_PERM | ACC_BAN_TEMP))
+            return false;
+
+        return self::$perms || self::$reputation >= CFG_REP_REQ_REPLY;
+    }
+
     public static function canUpvote()
     {
         if (!self::$id || self::$banStatus & (ACC_BAN_COMMENT | ACC_BAN_PERM | ACC_BAN_TEMP))
@@ -452,6 +481,22 @@ class User
             return false;
 
         return self::$reputation >= CFG_REP_REQ_SUPERVOTE;
+    }
+
+    public static function canUploadScreenshot()
+    {
+        if (!self::$id || self::$banStatus & (ACC_BAN_SCREENSHOT | ACC_BAN_PERM | ACC_BAN_TEMP))
+            return false;
+
+        return true;
+    }
+
+    public static function canSuggestVideo()
+    {
+        if (!self::$id || self::$banStatus & (ACC_BAN_VIDEO | ACC_BAN_PERM | ACC_BAN_TEMP))
+            return false;
+
+        return true;
     }
 
     public static function isPremium()
@@ -500,10 +545,10 @@ class User
         if (!self::$id || self::$banStatus & (ACC_BAN_TEMP | ACC_BAN_PERM))
             return $gUser;
 
-        $gUser['commentban']        = (bool)(self::$banStatus & ACC_BAN_COMMENT);
+        $gUser['commentban']        = !self::canComment();
         $gUser['canUpvote']         = self::canUpvote();
         $gUser['canDownvote']       = self::canDownvote();
-        $gUser['canPostReplies']    = self::canComment();
+        $gUser['canPostReplies']    = self::canReply();
         $gUser['superCommentVotes'] = self::canSupervote();
         $gUser['downvoteRep']       = CFG_REP_REQ_DOWNVOTE;
         $gUser['upvoteRep']         = CFG_REP_REQ_UPVOTE;
@@ -523,31 +568,17 @@ class User
 
     public static function getWeightScales()
     {
-        $data = [];
+        $result = [];
 
-        $res = DB::Aowow()->select('SELECT * FROM ?_account_weightscales WHERE userId = ?d', self::$id);
-        foreach ($res as $i)
-        {
-            $set = array (
-                'name' => $i['name'],
-                'id'   => $i['id']
-            );
+        $res = DB::Aowow()->selectCol('SELECT id AS ARRAY_KEY, name FROM ?_account_weightscales WHERE userId = ?d', self::$id);
+        if (!$res)
+            return $result;
 
-            $weights = explode(',', $i['weights']);
-            foreach ($weights as $weight)
-            {
-                $w = explode(':', $weight);
+        $weights = DB::Aowow()->selectCol('SELECT id AS ARRAY_KEY, `field` AS ARRAY_KEY2, val FROM ?_account_weightscale_data WHERE id IN (?a)', array_keys($res));
+        foreach ($weights as $id => $data)
+            $result[] = array_merge(['name' => $res[$id], 'id' => $id], $data);
 
-                if ($w[1] === 'undefined')
-                    $w[1] = 0;
-
-                $set[$w[0]] = $w[1];
-            }
-
-            $data[] = $set;
-        }
-
-        return $data;
+        return $result;
     }
 
     public static function getCharacters()

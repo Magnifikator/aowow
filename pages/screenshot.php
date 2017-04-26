@@ -47,6 +47,10 @@ class ScreenshotPage extends GenericPage
             if (empty(Util::$typeClasses[$m[1]]))
                 $this->error();
 
+            // this type cannot receive screenshots
+            if (!(get_class_vars(Util::$typeClasses[$m[1]])['contribute'] & CONTRIBUTE_SS))
+                $this->error();
+
             $t = Util::$typeClasses[$m[1]];
             $c = [['id', intVal($m[2])]];
 
@@ -91,7 +95,7 @@ class ScreenshotPage extends GenericPage
                     header('Location: ?screenshot=thankyou&'.$this->destType.'.'.$this->destTypeId, true, 302);
                 die();
             case 'thankyou':
-                $this->tpl = 'text-page-generic';
+                $this->tpl = 'list-page-generic';
                 $this->handleThankyou();
                 break;
         }
@@ -107,7 +111,7 @@ class ScreenshotPage extends GenericPage
     {
         $this->imgHash = Util::createHash(16);
 
-        if (User::$banStatus & ACC_BAN_SCREENSHOT)
+        if (!User::canUploadScreenshot())
         {
             $_SESSION['error']['ss'] = Lang::screenshot('error', 'notAllowed');
             return false;
@@ -194,7 +198,7 @@ class ScreenshotPage extends GenericPage
         if (count($dims) != 4)
             return 3;
 
-        Util::checkNumeric($dims);
+        Util::checkNumeric($dims, NUM_REQ_INT);
 
         // actually crop the image
         $srcImg = imagecreatefromjpeg($fullPath);
@@ -299,22 +303,18 @@ class ScreenshotPage extends GenericPage
             return Lang::main('intError');
         }
 
+        // check if file is an image; allow jpeg, png
+        $finfo = new finfo(FILEINFO_MIME);                  // fileInfo appends charset information and other nonsense
+        $mime  = $finfo->file($_FILES['screenshotfile']['tmp_name']);
+        if (preg_match('/^image\/(png|jpe?g)/i', $mime, $m))
+            $isPNG = $m[0] == 'image/png';
+        else
+            return Lang::screenshot('error', 'unkFormat');
+
         // invalid file
         $is = getimagesize($_FILES['screenshotfile']['tmp_name']);
-        if (!$is || empty($is['mime']))
+        if (!$is)
             return Lang::screenshot('error', 'selectSS');
-
-        // allow jpeg, png
-        switch ($is['mime'])
-        {
-            case 'image/png':
-                $isPNG = true;
-            case 'image/jpg':
-            case 'image/jpeg':
-                break;
-            default:
-                return Lang::screenshot('error', 'unkFormat');
-        }
 
         // size-missmatch: 4k UHD upper limit; 150px lower limit
         if ($is[0] < $this->minSize || $is[1] < $this->minSize)

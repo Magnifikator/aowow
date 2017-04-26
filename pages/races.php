@@ -10,7 +10,7 @@ class RacesPage extends GenericPage
 {
     use ListPage;
 
-    protected $type          = TYPE_CLASS;
+    protected $type          = TYPE_RACE;
     protected $tpl           = 'list-page-generic';
     protected $path          = [0, 13];
     protected $tabId         = 0;
@@ -30,15 +30,12 @@ class RacesPage extends GenericPage
         if (!User::isInGroup(U_GROUP_EMPLOYEE))
             $conditions[] = [['cuFlags', CUSTOM_EXCLUDE_FOR_LISTVIEW, '&'], 0];
 
+        $data  = [];
         $races = new CharRaceList($conditions);
         if (!$races->error)
-        {
-            $this->lvTabs[] = array(
-                'file'   => 'race',
-                'data'   => $races->getListviewData(),
-                'params' => []
-            );
-        }
+            $data = array_values($races->getListviewData());
+
+        $this->lvTabs[] = ['race', ['data' => $data]];
     }
 
     protected function generateTitle()

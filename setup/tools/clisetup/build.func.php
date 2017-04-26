@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 if (!CLI)
     die('not in cli mode');
@@ -81,7 +81,7 @@ function build($syncMe = null)
         else
             CLISetup::log('finished file generation with errors', CLISetup::LOG_ERROR);
     }
-    else
+    else if ($syncMe)
         CLISetup::log('no valid script names supplied', CLISetup::LOG_ERROR);
 
     return $done;

@@ -10,8 +10,8 @@ if (!defined('AOWOW_REVISION'))
 
 trait customProfileHelper
 {
-    protected     $queryBase = ''; // SELECT p.*, p.id AS ARRAY_KEY FROM ?_profiles p';
-    protected     $queryOpts = array(
+    protected       $queryBase = ''; // SELECT p.*, p.id AS ARRAY_KEY FROM ?_profiles p';
+    protected       $queryOpts = array(
                         'p'   => [['pa', 'pg']],
                         'pam' => [['?_profiles_arenateam_member pam ON pam.memberId = p.id', true], 's' => ', pam.status'],
                         'pa'  => ['?_profiles_arenateam pa ON pa.id = pam.teamId', 's' => ', pa.mode, pa.name'],
@@ -23,6 +23,10 @@ trait customProfileHelper
 class ProfileList extends BaseType
 {
     use profilerHelper;
+
+    public static   $type      = 0;                         // profiles dont actually have one
+    public static   $brickFile = 'profile';
+    public static   $dataTable = '';                        // doesn't have community content
 
     protected   $queryBase = 'SELECT `c`.*, `c`.`guid` AS ARRAY_KEY FROM characters c';
     protected   $queryOpts = array(

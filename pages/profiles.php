@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 // !do not cache!
 /* older version
@@ -138,16 +138,18 @@ class ProfilesPage extends GenericPage
         // if ($this->category)
             // $conditions[] = ['typeCat', (int)$this->category[0]];
 
-        // recreate form selection
-        $this->filter = $this->filterObj->getForm('form');
-        $this->filter['query'] = isset($_GET['filter']) ? $_GET['filter'] : null;
-        $this->filter['fi']    =  $this->filterObj->getForm();
-
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
-        $data   = [];
-        $params = array(
+        // recreate form selection
+        $this->filter             = $this->filterObj->getForm();
+        $this->filter['query']    = isset($_GET['filter']) ? $_GET['filter'] : null;
+        $this->filter['initData'] = ['init' => 'profiles'];
+
+        if ($x = $this->filterObj->getSetCriteria())
+            $this->filter['initData']['sc'] = $x;
+
+        $tabData = array(
             'id'          => 'characters',
             'name'        => '$LANG.tab_characters',
             'hideCount'   => 1,
@@ -162,7 +164,7 @@ class ProfilesPage extends GenericPage
             foreach ($_ as $skId)
                 $xc[] = "Listview.funcBox.createSimpleCol('Skill + ".$skId."', g_spell_skills[".$skId."], '7%', 'skill + ".$skId."')";
 
-            $params['extraCols'] = '$['.implode(', ', $xc).']';
+            $tabData['extraCols'] = '$['.implode(', ', $xc).']';
         }
 
         $miscParams = [];
@@ -174,26 +176,22 @@ class ProfilesPage extends GenericPage
         $profiles = new ProfileList($conditions, $miscParams);
         if (!$profiles->error)
         {
-            $data = $profiles->getListviewData();
+            $tabData['data'] = array_values($profiles->getListviewData());
 
             // create note if search limit was exceeded
             if (0 /* filter were applied */)
             {
-                $params['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound2', $this->sumChars, $profiles->getMatches());
-                $params['_truncated'] = 1;
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound2', $this->sumChars, $profiles->getMatches());
+                $tabData['_truncated'] = 1;
             }
             else
-                $params['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound', $this->sumChars, 0);
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound', $this->sumChars, 0);
 
             if ($this->filterObj->error)
-                $params['_errors'] = '$1';
+                $tabData['_errors'] = '$1';
         }
 
-        $this->lvTabs[] = array(
-            'file'   => 'profile',
-            'data'   => $data,
-            'params' => $params
-        );
+        $this->lvTabs[] = ['profile', $tabData];
 
         Lang::sort('game', 'cl');
         Lang::sort('game', 'ra');

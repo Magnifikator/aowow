@@ -19,10 +19,10 @@ class QuestsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->validCats = Util::$questClasses;             // needs reviewing (not allowed to set this as default)
+        $this->validCats = Game::$questClasses;             // needs reviewing (not allowed to set this as default)
 
-        $this->filterObj = new QuestListFilter();
         $this->getCategoryFromUrl($pageParam);
+        $this->filterObj = new QuestListFilter(false, ['parentCats' => $this->category]);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -50,34 +50,41 @@ class QuestsPage extends GenericPage
         $this->extendGlobalData($quests->getJSGlobals());
 
         // recreate form selection
-        $this->filter = array_merge($this->filterObj->getForm('form'), $this->filter);
-        $this->filter['query'] = isset($_GET['filter']) ? $_GET['filter'] : NULL;
-        $this->filter['fi']    =  $this->filterObj->getForm();
+        $this->filter             = $this->filterObj->getForm();
+        $this->filter['query']    = isset($_GET['filter']) ? $_GET['filter'] : null;
+        $this->filter['initData'] = ['init' => 'quests'];
 
-        $lv = array(
-            'file'   => 'quest',
-            'data'   => $quests->getListviewData(),
-            'params' => []
-        );
+        $rCols = $this->filterObj->getReputationCols();
+        $xCols = $this->filterObj->getExtraCols();
+        if ($rCols)
+            $this->filter['initData']['rc'] = $rCols;
 
-        if ($_ = $this->filterObj->getForm('reputationCols'))
-            $lv['params']['extraCols'] = '$fi_getReputationCols('.Util::toJSON($_).')';
-        else if (!empty($this->filter['fi']['extraCols']))
-            $lv['params']['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
+        if ($xCols)
+            $this->filter['initData']['ec'] = $xCols;
+
+        if ($x = $this->filterObj->getSetCriteria())
+            $this->filter['initData']['sc'] = $x;
+
+        $tabData = ['data' => array_values($quests->getListviewData())];
+
+        if ($rCols)
+            $tabData['extraCols'] = '$fi_getReputationCols('.json_encode($rCols, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE).')';
+        else if ($xCols)
+            $tabData['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
 
         // create note if search limit was exceeded
         if ($quests->getMatches() > CFG_SQL_LIMIT_DEFAULT)
         {
-            $lv['params']['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_questsfound', $quests->getMatches(), CFG_SQL_LIMIT_DEFAULT);
-            $lv['params']['_truncated'] = 1;
+            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_questsfound', $quests->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+            $tabData['_truncated'] = 1;
         }
         else if (isset($this->category[1]) && $this->category[1] > 0)
-            $lv['params']['note'] = '$$WH.sprintf(LANG.lvnote_questgivers, '.$this->category[1].', g_zones['.$this->category[1].'], '.$this->category[1].')';
+            $tabData['note'] = '$$WH.sprintf(LANG.lvnote_questgivers, '.$this->category[1].', g_zones['.$this->category[1].'], '.$this->category[1].')';
 
         if ($this->filterObj->error)
-            $lv['params']['_errors'] = '$1';
+            $tabData['_errors'] = 1;
 
-        $this->lvTabs[] = $lv;
+        $this->lvTabs[] = ['quest', $tabData];
     }
 
     protected function generateTitle()

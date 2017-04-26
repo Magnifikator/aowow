@@ -24,7 +24,7 @@ $customData = array(
     3849 => ['parentAreaId' => 3523, 'parentX' => 70.5, 'parentY' => 69.6],
     3847 => ['parentAreaId' => 3523, 'parentX' => 71.7, 'parentY' => 55.1],
     3848 => ['parentAreaId' => 3523, 'parentX' => 74.3, 'parentY' => 57.8],
-    3456 => ['parentAreaId' => 3523, 'parentX' => 73.5, 'parentY' => 63.7]
+    3845 => ['parentAreaId' => 3523, 'parentX' => 73.5, 'parentY' => 63.7]
 );
 $reqDBC = ['worldmaptransforms', 'worldmaparea', 'map', 'mapdifficulty', 'areatable', 'lfgdungeons', 'battlemasterlist'];
 
@@ -46,7 +46,8 @@ function zones()
                                     IF(a.mapId = 571, 10,
                                         IF(a.mapId = 530, 8, a.mapId))))))),
                 a.flags,
-                IF(wma.id IS NULL AND m.areaType <> 4, ?d, 0),  -- cuFlags,
+                IF(areaTable <> 0 OR                        -- cuFlags
+                    (wma.id IS NULL AND pa.areaId IS NULL AND (flags & 0x11000) = 0), ?d, 0),
                 IF(a.flags & 0x01000000, 5,                 -- g_zone_territories
                     IF(m.isBG = 1, 4,
                         IF(m.areaType = 4, 4,

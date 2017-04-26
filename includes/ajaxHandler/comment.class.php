@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 class AjaxComment extends AjaxHandler
 {
@@ -11,21 +11,23 @@ class AjaxComment extends AjaxHandler
     const REPLY_LENGTH_MAX   = 600;
 
     protected $_post = array(
-        'id'          => [FILTER_CALLBACK,                    ['options' => 'AjaxComment::checkId']],
-        'body'        => [FILTER_SANITIZE_FULL_SPECIAL_CHARS, FILTER_FLAG_NO_ENCODE_QUOTES],
-        'commentbody' => [FILTER_SANITIZE_FULL_SPECIAL_CHARS, FILTER_FLAG_NO_ENCODE_QUOTES],
-        'response'    => [FILTER_SANITIZE_FULL_SPECIAL_CHARS, FILTER_FLAG_NO_ENCODE_QUOTES],
-        'reason'      => [FILTER_SANITIZE_FULL_SPECIAL_CHARS, FILTER_FLAG_NO_ENCODE_QUOTES],
-        'remove'      => [FILTER_SANITIZE_NUMBER_INT,         null],
-        'commentId'   => [FILTER_SANITIZE_NUMBER_INT,         null],
-        'replyId'     => [FILTER_SANITIZE_NUMBER_INT,         null],
-     // 'username'    => [FILTER_SANITIZE_STRING,            0xC] // FILTER_FLAG_STRIP_LOW | *_HIGH
+        'id'          => [FILTER_CALLBACK,            ['options' => 'AjaxComment::checkId']],
+        'body'        => [FILTER_UNSAFE_RAW,          null],// escaped by json_encode
+        'commentbody' => [FILTER_UNSAFE_RAW,          null],// escaped by json_encode
+        'response'    => [FILTER_SANITIZE_STRING,     FILTER_FLAG_STRIP_LOW],
+        'reason'      => [FILTER_SANITIZE_STRING,     FILTER_FLAG_STRIP_LOW],
+        'remove'      => [FILTER_SANITIZE_NUMBER_INT, null],
+        'commentId'   => [FILTER_SANITIZE_NUMBER_INT, null],
+        'replyId'     => [FILTER_SANITIZE_NUMBER_INT, null],
+        'sticky'      => [FILTER_SANITIZE_NUMBER_INT, null],
+     // 'username'    => [FILTER_SANITIZE_STRING,     0xC]  // FILTER_FLAG_STRIP_LOW | *_HIGH
     );
 
     protected $_get  = array(
         'id'     => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkInt']],
         'type'   => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkInt']],
         'typeid' => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkInt']],
+        'rating' => [FILTER_SANITIZE_NUMBER_INT, null]
     );
 
     public function __construct(array $params)
@@ -75,8 +77,12 @@ class AjaxComment extends AjaxHandler
     // i .. have problems believing, that everything uses nifty ajax while adding comments requires a brutal header(Loacation: <wherever>), yet, thats how it is
     protected function handleCommentAdd()
     {
-        if (!$this->_get['typeid'] || !$this->_get['type'] || !isset(Util::$typeStrings[$this->_get['type']]))
+        if (!$this->_get['typeid'] || !$this->_get['type'] || !isset(Util::$typeClasses[$this->_get['type']]))
             return;                                         // whatever, we cant even send him back
+
+        // this type cannot be commented on
+        if (!(get_class_vars(Util::$typeClasses[$this->_get['type']])['contribute'] & CONTRIBUTE_CO))
+            return;
 
         // trim to max length
         if (!User::isInGroup(U_GROUP_MODERATOR) && mb_strlen($this->_post['commentbody']) > (self::COMMENT_LENGTH_MAX * (User::isPremium() ? 3 : 1)))
@@ -91,8 +97,8 @@ class AjaxComment extends AjaxHandler
                 // every comment starts with a rating of +1 and i guess the simplest thing to do is create a db-entry with the system as owner
                 DB::Aowow()->query('INSERT INTO ?_comments_rates (commentId, userId, value) VALUES (?d, 0, 1)', $postIdx);
 
-                // flag target with hasComment (if filtrable)
-                if ($tbl = Util::getCCTableParent($this->_get['type']))
+                // flag target with hasComment
+                if ($tbl = get_class_vars(Util::$typeClasses[$this->_get['type']])['dataTable'])
                     DB::Aowow()->query('UPDATE '.$tbl.' SET cuFlags = cuFlags | ?d WHERE id = ?d', CUSTOM_HAS_COMMENT, $this->_get['typeid']);
             }
         }
@@ -142,7 +148,7 @@ class AjaxComment extends AjaxHandler
             User::isInGroup(U_GROUP_MODERATOR) ? DBSIMPLE_SKIP : User::$id
         );
 
-        // deflag hasComment (if filtrable)
+        // deflag hasComment
         if ($ok)
         {
             $coInfo = DB::Aowow()->selectRow('SELECT IF(BIT_OR(~b.flags) & ?d, 1, 0) as hasMore, b.type, b.typeId FROM ?_comments a JOIN ?_comments b ON a.type = b.type AND a.typeId = b.typeId WHERE a.id = ?d',
@@ -150,7 +156,7 @@ class AjaxComment extends AjaxHandler
                 $this->_post['id']
             );
 
-            if (!$coInfo['hasMore'] && ($tbl = Util::getCCTableParent($coInfo['type'])))
+            if (!$coInfo['hasMore'] && Util::$typeClasses[$coInfo['type']] && ($tbl = get_class_vars(Util::$typeClasses[$coInfo['type']])['dataTable']))
                 DB::Aowow()->query('UPDATE '.$tbl.' SET cuFlags = cuFlags & ~?d WHERE id = ?d', CUSTOM_HAS_COMMENT, $coInfo['typeId']);
         }
     }
@@ -167,11 +173,11 @@ class AjaxComment extends AjaxHandler
             User::isInGroup(U_GROUP_MODERATOR) ? DBSIMPLE_SKIP : User::$id
         );
 
-        // reflag hasComment (if filtrable)
+        // reflag hasComment
         if ($ok)
         {
             $coInfo = DB::Aowow()->selectRow('SELECT type, typeId FROM ?_comments WHERE id = ?d', $this->_post['id']);
-            if ($tbl = Util::getCCTableParent($coInfo['type']))
+            if (Util::$typeClasses[$coInfo['type']] && ($tbl = get_class_vars(Util::$typeClasses[$coInfo['type']])['dataTable']))
                 DB::Aowow()->query('UPDATE '.$tbl.' SET cuFlags = cuFlags | ?d WHERE id = ?d', CUSTOM_HAS_COMMENT, $coInfo['typeId']);
         }
     }
@@ -181,7 +187,7 @@ class AjaxComment extends AjaxHandler
         if (!$this->_get['id'])
             return Util::toJSON(['success' => 0]);
 
-        if ($votes = DB::Aowow()->selectRow('SELECT 1 AS success, SUM(IF(value > 0, value, 0)) AS up, SUM(IF(value < 0, -value, 0)) AS down FROM ?_comments_rates WHERE commentId = ?d GROUP BY commentId', $this->_get['id']))
+        if ($votes = DB::Aowow()->selectRow('SELECT 1 AS success, SUM(IF(value > 0, value, 0)) AS up, SUM(IF(value < 0, -value, 0)) AS down FROM ?_comments_rates WHERE commentId = ?d and userId <> 0 GROUP BY commentId', $this->_get['id']))
             return Util::toJSON($votes);
         else
             return Util::toJSON(['success' => 1, 'up' => 0, 'down' => 0]);
@@ -236,6 +242,8 @@ class AjaxComment extends AjaxHandler
 
     protected function handleCommentOutOfDate()
     {
+        $this->contentType = 'text/plain';
+
         if (!$this->_post['id'])
             return 'The comment does not exist.';
 
@@ -274,6 +282,8 @@ class AjaxComment extends AjaxHandler
 
     protected function handleReplyAdd()
     {
+        $this->contentType = 'text/plain';
+
         if (!User::canComment())
             return 'You are not allowed to reply.';
 
@@ -292,6 +302,8 @@ class AjaxComment extends AjaxHandler
 
     protected function handleReplyEdit()
     {
+        $this->contentType = 'text/plain';
+
         if (!User::canComment())
             return 'You are not allowed to reply.';
 
@@ -390,7 +402,7 @@ class AjaxComment extends AjaxHandler
     {
         // expecting id-list
         if (preg_match('/\d+(,\d+)*/', $val))
-            return array_map('intVal', explode(', ', $val));
+            return array_map('intVal', explode(',', $val));
 
         return null;
     }

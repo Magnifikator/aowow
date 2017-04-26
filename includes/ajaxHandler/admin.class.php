@@ -1,14 +1,15 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 class AjaxAdmin extends AjaxHandler
 {
-    protected $validParams = ['screenshots', 'siteconfig'];
+    protected $validParams = ['screenshots', 'siteconfig', 'weight-presets'];
     protected $_get        = array(
         'action' => [FILTER_SANITIZE_STRING,     0xC],          // FILTER_FLAG_STRIP_LOW | *_HIGH
         'id'     => [FILTER_CALLBACK,            ['options' => 'AjaxAdmin::checkId']],
+        'key'    => [FILTER_CALLBACK,            ['options' => 'AjaxAdmin::checkKey']],
         'all'    => [FILTER_UNSAFE_RAW,          null],
         'type'   => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkInt']],
         'typeid' => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkInt']],
@@ -16,7 +17,10 @@ class AjaxAdmin extends AjaxHandler
         'val'    => [FILTER_UNSAFE_RAW,          null]
     );
     protected $_post       = array(
-        'alt' => [FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW],
+        'alt'    => [FILTER_SANITIZE_STRING,     FILTER_FLAG_STRIP_LOW],
+        'id'     => [FILTER_SANITIZE_NUMBER_INT, null],
+        'scale'  => [FILTER_CALLBACK,            ['options' => 'AjaxAdmin::checkScale']],
+        '__icon' => [FILTER_CALLBACK,            ['options' => 'AjaxAdmin::checkKey']],
     );
 
     public function __construct(array $params)
@@ -29,7 +33,7 @@ class AjaxAdmin extends AjaxHandler
 
         if ($this->params[0] == 'screenshots')
         {
-            if (!User::isInGroup(U_GROUP_STAFF | U_GROUP_SCREENSHOT))  // comment_mod, handleSSmod, vi_mod ?
+            if (!User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU | U_GROUP_SCREENSHOT))
                 return;
 
             if ($this->_get['action'] == 'list')
@@ -58,6 +62,14 @@ class AjaxAdmin extends AjaxHandler
                 $this->handler = 'confRemove';
             else if ($this->_get['action'] == 'update')
                 $this->handler = 'confUpdate';
+        }
+        else if ($this->params[0] == 'weight-presets')
+        {
+            if (!User::isInGroup(U_GROUP_DEV | U_GROUP_ADMIN | U_GROUP_BUREAU))
+                return;
+
+            if ($this->_get['action'] == 'save')
+                $this->handler = 'wtSave';
         }
     }
 
@@ -116,7 +128,7 @@ class AjaxAdmin extends AjaxHandler
         foreach ($this->_get['id'] as $id)
         {
             // must not be already approved
-            if ($_ = DB::Aowow()->selectRow('SELECT userIdOwner, date FROM ?_screenshots WHERE (status & ?d) = 0 AND id = ?d', CC_FLAG_APPROVED, $id))
+            if ($_ = DB::Aowow()->selectRow('SELECT userIdOwner, date, type, typeId FROM ?_screenshots WHERE (status & ?d) = 0 AND id = ?d', CC_FLAG_APPROVED, $id))
             {
                 // should also error-log
                 if (!file_exists(sprintf($path, 'pending', $id)))
@@ -159,6 +171,9 @@ class AjaxAdmin extends AjaxHandler
                 // set as approved in DB and gain rep (once!)
                 DB::Aowow()->query('UPDATE ?_screenshots SET status = ?d, userIdApprove = ?d WHERE id = ?d', CC_FLAG_APPROVED, User::$id, $id);
                 Util::gainSiteReputation($_['userIdOwner'], SITEREP_ACTION_UPLOAD, ['id' => $id, 'what' => 1, 'date' => $_['date']]);
+                // flag DB entry as having screenshots
+                if (Util::$typeClasses[$_['type']] && ($tbl = get_class_vars(Util::$typeClasses[$_['type']])['dataTable']))
+                    DB::Aowow()->query('UPDATE '.$tbl.' SET cuFlags = cuFlags | ?d WHERE id = ?d', CUSTOM_HAS_SCREENSHOT, $_['typeId']);
             }
         }
 
@@ -172,6 +187,9 @@ class AjaxAdmin extends AjaxHandler
         if (!$this->_get['id'])
             return '';
 
+        // approve soon to be sticky screenshots
+        $this->ssApprove();
+
         // this one is a bit strange: as far as i've seen, the only thing a 'sticky' screenshot does is show up in the infobox
         // this also means, that only one screenshot per page should be sticky
         // so, handle it one by one and the last one affecting one particular type/typId-key gets the cake
@@ -179,9 +197,6 @@ class AjaxAdmin extends AjaxHandler
         {
             // reset all others
             DB::Aowow()->query('UPDATE ?_screenshots a, ?_screenshots b SET a.status = a.status & ~?d WHERE a.type = b.type AND a.typeId = b.typeId AND a.id <> b.id AND b.id = ?d', CC_FLAG_STICKY, $id);
-
-            // approve this one (if not already)
-            $this->ssApprove([$id]);
 
             // toggle sticky status
             DB::Aowow()->query('UPDATE ?_screenshots SET `status` = IF(`status` & ?d, `status` & ~?d, `status` | ?d) WHERE id = ?d AND `status` & ?d', CC_FLAG_STICKY, CC_FLAG_STICKY, CC_FLAG_STICKY, $id, CC_FLAG_APPROVED);
@@ -203,7 +218,7 @@ class AjaxAdmin extends AjaxHandler
         foreach ($this->_get['id'] as $id)
         {
             // irrevocably remove already deleted files
-            if (DB::Aowow()->selectCell('SELECT 1 FROM ?_screenshots WHERE status & ?d AND id = ?d', CC_FLAG_DELETED, $id))
+            if (User::isInGroup(U_GROUP_ADMIN) && DB::Aowow()->selectCell('SELECT 1 FROM ?_screenshots WHERE status & ?d AND id = ?d', CC_FLAG_DELETED, $id))
             {
                 DB::Aowow()->query('DELETE FROM ?_screenshots WHERE id = ?d', $id);
                 if (file_exists(sprintf($path, 'pending', $id)))
@@ -225,7 +240,16 @@ class AjaxAdmin extends AjaxHandler
         }
 
         // flag as deleted if not aready
-        DB::Aowow()->query('UPDATE ?_screenshots SET status = ?d, userIdDelete = ?d WHERE id IN (?a)', CC_FLAG_DELETED, User::$id, $ids);
+        $oldEntries = DB::Aowow()->selectCol('SELECT `type` AS ARRAY_KEY, GROUP_CONCAT(typeId) FROM ?_screenshots WHERE id IN (?a) GROUP BY `type`', $this->_get['id']);
+        DB::Aowow()->query('UPDATE ?_screenshots SET status = ?d, userIdDelete = ?d WHERE id IN (?a)', CC_FLAG_DELETED, User::$id, $this->_get['id']);
+        // deflag db entry as having screenshots
+        foreach ($oldEntries as $type => $typeIds)
+        {
+            $typeIds  = explode(',', $typeIds);
+            $toUnflag = DB::Aowow()->selectCol('SELECT typeId AS ARRAY_KEY, IF(BIT_OR(`status`) & ?d, 1, 0) AS hasMore FROM ?_screenshots WHERE `type` = ?d AND typeId IN (?a) GROUP BY typeId HAVING hasMore = 0', CC_FLAG_APPROVED, $type, $typeIds);
+            if ($toUnflag && Util::$typeClasses[$type] && ($tbl = get_class_vars(Util::$typeClasses[$type])['dataTable']))
+                DB::Aowow()->query('UPDATE '.$tbl.' SET cuFlags = cuFlags & ~?d WHERE id IN (?a)', CUSTOM_HAS_SCREENSHOT, array_keys($toUnflag));
+        }
 
         return '';
     }
@@ -237,18 +261,31 @@ class AjaxAdmin extends AjaxHandler
         if (!$this->_get['id'] || !$this->_get['typeid'])
             return '';
 
-        $type   = DB::Aowow()->selectCell('SELECT type FROM ?_screenshots WHERE id = ?d', $this->_get['id']);
-        $typeId = (int)$this->_get['typeid'];
+        $id                     = $this->_get['id'][0];
+        list($type, $oldTypeId) = array_values(DB::Aowow()->selectRow('SELECT type, typeId FROM ?_screenshots WHERE id = ?d', $id));
+        $typeId                 = (int)$this->_get['typeid'];
 
-        if (!(new Util::$typeClasses[$type]([['id', $typeId]]))->error)
-            DB::Aowow()->query('UPDATE ?_screenshots SET typeId = ?d WHERE id = ?d', $typeId, $this->_get['id'][0]);
+        $tc = new Util::$typeClasses[$type]([['id', $typeId]]);
+        if (!$tc->error)
+        {
+            // move screenshot
+            DB::Aowow()->query('UPDATE ?_screenshots SET typeId = ?d WHERE id = ?d', $typeId, $id);
+
+            // flag target as having screenshot
+            DB::Aowow()->query('UPDATE '.$tc::$dataTable.' SET cuFlags = cuFlags | ?d WHERE id = ?d', CUSTOM_HAS_SCREENSHOT, $typeId);
+
+            // deflag source for having had screenshots (maybe)
+            $ssInfo = DB::Aowow()->selectRow('SELECT IF(BIT_OR(~status) & ?d, 1, 0) AS hasMore FROM ?_screenshots WHERE `status`& ?d AND `type` = ?d AND typeId = ?d', CC_FLAG_DELETED, CC_FLAG_APPROVED, $type, $oldTypeId);
+            if($ssInfo || !$ssInfo['hasMore'])
+                DB::Aowow()->query('UPDATE '.$tc::$dataTable.' SET cuFlags = cuFlags & ~?d WHERE id = ?d', CUSTOM_HAS_SCREENSHOT, $oldTypeId);
+        }
 
         return '';
     }
 
     protected function confAdd()
     {
-        $key = $this->_get['id'];
+        $key = $this->_get['key'];
         $val = $this->_get['val'];
 
         if ($key === null)
@@ -263,16 +300,16 @@ class AjaxAdmin extends AjaxHandler
         if (DB::Aowow()->selectCell('SELECT 1 FROM ?_config WHERE `flags` & ?d AND `key` = ?', CON_FLAG_PHP, $key))
             return 'this configuration option is already in use';
 
-        DB::Aowow()->query('INSERT IGNORE INTO ?_config (`key`, `value`, `flags`) VALUES (?, ?, ?d)', $key, $val, CON_FLAG_TYPE_STRING | CON_FLAG_PHP);
+        DB::Aowow()->query('INSERT IGNORE INTO ?_config (`key`, `value`, `cat`, `flags`) VALUES (?, ?, 0, ?d)', $key, $val, CON_FLAG_TYPE_STRING | CON_FLAG_PHP);
         return '';
     }
 
     protected function confRemove()
     {
-        if (!$this->_get['id'])
+        if (!$this->_get['key'])
             return 'invalid configuration option given';
 
-        if (DB::Aowow()->query('DELETE FROM ?_config WHERE `key` = ? AND (`flags` & ?d) = 0', $this->_get['id'], CON_FLAG_PERSISTENT))
+        if (DB::Aowow()->query('DELETE FROM ?_config WHERE `key` = ? AND (`flags` & ?d) = 0', $this->_get['key'], CON_FLAG_PERSISTENT))
             return '';
         else
             return 'option name is either protected or was not found';
@@ -280,7 +317,7 @@ class AjaxAdmin extends AjaxHandler
 
     protected function confUpdate()
     {
-        $key = trim($this->_get['id']);
+        $key = trim($this->_get['key']);
         $val = trim($this->_get['val']);
 
         if (!strlen($key))
@@ -303,30 +340,90 @@ class AjaxAdmin extends AjaxHandler
         return '';
     }
 
+    protected function wtSave()
+    {
+        if (!$this->_post['id'] || !$this->_post['__icon'])
+            return 3;
+
+        $writeFile = function($file, $content)
+        {
+            $success = false;
+            if ($handle = @fOpen($file, "w"))
+            {
+                if (fWrite($handle, $content))
+                    $success = true;
+
+                fClose($handle);
+            }
+            else
+                die('me no file');
+
+            if ($success)
+                @chmod($file, Util::FILE_ACCESS);
+
+            return $success;
+        };
+
+
+        // save to db
+
+        DB::Aowow()->query('DELETE FROM ?_account_weightscale_data WHERE id = ?d', $this->_post['id']);
+        DB::Aowow()->query('UPDATE ?_account_weightscales SET `icon`= ? WHERE `id` = ?d', $this->_post['__icon'], $this->_post['id']);
+
+        foreach (explode(',', $this->_post['scale']) as $s)
+        {
+            list($k, $v) = explode(':', $s);
+
+            if (!in_array($k, Util::$weightScales) || $v < 1)
+                continue;
+
+            if (DB::Aowow()->query('INSERT INTO ?_account_weightscale_data VALUES (?d, ?, ?d)', $this->_post['id'], $k, $v) === null)
+                return 1;
+        }
+
+
+        // write dataset
+
+        $wtPresets = [];
+        $scales    = DB::Aowow()->select('SELECT id, name, icon, class FROM ?_account_weightscales WHERE userId = 0 ORDER BY class, id ASC');
+
+        foreach ($scales as $s)
+        {
+            $weights = DB::Aowow()->selectCol('SELECT field AS ARRAY_KEY, val FROM ?_account_weightscale_data WHERE id = ?d', $s['id']);
+            if (!$weights)
+                continue;
+
+            $wtPresets[$s['class']]['pve'][$s['name']] = array_merge(['__icon' => $s['icon']], $weights);
+        }
+
+        $toFile = "var wt_presets = ".Util::toJSON($wtPresets).";";
+        $file   = 'datasets/weight-presets';
+
+        if (!$writeFile($file, $toFile))
+            return 2;
+
+
+        // all done
+
+        return 0;
+    }
+
     protected function checkId($val)
     {
-        if (!$this->params)
-            return null;
-
         // expecting id-list
-        if ($this->params[0] == 'screenshots')
-        {
-            if (preg_match('/\d+(,\d+)*/', $val))
-                return array_map('intVal', explode(', ', $val));
-
-            return null;
-        }
-
-        // expecting string
-        if ($this->params[0] == 'siteconfig')
-        {
-            if (preg_match('/[^a-z0-9_\.\-]/i', $val))
-                return '';
-
-            return strtolower($val);
-        }
+        if (preg_match('/\d+(,\d+)*/', $val))
+            return array_map('intVal', explode(',', $val));
 
         return null;
+    }
+
+    protected function checkKey($val)
+    {
+        // expecting string
+        if (preg_match('/[^a-z0-9_\.\-]/i', $val))
+            return '';
+
+        return strtolower($val);
     }
 
     protected function checkUser($val)
@@ -335,6 +432,14 @@ class AjaxAdmin extends AjaxHandler
 
         if (User::isValidName($n))
             return $n;
+
+        return null;
+    }
+
+    protected function checkScale($val)
+    {
+        if (preg_match('/^((\w+:\d+)(,\w+:\d+)*)$/', $val))
+            return $val;
 
         return null;
     }

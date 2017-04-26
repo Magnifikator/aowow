@@ -20,8 +20,8 @@ class ObjectsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->filterObj = new GameObjectListFilter();
         $this->getCategoryFromUrl($pageParam);;
+        $this->filterObj = new GameObjectListFilter(false, ['parentCats' => $this->category]);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -31,6 +31,8 @@ class ObjectsPage extends GenericPage
 
     protected function generateContent()
     {
+        $this->addJS('?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
+
         $conditions = [];
 
         if (!User::isInGroup(U_GROUP_EMPLOYEE))
@@ -40,38 +42,36 @@ class ObjectsPage extends GenericPage
             $conditions[] = ['typeCat', (int)$this->category[0]];
 
         // recreate form selection
-        $this->filter = $this->filterObj->getForm('form');
-        $this->filter['query'] = isset($_GET['filter']) ? $_GET['filter'] : null;
-        $this->filter['fi']    =  $this->filterObj->getForm();
+        $this->filter             = $this->filterObj->getForm();
+        $this->filter['query']    = isset($_GET['filter']) ? $_GET['filter'] : null;
+        $this->filter['initData'] = ['init' => 'objects'];
+
+        if ($x = $this->filterObj->getSetCriteria())
+            $this->filter['initData']['sc'] = $x;
 
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
-        $params = $data = [];
+        $tabData = ['data' => []];
         $objects = new GameObjectList($conditions, ['extraOpts' => $this->filterObj->extraOpts]);
         if (!$objects->error)
         {
-            $data = $objects->getListviewData();
+            $tabData['data'] = array_values($objects->getListviewData());
             if ($objects->hasSetFields(['reqSkill']))
-                $params['visibleCols'] = "$['skill']";
-
+                $tabData['visibleCols'] = ['skill'];
 
             // create note if search limit was exceeded
             if ($objects->getMatches() > CFG_SQL_LIMIT_DEFAULT)
             {
-                $params['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_objectsfound', $objects->getMatches(), CFG_SQL_LIMIT_DEFAULT);
-                $params['_truncated'] = 1;
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_objectsfound', $objects->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+                $tabData['_truncated'] = 1;
             }
 
             if ($this->filterObj->error)
-                $params['_errors'] = '$1';
+                $tabData['_errors'] = 1;
         }
 
-        $this->lvTabs[] = array(
-            'file'   => 'object',
-            'data'   => $data,
-            'params' => $params
-        );
+        $this->lvTabs[] = ['object', $tabData];
     }
 
     protected function generateTitle()

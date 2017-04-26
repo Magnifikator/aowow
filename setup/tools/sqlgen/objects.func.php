@@ -31,12 +31,12 @@ function objects(array $ids = [])
             0 AS event,                                                                         -- linked worldevent
             displayId,
             go.name,
-            gtl2.`name` AS name_loc2,
-            gtl3.`name` AS name_loc3,
-            gtl6.`name` AS name_loc6,
-            gtl8.`name` AS name_loc8,
-            faction,
-            flags,
+            IFNULL(gtl2.`name`, "") AS name_loc2,
+            IFNULL(gtl3.`name`, "") AS name_loc3,
+            IFNULL(gtl6.`name`, "") AS name_loc6,
+            IFNULL(gtl8.`name`, "") AS name_loc8,
+            IFNULL(goa.faction, 0),
+            IFNULL(goa.flags, 0),
             0 AS cuFlags,                                                                       -- custom Flags
             IF(`type` IN (3, 25), Data1, 0),                                                    -- lootId
             IF(`type` IN (2, 3, 6, 10, 13, 24, 26), Data0, IF(`type` IN (0, 1), Data1, 0)),     -- lockId
@@ -66,6 +66,8 @@ function objects(array $ids = [])
         FROM
             gameobject_template go
         LEFT JOIN
+            gameobject_template_addon goa ON go.entry = goa.entry
+        LEFT JOIN
             gameobject_template_locale gtl2 ON go.entry = gtl2.entry AND gtl2.`locale` = "frFR"
         LEFT JOIN
             gameobject_template_locale gtl3 ON go.entry = gtl3.entry AND gtl3.`locale` = "deDE"
@@ -75,14 +77,17 @@ function objects(array $ids = [])
             gameobject_template_locale gtl8 ON go.entry = gtl8.entry AND gtl8.`locale` = "ruRU"
         LEFT JOIN
             gameobject_questitem gqi ON gqi.GameObjectEntry = go.entry
-        {
         WHERE
-            go.entry IN (?a)
+            go.entry > ?d
+        {
+            AND go.entry IN (?a)
         }
         GROUP BY
             go.entry
+        ORDER BY
+            go.entry ASC
         LIMIT
-            ?d, ?d';
+            ?d';
 
     $updateQuery = '
         UPDATE
@@ -100,12 +105,14 @@ function objects(array $ids = [])
             o.id IN (?a)
         }';
 
-    $offset = 0;
-    while ($objects = DB::World()->select($baseQuery, $ids ?: DBSIMPLE_SKIP, $offset, SqlGen::$stepSize))
+    $lastMax = 0;
+    while ($objects = DB::World()->select($baseQuery, $lastMax, $ids ?: DBSIMPLE_SKIP, SqlGen::$stepSize))
     {
-        CLISetup::log(' * sets '.($offset + 1).' - '.($offset + count($objects)));
+        $newMax = max(array_column($objects, 'entry'));
 
-        $offset += SqlGen::$stepSize;
+        CLISetup::log(' * sets '.($lastMax + 1).' - '.$newMax);
+
+        $lastMax = $newMax;
 
         foreach ($objects as $o)
             DB::Aowow()->query('REPLACE INTO ?_objects VALUES (?a)', array_values($o));

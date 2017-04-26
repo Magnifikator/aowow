@@ -13,6 +13,7 @@ if (!CLI)
  * locales_quest
  * game_event
  * game_event_seasonal_questrelation
+ * disables
 */
 
 
@@ -28,67 +29,70 @@ function quests(array $ids = [])
             QuestType,                                      -- Method
             QuestLevel,
             MinLevel,
-            MaxLevel,
+            IFNULL(qa.MaxLevel, 0),
             QuestSortID,
             QuestSortID AS zoneOrSortBak,                   -- ZoneOrSortBak
             QuestInfoID,                                    -- QuestType
             SuggestedGroupNum,
             TimeAllowed,
             IFNULL(gesqr.eventEntry, 0) AS eventId,
-            PrevQuestId,
-            NextQuestId,
-            ExclusiveGroup,
+            IFNULL(qa.PrevQuestId, 0),
+            IFNULL(qa.NextQuestId, 0),
+            IFNULL(qa.ExclusiveGroup, 0),
             RewardNextQuest,
-            Flags,
-            SpecialFlags,
-            0 AS cuFlags,                                   -- cuFlags
-            AllowableClasses,
+            q.Flags,
+            IFNULL(qa.SpecialFlags, 0),
+            (
+                IF(d.entry IS NULL, 0, 134217728) +         -- disabled
+                IF(q.Flags & 16384, 536870912, 0)           -- unavailable
+            ) AS cuFlags,                                   -- cuFlags
+            IFNULL(qa.AllowableClasses, 0),
             AllowableRaces,
-            RequiredSkillId,            RequiredSkillPoints,
-            RequiredFactionId1,         RequiredFactionId2,
-            RequiredFactionValue1,      RequiredFactionValue2,
-            RequiredMinRepFaction,      RequiredMaxRepFaction,
-            RequiredMinRepValue,        RequiredMaxRepValue,
+            IFNULL(qa.RequiredSkillId, 0),      IFNULL(qa.RequiredSkillPoints, 0),
+            RequiredFactionId1,                 RequiredFactionId2,
+            RequiredFactionValue1,              RequiredFactionValue2,
+            IFNULL(qa.RequiredMinRepFaction, 0),IFNULL(qa.RequiredMaxRepFaction, 0),
+            IFNULL(qa.RequiredMinRepValue, 0),  IFNULL(qa.RequiredMaxRepValue, 0),
             RequiredPlayerKills,
             StartItem,
-            ProvidedItemCount,
-            SourceSpellId,
+            IFNULL(qa.ProvidedItemCount, 0),
+            IFNULL(qa.SourceSpellId, 0),
             RewardXPDifficulty,                             -- QuestXP.dbc x level
             RewardMoney,
             RewardBonusMoney,
-            RewardDisplaySpell,         RewardSpell,
+            RewardDisplaySpell,                 RewardSpell,
             RewardHonor * 124 * RewardKillHonor,            -- alt calculation in QuestDef.cpp -> Quest::CalculateHonorGain(playerLevel)
-            RewardMailTemplateId,       RewardMailDelay,
+            IFNULL(qa.RewardMailTemplateId, 0), IFNULL(qa.RewardMailDelay, 0),
             RewardTitle,
             RewardTalents,
             RewardArenaPoints,
-            RewardItem1,                RewardItem2,                RewardItem3,                RewardItem4,
-            RewardAmount1,              RewardAmount2,              RewardAmount3,              RewardAmount4,
-            RewardChoiceItemID1,        RewardChoiceItemID2,        RewardChoiceItemID3,        RewardChoiceItemID4,        RewardChoiceItemID5,        RewardChoiceItemID6,
-            RewardChoiceItemQuantity1,  RewardChoiceItemQuantity2,  RewardChoiceItemQuantity3,  RewardChoiceItemQuantity4,  RewardChoiceItemQuantity5,  RewardChoiceItemQuantity6,
-            RewardFactionID1,           RewardFactionID2,           RewardFactionID3,           RewardFactionID4,           RewardFactionID5,
+            RewardItem1,                        RewardItem2,                            RewardItem3,                            RewardItem4,
+            RewardAmount1,                      RewardAmount2,                          RewardAmount3,                          RewardAmount4,
+            RewardChoiceItemID1,                RewardChoiceItemID2,                    RewardChoiceItemID3,                    RewardChoiceItemID4,                    RewardChoiceItemID5,                    RewardChoiceItemID6,
+            RewardChoiceItemQuantity1,          RewardChoiceItemQuantity2,              RewardChoiceItemQuantity3,              RewardChoiceItemQuantity4,              RewardChoiceItemQuantity5,              RewardChoiceItemQuantity6,
+            RewardFactionID1,                   RewardFactionID2,                       RewardFactionID3,                       RewardFactionID4,                       RewardFactionID5,
             IF (RewardFactionOverride1 <> 0, RewardFactionOverride1 / 100, RewardFactionValue1),
             IF (RewardFactionOverride2 <> 0, RewardFactionOverride2 / 100, RewardFactionValue2),
             IF (RewardFactionOverride3 <> 0, RewardFactionOverride3 / 100, RewardFactionValue3),
             IF (RewardFactionOverride4 <> 0, RewardFactionOverride4 / 100, RewardFactionValue4),
             IF (RewardFactionOverride5 <> 0, RewardFactionOverride5 / 100, RewardFactionValue5),
-            LogTitle,                   Title_loc2,                 Title_loc3,                 Title_loc6,                 Title_loc8,
-            LogDescription,             Objectives_loc2,            Objectives_loc3,            Objectives_loc6,            Objectives_loc8,
-            QuestDescription,           Details_loc2,               Details_loc3,               Details_loc6,               Details_loc8,
-            AreaDescription,            EndText_loc2,               EndText_loc3,               EndText_loc6,               EndText_loc8,
-            qor.RewardText,             OfferRewardText_loc2,       OfferRewardText_loc3,       OfferRewardText_loc6,       OfferRewardText_loc8,
-            qri.CompletionText,         RequestItemsText_loc2,      RequestItemsText_loc3,      RequestItemsText_loc6,      RequestItemsText_loc8,
-            QuestCompletionLog,         CompletedText_loc2,         CompletedText_loc3,         CompletedText_loc6,         CompletedText_loc8,
-            RequiredNpcOrGo1,           RequiredNpcOrGo2,           RequiredNpcOrGo3,           RequiredNpcOrGo4,
-            RequiredNpcOrGoCount1,      RequiredNpcOrGoCount2,      RequiredNpcOrGoCount3,      RequiredNpcOrGoCount4,
-            ItemDrop1,                  ItemDrop2,                  ItemDrop3,                  ItemDrop4,
-            ItemDropQuantity1,          ItemDropQuantity2,          ItemDropQuantity3,          ItemDropQuantity4,
-            RequiredItemId1,            RequiredItemId2,            RequiredItemId3,            RequiredItemId4,            RequiredItemId5,            RequiredItemId6,
-            RequiredItemCount1,         RequiredItemCount2,         RequiredItemCount3,         RequiredItemCount4,         RequiredItemCount5,         RequiredItemCount6,
-            ObjectiveText1,             ObjectiveText1_loc2,        ObjectiveText1_loc3,        ObjectiveText1_loc6,        ObjectiveText1_loc8,
-            ObjectiveText2,             ObjectiveText2_loc2,        ObjectiveText2_loc3,        ObjectiveText2_loc6,        ObjectiveText2_loc8,
-            ObjectiveText3,             ObjectiveText3_loc2,        ObjectiveText3_loc3,        ObjectiveText3_loc6,        ObjectiveText3_loc8,
-            ObjectiveText4,             ObjectiveText4_loc2,        ObjectiveText4_loc3,        ObjectiveText4_loc6,        ObjectiveText4_loc8
+            LogTitle,                           IFNULL(lq.Title_loc2, ""),              IFNULL(lq.Title_loc3, ""),              IFNULL(lq.Title_loc6, ""),              IFNULL(lq.Title_loc8, ""),
+            LogDescription,                     IFNULL(lq.Objectives_loc2, ""),         IFNULL(lq.Objectives_loc3, ""),         IFNULL(lq.Objectives_loc6, ""),         IFNULL(lq.Objectives_loc8, ""),
+            QuestDescription,                   IFNULL(lq.Details_loc2, ""),            IFNULL(lq.Details_loc3, ""),            IFNULL(lq.Details_loc6, ""),            IFNULL(lq.Details_loc8, ""),
+            AreaDescription,                    IFNULL(lq.EndText_loc2, ""),            IFNULL(lq.EndText_loc3, ""),            IFNULL(lq.EndText_loc6, ""),            IFNULL(lq.EndText_loc8, ""),
+            IFNULL(qor.RewardText, ""),         IFNULL(lq.OfferRewardText_loc2, ""),    IFNULL(lq.OfferRewardText_loc3, ""),    IFNULL(lq.OfferRewardText_loc6, ""),    IFNULL(lq.OfferRewardText_loc8, ""),
+            IFNULL(qri.CompletionText, ""),     IFNULL(lq.RequestItemsText_loc2, ""),   IFNULL(lq.RequestItemsText_loc3, ""),   IFNULL(lq.RequestItemsText_loc6, ""),   IFNULL(lq.RequestItemsText_loc8, ""),
+            QuestCompletionLog,                 IFNULL(lq.CompletedText_loc2, ""),      IFNULL(lq.CompletedText_loc3, ""),      IFNULL(lq.CompletedText_loc6, ""),      IFNULL(lq.CompletedText_loc8, ""),
+            RequiredNpcOrGo1,                   RequiredNpcOrGo2,                       RequiredNpcOrGo3,                       RequiredNpcOrGo4,
+            RequiredNpcOrGoCount1,              RequiredNpcOrGoCount2,                  RequiredNpcOrGoCount3,                  RequiredNpcOrGoCount4,
+            ItemDrop1,                          ItemDrop2,                              ItemDrop3,                              ItemDrop4,
+            ItemDropQuantity1,                  ItemDropQuantity2,                      ItemDropQuantity3,                      ItemDropQuantity4,
+            RequiredItemId1,                    RequiredItemId2,                        RequiredItemId3,                        RequiredItemId4,                        RequiredItemId5,                        RequiredItemId6,
+            RequiredItemCount1,                 RequiredItemCount2,                     RequiredItemCount3,                     RequiredItemCount4,                     RequiredItemCount5,                     RequiredItemCount6,
+            ObjectiveText1,                     IFNULL(lq.ObjectiveText1_loc2, ""),     IFNULL(lq.ObjectiveText1_loc3, ""),     IFNULL(lq.ObjectiveText1_loc6, ""),     IFNULL(lq.ObjectiveText1_loc8, ""),
+            ObjectiveText2,                     IFNULL(lq.ObjectiveText2_loc2, ""),     IFNULL(lq.ObjectiveText2_loc3, ""),     IFNULL(lq.ObjectiveText2_loc6, ""),     IFNULL(lq.ObjectiveText2_loc8, ""),
+            ObjectiveText3,                     IFNULL(lq.ObjectiveText3_loc2, ""),     IFNULL(lq.ObjectiveText3_loc3, ""),     IFNULL(lq.ObjectiveText3_loc6, ""),     IFNULL(lq.ObjectiveText3_loc8, ""),
+            ObjectiveText4,                     IFNULL(lq.ObjectiveText4_loc2, ""),     IFNULL(lq.ObjectiveText4_loc3, ""),     IFNULL(lq.ObjectiveText4_loc6, ""),     IFNULL(lq.ObjectiveText4_loc8, "")
         FROM
             quest_template q
         LEFT JOIN
@@ -98,15 +102,20 @@ function quests(array $ids = [])
         LEFT JOIN
             quest_request_items qri ON q.ID = qri.ID
         LEFT JOIN
-            locales_quest lq ON q.ID = lq.Id
+            locales_quest lq ON q.ID = lq.id
         LEFT JOIN
             game_event_seasonal_questrelation gesqr ON gesqr.questId = q.ID
-        {
+        LEFT JOIN
+            disables d ON d.entry = q.ID AND d.sourceType = 1
         WHERE
-            q.ID IN (?a)
+            q.id > ?d
+        {
+            AND q.id IN (?a)
         }
+        ORDER BY
+            q.ID ASC
         LIMIT
-            ?d, ?d';
+            ?d';
 
     $xpQuery = '
         UPDATE
@@ -127,7 +136,7 @@ function quests(array $ids = [])
         UPDATE
             ?_quests q
         LEFT JOIN
-            dbc_questfactionreward rep ON rep.Id = IF(rewardFactionValue?d > 0, 1, 2)
+            dbc_questfactionreward rep ON rep.id = IF(rewardFactionValue?d > 0, 1, 2)
         SET
             rewardFactionValue?d = (CASE ABS(rewardFactionValue?d)
                 WHEN 0 THEN rep.Field1   WHEN 1 THEN rep.Field2   WHEN 2 THEN rep.Field3   WHEN 3 THEN rep.Field4   WHEN 4 THEN rep.Field5
@@ -140,12 +149,14 @@ function quests(array $ids = [])
             }';
 
 
-    $offset = 0;
-    while ($quests = DB::World()->select($baseQuery, $ids ?: DBSIMPLE_SKIP, $offset, SqlGen::$stepSize))
+    $lastMax = 0;
+    while ($quests = DB::World()->select($baseQuery, $lastMax, $ids ?: DBSIMPLE_SKIP, SqlGen::$stepSize))
     {
-        CLISetup::log(' * sets '.($offset + 1).' - '.($offset + count($quests)));
+        $newMax = max(array_column($quests, 'ID'));
 
-        $offset += SqlGen::$stepSize;
+        CLISetup::log(' * sets '.($lastMax + 1).' - '.$newMax);
+
+        $lastMax = $newMax;
 
         foreach ($quests as $q)
             DB::Aowow()->query('REPLACE INTO ?_quests VALUES (?a)', array_values($q));

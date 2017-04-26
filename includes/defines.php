@@ -1,11 +1,13 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 /*
  * Page
  */
+
+define('E_AOWOW',                           E_ALL & ~(E_DEPRECATED | E_USER_DEPRECATED | E_STRICT));
 
 // TypeIds
 define('TYPE_NPC',                          1);
@@ -24,13 +26,16 @@ define('TYPE_CLASS',                        13);
 define('TYPE_RACE',                         14);
 define('TYPE_SKILL',                        15);
 define('TYPE_CURRENCY',                     17);
+define('TYPE_SOUND',                        19);
+define('TYPE_ICON',                         29);
+define('TYPE_PROFILE',                      100);
 // internal types (not published to js)
+define('TYPE_GUILD',                        101);
+define('TYPE_ARENA_TEAM',                   102);
 define('TYPE_USER',                         500);
 define('TYPE_EMOTE',                        501);
 define('TYPE_ENCHANTMENT',                  502);
-define('TYPE_PROFILE',                      503);
-define('TYPE_GUILD',                        504);
-define('TYPE_ARENA_TEAM',                   505);
+define('TYPE_AREATRIGGER',                  503);           // not for display, but indexing in ?_spawns-table
 
 define('CACHE_TYPE_NONE',                   0);             // page will not be cached
 define('CACHE_TYPE_PAGE',                   1);
@@ -45,7 +50,7 @@ define('SEARCH_TYPE_REGULAR',               0x10000000);
 define('SEARCH_TYPE_OPEN',                  0x20000000);
 define('SEARCH_TYPE_JSON',                  0x40000000);
 define('SEARCH_MASK_OPEN',                  0x007DC1FF);    // open search
-define('SEARCH_MASK_ALL',                   0x07FFFFFF);    // normal search
+define('SEARCH_MASK_ALL',                   0x0FFFFFFF);    // normal search
 
 // Databases
 define('DB_AOWOW',                          0);
@@ -135,12 +140,13 @@ define('U_GROUP_LOCALIZER',                 0x0200);
 define('U_GROUP_SALESAGENT',                0x0400);
 define('U_GROUP_SCREENSHOT',                0x0800);
 define('U_GROUP_VIDEO',                     0x1000);
-// define('U_GROUP_APIONLY,                 0x2000);        // the heck..?
-// define('U_GROUP_PENDING,                 0x4000);        // would restrict some markup like urls
+define('U_GROUP_APIONLY',                   0x2000);        // not used
+define('U_GROUP_PENDING',                   0x4000);        // restricts usage of urls in comments
 
 define('U_GROUP_STAFF',                     (U_GROUP_ADMIN|U_GROUP_EDITOR|U_GROUP_MOD|U_GROUP_BUREAU|U_GROUP_DEV|U_GROUP_BLOGGER|U_GROUP_LOCALIZER|U_GROUP_SALESAGENT));
 define('U_GROUP_EMPLOYEE',                  (U_GROUP_ADMIN|U_GROUP_BUREAU|U_GROUP_DEV));
 define('U_GROUP_GREEN_TEXT',                (U_GROUP_MOD|U_GROUP_BUREAU|U_GROUP_DEV));
+define('U_GROUP_PREMIUMISH',                (U_GROUP_PREMIUM|U_GROUP_EDITOR));
 define('U_GROUP_MODERATOR',                 (U_GROUP_ADMIN|U_GROUP_MOD|U_GROUP_BUREAU));
 define('U_GROUP_COMMENTS_MODERATOR',        (U_GROUP_MODERATOR|U_GROUP_LOCALIZER));
 define('U_GROUP_PREMIUM_PERMISSIONS',       (U_GROUP_PREMIUM|U_GROUP_STAFF|U_GROUP_VIP));
@@ -161,7 +167,8 @@ define('BUTTON_LINKS',                      4);
 define('BUTTON_FORUM',                      5);
 define('BUTTON_TALENT',                     6);
 define('BUTTON_EQUIP',                      7);
-define('BUTTON_RESYNC',                     8);
+define('BUTTON_PLAYLIST',                   8);
+define('BUTTON_RESYNC',                     9);
 
 // generic filter handler
 define('FILTER_CR_BOOLEAN',                 1);
@@ -170,6 +177,13 @@ define('FILTER_CR_NUMERIC',                 3);
 define('FILTER_CR_STRING',                  4);
 define('FILTER_CR_ENUM',                    5);
 define('FILTER_CR_STAFFFLAG',               6);
+define('FILTER_CR_CALLBACK',                7);
+define('FILTER_CR_NYI_PH',                  999);
+define('FILTER_V_EQUAL',                    8);
+define('FILTER_V_RANGE',                    9);
+define('FILTER_V_LIST',                     10);
+define('FILTER_V_CALLBACK',                 11);
+define('FILTER_V_REGEX',                    12);
 
 define('FILTER_ENUM_ANY',                   -2323);
 define('FILTER_ENUM_NONE',                  -2324);
@@ -202,12 +216,27 @@ define('PROFILEINFO_ARENA_5S',              4);
 define('SPAWNINFO_ZONES',                   1);             // not a mask, mutually exclusive
 define('SPAWNINFO_SHORT',                   2);
 define('SPAWNINFO_FULL',                    3);
+define('SPAWNINFO_QUEST',                   4);
 
 // Community Content
 define('CC_FLAG_STICKY',                    0x1);
 define('CC_FLAG_DELETED',                   0x2);
 define('CC_FLAG_OUTDATED',                  0x4);
 define('CC_FLAG_APPROVED',                  0x8);
+
+define('SOUND_TYPE_OGG',                    1);
+define('SOUND_TYPE_MP3',                    2);
+
+define('CONTRIBUTE_CO',                     0x1);
+define('CONTRIBUTE_SS',                     0x2);
+define('CONTRIBUTE_VI',                     0x4);
+define('CONTRIBUTE_ANY',                    CONTRIBUTE_CO | CONTRIBUTE_SS | CONTRIBUTE_VI);
+
+define('NUM_ANY',                           0);
+define('NUM_CAST_INT',                      1);
+define('NUM_CAST_FLOAT',                    2);
+define('NUM_REQ_INT',                       3);
+define('NUM_REQ_FLOAT',                     4);
 
 /*
  * Game
@@ -217,9 +246,9 @@ define('CC_FLAG_APPROVED',                  0x8);
 define('CUSTOM_HAS_COMMENT',                0x01000000);
 define('CUSTOM_HAS_SCREENSHOT',             0x02000000);
 define('CUSTOM_HAS_VIDEO',                  0x04000000);
-define('CUSTOM_DISABLED',                   0x08000000);
+define('CUSTOM_DISABLED',                   0x08000000);    // contained in world.disables
 define('CUSTOM_SERVERSIDE',                 0x10000000);
-define('CUSTOM_UNAVAILABLE',                0x20000000);
+define('CUSTOM_UNAVAILABLE',                0x20000000);    // no source for X or questFlag
 define('CUSTOM_EXCLUDE_FOR_LISTVIEW',       0x40000000);    // will not show up in search or on listPage (override for staff)
 
 // Custom Flags (per type)

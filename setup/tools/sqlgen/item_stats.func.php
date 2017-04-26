@@ -49,6 +49,10 @@ class ItemStatSetup extends ItemList
         {
             $this->itemMods[$this->id] = [];
 
+            // also occurs as seperate field (gets summed in calculation but not in tooltip)
+            if ($_ = $this->getField('block'))
+                $this->itemMods[$this->id][ITEM_MOD_BLOCK_VALUE] = $_;
+
             // convert itemMods to stats
             for ($h = 1; $h <= 10; $h++)
             {
@@ -124,7 +128,7 @@ class ItemStatSetup extends ItemList
                 {
                     if (!$v)
                         continue;
-                    if ($str = Util::$itemMods[$k])
+                    if ($str = Game::$itemMods[$k])
                         $updateFields[$str] = number_format($v, 2, '.', '');
                 }
             }
@@ -157,7 +161,6 @@ function item_stats(array $ids = [])
         $offset = $max;
 
         $items->writeStatsTable();
-
     }
 
     return true;
@@ -166,7 +169,7 @@ function item_stats(array $ids = [])
 function enchantment_stats()
 {
     $statCols   = DB::Aowow()->selectCol('SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_NAME` LIKE "%item_stats"');
-    $enchants   = DB::Aowow()->select('SELECT *, Id AS ARRAY_KEY FROM dbc_spellitemenchantment');
+    $enchants   = DB::Aowow()->select('SELECT *, id AS ARRAY_KEY FROM dbc_spellitemenchantment');
     $spells     = [];
     $spellStats = [];
 
@@ -207,7 +210,7 @@ function enchantment_stats()
                 case 3:                                 // TYPE_EQUIP_SPELL         Spells from ObjectX (use of amountX?)
                     if (!empty($spellStats[$obj]))
                         foreach ($spellStats[$obj] as $mod => $val)
-                            if ($str = Util::$itemMods[$mod])
+                            if ($str = Game::$itemMods[$mod])
                                 Util::arraySumByKey($result[$eId], [$str => $val]);
 
                     $obj = null;
@@ -252,7 +255,7 @@ function enchantment_stats()
             }
 
             if ($obj !== null)
-                if ($str = Util::$itemMods[$obj])       // check if we use these mods
+                if ($str = Game::$itemMods[$obj])       // check if we use these mods
                     Util::arraySumByKey($result[$eId], [$str => $val]);
         }
 

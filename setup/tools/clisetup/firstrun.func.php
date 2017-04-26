@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 if (!CLI)
     die('not in cli mode');
@@ -74,6 +74,8 @@ function firstrun()
         ['SqlGen::generate',  'itemset',                  null, null, null],
         ['SqlGen::generate',  'item_stats',               null, null, null],
         ['SqlGen::generate',  'source',                   null, null, null],
+        ['SqlGen::generate',  'sounds',                   null, null, null],
+        ['FileGen::generate', 'soundfiles',               null, null, null],
         ['FileGen::generate', 'searchplugin',             null, null, null],
         ['FileGen::generate', 'power',                    null, null, null],
         ['FileGen::generate', 'searchboxScript',          null, null, null],
@@ -93,6 +95,7 @@ function firstrun()
         ['FileGen::generate', 'enchants',                 null, null, null],
         ['FileGen::generate', 'gems',                     null, null, null],
         ['FileGen::generate', 'profiler',                 null, null, null],
+        ['FileGen::generate', 'weightPresets',            null, null, null],
         // apply sql-updates from repository
         ['update',            null,                       null, null, null],
         ['account',           null,                       'testAcc',  'Please create your admin account.', 'There is no user with administrator priviledges in the DB.'],
@@ -110,7 +113,7 @@ function firstrun()
         fclose($h);
     };
 
-    $testDB = function(&$error)
+    function testDB(&$error)
     {
         require 'config/config.php';
 
@@ -133,9 +136,9 @@ function firstrun()
         }
 
         return empty($error);
-    };
+    }
 
-    $testSelf = function(&$error)
+    function testSelf(&$error)
     {
         $error = [];
         $test  = function($url, &$rCode)
@@ -171,13 +174,13 @@ function firstrun()
             $error[] = ' * STATIC_HOST is empty';
 
         return empty($error);
-    };
+    }
 
-    $testAcc = function(&$error)
+    function testAcc(&$error)
     {
         $error = [];
         return !!DB::Aowow()->selectCell('SELECT id FROM ?_account WHERE userPerms = 1');
-    };
+    }
 
     function endSetup()
     {
@@ -243,7 +246,7 @@ function firstrun()
             // check script result
             if ($step[2])
             {
-                if (!$$step[2]($errors))
+                if (!$step[2]($errors))
                 {
                     CLISetup::log($step[4], CLISetup::LOG_ERROR);
                     foreach ($errors as $e)

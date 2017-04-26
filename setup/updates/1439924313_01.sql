@@ -1,2 +1,1 @@
-UPDATE aowow_dbversion SET `sql`= CONCAT(`sql, ' spawns');
-
+UPDATE aowow_dbversion SET `sql`= CONCAT(`sql`, ' spawns');

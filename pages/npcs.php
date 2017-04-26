@@ -20,8 +20,8 @@ class NpcsPage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->filterObj = new CreatureListFilter();
         $this->getCategoryFromUrl($pageParam);;
+        $this->filterObj = new CreatureListFilter(false, ['parentCats' => $this->category]);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -53,37 +53,42 @@ class NpcsPage extends GenericPage
         $npcs = new CreatureList($conditions, ['extraOpts' => $this->filterObj->extraOpts]);
 
         // recreate form selection
-        $this->filter = array_merge($this->filterObj->getForm('form'), $this->filter);
-        $this->filter['query'] = isset($_GET['filter']) ? $_GET['filter'] : NULL;
-        $this->filter['fi']    =  $this->filterObj->getForm();
+        $this->filter             = $this->filterObj->getForm();
+        $this->filter['query']    = isset($_GET['filter']) ? $_GET['filter'] : null;
+        $this->filter['initData'] =  ['init' => 'npcs'];
 
-        $repCols = $this->filterObj->getForm('reputationCols');
+        $rCols = $this->filterObj->getReputationCols();
+        $xCols = $this->filterObj->getExtraCols();
+        if ($rCols)
+            $this->filter['initData']['rc'] = $rCols;
 
-        $lv = array(
-            'file'   => 'creature',
-            'data'   => $npcs->getListviewData($repCols ? NPCINFO_REP : 0x0),
-            'params' => []
-        );
+        if ($xCols)
+            $this->filter['initData']['ec'] = $xCols;
 
-        if ($repCols)
-            $lv['params']['extraCols'] = '$fi_getReputationCols('.Util::toJSON($repCols).')';
-        else if (!empty($this->filter['fi']['extraCols']))
-            $lv['params']['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
+        if ($x = $this->filterObj->getSetCriteria())
+            $this->filter['initData']['sc'] = $x;
+
+        $tabData = ['data' => array_values($npcs->getListviewData($rCols ? NPCINFO_REP : 0x0))];
+
+        if ($rCols)                                         // never use pretty-print
+            $tabData['extraCols'] = '$fi_getReputationCols('.Util::toJSON($rCols, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE).')';
+        else if ($xCols)
+            $tabData['extraCols'] = '$fi_getExtraCols(fi_extraCols, 0, 0)';
 
         if ($this->category)
-            $lv['params']['hiddenCols'] = "$['type']";
+            $tabData['hiddenCols'] = ['type'];
 
         // create note if search limit was exceeded
         if ($npcs->getMatches() > CFG_SQL_LIMIT_DEFAULT)
         {
-            $lv['params']['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_npcsfound', $npcs->getMatches(), CFG_SQL_LIMIT_DEFAULT);
-            $lv['params']['_truncated'] = 1;
+            $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_npcsfound', $npcs->getMatches(), CFG_SQL_LIMIT_DEFAULT);
+            $tabData['_truncated'] = 1;
         }
 
         if ($this->filterObj->error)
-            $lv['params']['_errors'] = '$1';
+            $tabData['_errors'] = 1;
 
-        $this->lvTabs[] = $lv;
+        $this->lvTabs[] = ['creature', $tabData];
 
         // sort for dropdown-menus
         Lang::sort('game', 'fa');
@@ -94,6 +99,10 @@ class NpcsPage extends GenericPage
         array_unshift($this->title, $this->name);
         if ($this->category)
             array_unshift($this->title, Lang::npc('cat', $this->category[0]));
+
+        $form = $this->filterObj->getForm();
+        if (isset($form['fa']) && !is_array($form['fa']))
+            array_unshift($this->title, Lang::game('fa', $form['fa']));
     }
 
     protected function generatePath()
@@ -101,7 +110,7 @@ class NpcsPage extends GenericPage
         if ($this->category)
             $this->path[] = $this->category[0];
 
-        $form = $this->filterObj->getForm('form');
+        $form = $this->filterObj->getForm();
         if (isset($form['fa']) && !is_array($form['fa']))
             $this->path[] = $form['fa'];
     }

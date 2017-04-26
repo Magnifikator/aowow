@@ -780,6 +780,52 @@ var mn_enchantments = [
     [6,"УВС","?enchantments&filter=ty=6"],
     [4,"Защита","?enchantments&filter=ty=4"]
 ];
+var mn_sounds = [
+    [1000, "Мой плейлист", "?sound&playlist"],
+    [, "Типы"],
+    [19,"Armor","?sounds&filter=ty=19"],
+    [16,"Death","?sounds&filter=ty=16"],
+    [25,"Doodads","?sounds&filter=ty=25"],
+    [52,"Emitters","?sounds&filter=ty=52"],
+    [29,"Emotes","?sounds&filter=ty=29"],
+    [12,"Errors","?sounds&filter=ty=12"],
+    [20,"Footstep Splash","?sounds&filter=ty=20"],
+    [3,"Footsteps","?sounds&filter=ty=3"],
+    [24,"Misc Ambience","?sounds&filter=ty=24"],
+    [10,"NPC Combat","?sounds&filter=ty=10"],
+    [17,"NPC Greetings","?sounds&filter=ty=17"],
+    [27,"NPC Loops","?sounds&filter=ty=27"],
+    [31,"Narration","?sounds&filter=ty=31"],
+    [30,"Narration Music","?sounds&filter=ty=30"],
+    [13,"Nature","?sounds&filter=ty=13"],
+    [14,"Objects","?sounds&filter=ty=14"],
+    [9,"Pick Up/Put Down","?sounds&filter=ty=9"],
+    [26,"Spell Fizzle","?sounds&filter=ty=26"],
+    [1,"Spells","?sounds&filter=ty=1"],
+    [23,"Tradeskills","?sounds&filter=ty=23"],
+    [2,"User Interface","?sounds&filter=ty=2"],
+    [53,"Vehicles","?sounds&filter=ty=53"],
+    [22,"Water","?sounds&filter=ty=22"],
+    [21,"Water (Character)","?sounds&filter=ty=21"],
+    [4,"Weapons Impacts","?sounds&filter=ty=4"],
+    [6,"Weapons Misses","?sounds&filter=ty=6"],
+    [50,"Zone Ambience","?sounds&filter=ty=50"],
+    [28,"Zone Music","?sounds&filter=ty=28"]
+];
+mn_icons = [
+    [3, "Достижения", "?icons&filter=cr=3;crs=1;crv=0"],
+    // [4, "Боевые питомцы", "?icons&filter=cr=4;crs=1;crv=0"],
+    // [5, "Способности Боевого Питомца", "?icons&filter=cr=5;crs=1;crv=0"],
+    [11, "Классы", "?icons&filter=cr=11;crs=1;crv=0"],
+    [6, "Валюта", "?icons&filter=cr=6;crs=1;crv=0"],
+    // [7, "Способности Гарнизона", "?icons&filter=cr=7;crs=1;crv=0"],
+    // [8, "Здания гарнизона", "?icons&filter=cr=8;crs=1;crv=0"],
+    [1, "Предметы", "?icons&filter=cr=1;crs=1;crv=0"],
+    [9, "Питомцы охотников", "?icons&filter=cr=9;crs=1;crv=0"],
+    [2, "Заклинания", "?icons&filter=cr=2;crs=1;crv=0"],
+    // [10, "Угрозы", "?icons&filter=cr=10;crs=1;crv=0"],
+    [13, "Неиспользуемые", "?icons&filter=cr=13;crs=3;crv=0"]
+];
 var mn_talentCalc = [
     [6,"Рыцарь смерти","?talent#j",,{className:"c6",tinyIcon:"class_deathknight"}],
     [11,"Друид","?talent#0",,{className:"c11",tinyIcon:"class_druid"}],
@@ -830,24 +876,30 @@ var mn_petCalc = [
     [42,"Червь","?petcalc#mm",,{tinyIcon:"Ability_Hunter_Pet_Worm"}]
 ];
 var mn_database = [
-    [9,"Достижения","?achievements",mn_achievements],
-    [12,"Классы","?classes",mn_classes],
-    [15,"Валюта","?currencies", mn_currencies],
-    [7,"Фракции","?factions",mn_factions],
-    [8,"Питомцы охотников","?pets",mn_pets],
+    [, "Предметы"],
     [2,"Комплекты","?itemsets",mn_itemSets],
     [0,"Предметы","?items",mn_items],
-    [4,"НИП","?npcs",mn_npcs],
-    [5,"Объекты","?objects",mn_objects],
+    [101,"Улучшения","?enchantments",mn_enchantments],
+    [, "Персонаж"],
+    [9,"Достижения","?achievements",mn_achievements],
+    [12,"Классы","?classes",mn_classes],
+    [8,"Питомцы охотников","?pets",mn_pets],
     [14,"Профессии и навыки","?skills",mn_skills],
-    [3,"Задания","?quests",mn_quests],
     [13,"Расы","?races",mn_races],
     [1,"Заклинания","?spells",mn_spells],
     [10,"Звания","?titles",mn_titles],
+    [100,"Эмоции","?emotes",null],
+    [, "Игровой мир"],
+    [15,"Валюта","?currencies", mn_currencies],
+    [7,"Фракции","?factions",mn_factions],
+    [4,"НИП","?npcs",mn_npcs],
+    [5,"Объекты","?objects",mn_objects],
+    [3,"Задания","?quests",mn_quests],
     [11,"Игровые события","?events",mn_holidays],
     [6,"Местности","?zones",mn_zones],
-    [100,"Эмоции","?emotes",null],
-    [101,"Улучшения","?enchantments",mn_enchantments]
+    [, "Другое"],
+    [31, "Иконки", ":wowhead.com/icons", mn_icons],
+    [19,"Звуки","?sounds",mn_sounds]
 ];
 var mn_tools = [
     [0,"Расчёт талантов","?talent",mn_talentCalc],
@@ -890,13 +942,33 @@ var mn_tools = [
         [4,"Случайная страница","?random"]
     ]]
 ];
+var mn_reputation = [
+    [0, "Показать все привилегии", "?privileges"],
+    [, "Привилегии"],
+    [1, "Оставлять комментарии", "?privilege=1"],
+    // [2, "Оставлять внешние ссылки", "?privilege=2"],
+    // [4, "Нет CAPTCHA", "?privilege=4"],
+    [5, "Более сильные голоса", "?privilege=5"],
+    [9, "Больше голосов в день", "?privilege=9"],
+    [10, "Голосовать за комментарии", "?privilege=10"],
+    [11, "Голосовать против комментариев", "?privilege=11"],
+    [12, "Отвечать на комментарии", "?privilege=12"],
+    // [13, "Граница: Необычный", "?privilege=13"],
+    // [14, "Граница: Редкий", "?privilege=14"],
+    // [15, "Граница: Эпический", "?privilege=15"],
+    // [16, "Граница: Легендарный", "?privilege=16"],
+    [17, "AoWoW Premium", "?privilege=17"]
+];
 var mn_community = [
     [3,"Форум","http://forums.battle.net",null,{tinyIcon: g_staticUrl + "/images/icons/forum.png"}],
     [7,"Блог","http://worldpress.com",null,{tinyIcon: g_staticUrl + "/images/icons/blog.png"}],
     [4,"Канал IRC","http://webchat.quakenet.org/",null,{tinyIcon: g_staticUrl + "/images/icons/irc.png"}],
+    [,"Сообщество"],
+    [10, "Репутация на сайте", "?reputation", mn_reputation],
+    [11, "Лучшие пользователи", "?top-users"],
     [,"Социальные сети"],
-    [6,"Facebook","http://facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.gif"}],
-    [5,"Twitter","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.gif"}]
+    [6,"Facebook","http://facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.png"}],
+    [5,"Twitter","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.png"}]
 ];
 var mn_more = [
     [,"О AoWoW"],
@@ -2195,7 +2267,9 @@ var g_user_roles = {
     10: 'Переводчик',
     11: 'Агент по продажам',
     12: 'Менеджер изображений',
-    13: 'Менеджер видео'
+    13: 'Менеджер видео',
+    14: 'API партнер',
+    15: 'Ожидающее'
 };
 
 var g_gem_colors = {
@@ -2279,7 +2353,7 @@ var g_conditions = {
      8: 'The Player has$: not; finished $1',
      9: 'The Player has$: not; accepted $1',
     10: 'The Player is$: not; $1',
-    11: 'The game word is$: not; in a certain state',       // nyi
+    11: 'WorldState #$1 is$: not; $2',
     12: '$1 must$: not; be active',
     13: 'The instance $has:does not have; a certain state', // nyi
     14: 'The Player has $never:; interacted with $1',
@@ -2305,8 +2379,15 @@ var g_conditions = {
 /* end custom */
 
 var LANG = {
+    alltime_stc:   "Все время",
+    lastmonth_stc: "Последний месяц",
+    lastweek_stc:  "Последняя неделя",
+
+    linkremoved:     "ссылка удалена",
+    linkremoved_tip: "Новые пользователи не могут публиковать<br />\nссылки на не разрешенные сайты.",
+
     and:      " и ",
-    or:       " или ",
+    or:       " или ",                                      // custom
     comma:    ", ",
     ellipsis: "…",
     dash:     " – ",
@@ -2321,7 +2402,7 @@ var LANG = {
     date_ago:    "$1 назад",
     date_at:     " в ",
     date_to:     " в ",
-    date_simple: "$3-$2-$1",
+    date_simple: "$1.$2.$3",
     unknowndate_stc: "Неизвестная дата",
     date_months: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
     date_days:   ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
@@ -2329,6 +2410,7 @@ var LANG = {
     amount:                 "Количество",
     abilities:              "Способности",
     activity:               "Активность",
+    add:                    "Добавить",
     animation:              "Анимация",
     armor:                  "Броня",
     text:                   "Текст",
@@ -2350,10 +2432,12 @@ var LANG = {
     daily:                  "Ежедневно",
     weekly:                 "Раз в неделю",
     damage:                 "Урон",
+    'delete':               "Удалить",
     diet:                   "Рацион",
     dps:                    "УВС",
     earned:                 "Заработано",
     enchant:                "Чары",
+    entitycount:            "$2: $1",
     exp:                    "Опыт",
     faction:                "Фракция",
     gains:                  "Бонус",
@@ -2447,6 +2531,7 @@ var LANG = {
     tp:                     "Очков",
     trending:               "Актуальное",
     type:                   "Тип",
+    unused:                 "Неиспользуемые",
     up:                     "Выше",
     cooldown:               "Восстановление",
     duration:               "Длительность",
@@ -2471,6 +2556,8 @@ var LANG = {
 
     male:   "Мужчина",
     female: "Женщина",
+
+    searchdb: "Искать в Базе Данных...",
 
     source_bossdrop: "Добыча с боссов",
     source_zonedrop: "Добыча на территории",
@@ -2553,6 +2640,9 @@ var LANG = {
     lvpage_next:     "Далее ",
     lvpage_last:     "Конец ",
 
+    lvsearchresults:          "Поиск в результатах",
+    lvsearchdisplayedresults: "Поиск в показанных результатах",
+
     lvscreenshot_submit: "Отправить изображение",
     lvscreenshot_from:   "От ",
     lvscreenshot_hires:  "Просмотр",
@@ -2575,11 +2665,14 @@ var LANG = {
     lvnodata_vi2: "<a>Будьте первым</a>, кто предложит видео к этой странице!",
     lvnodata_vi3: "<a>Войдите</a>, чтобы предложить видео, или <a>зарегистрируйтесь</a>, если у вас еще нет учетной записи.",
 
+    lvnote_sort: "Сортировать: ",
+
     lvnote_tryfiltering: "Попробуйте <a>отфильтровать</a> результаты",
     lvnote_trynarrowing: "Попытайтесь сузить поиск",
     lvnote_upgradesfor:  'Предметы лучше, чем <a href="?item=$1" class="q$2"><b>$3</b></a>.',
     lvnote_witherrors:   "Некоторые фильтры в вашем поиске некорректны и были проигнорированы.",
 
+    lvnote_entitiesfound:     "Найдено $2: $1 (показано: $3)",
     lvnote_itemsfound:        "Найдено предметов: $1 (показано: $2)",
     lvnote_itemsetsfound:     "Найдено комплектов: $1 (показано: $2)",
     lvnote_npcsfound:         "Найдено НИП: $1 (показано: $2)",
@@ -2607,6 +2700,7 @@ var LANG = {
     lvnote_arenateamsfound2:  "Команд арены: $1, подходящих: $2",
     lvnote_currenciesfound:   "Найдено валюты: $1 (показано: $2)",
     lvnote_enchantmentsfound: "Найдено улучшения: $1 (показано: $2)",
+    lvnote_soundsfound:       "$1 звуков найдено ($2 отображено)",
 
     lvnote_createafilter:  '<small><a href="$1">Применить фильтр</a></small>',
     lvnote_filterresults:  '<small><a href="$1">Отфильтровать результаты</a></small>',
@@ -2702,6 +2796,7 @@ var LANG = {
     dialog_mouseovertoload: "Наведите мышкой для загрузки...",
 
     message_ajaxnotsupported:     "Обновите ваш браузер на версию с поддержкой технологии 'Ajax'.",
+    message_browsernoaudio:       "К сожалению, ваш браузер не может проигрывать этот аудио формат: $1",
     message_cantdeletecomment:    "Этот комментарий был автоматически удален из-за негативного рейтинга.",
     message_cantdetachcomment:    "Этот коментарий уже откреплен.",
     message_codenotentered:       "Вы не ввели CAPTCHA код.",
@@ -3195,6 +3290,8 @@ var LANG = {
          15: ["Уровень навыка", "навык",           "Умения",          "навыки"],
          16: ["Статистика",     "характеристика",  "Характеристики",  "характеристики"],
          17: ["Валюта",         "валюта",          "Валюта",          "валюта"],
+         19: ["Звук",           "звук",            "Звуки",           "звуки"],
+         29: ["Иконка",         "иконка",          "Иконки",          "иконки"],
         501: ["Эмоция",         "эмоция",          "Эмоции",          "эмоции"],
         502: ["Улучшение",      "улучшение",       "Улучшения",       "улучшения"]
     },
@@ -3872,6 +3969,23 @@ var LANG = {
         teamcontrib5v5:       "Очки команды арены 5х5"
     },
 
+    fiicons: {                                              // derived from from LANG.filters_icons
+        sepgeneral:         "Общее",
+        sepuses:            "Используется",
+        used:               "Использовано (раз)",
+        items:              "Используется Предметы",
+        spells:             "Используется Заклинания",
+        achievements:       "Используется Достижения",
+        battlepets:         "Используется Боевые питомцы",
+        battlepetabilities: "Используется Способности Боевого Питомца",
+        currencies:         "Используется Валюта",
+        missionabilities:   "Используется Способности соратников/кораблей",
+        garrisonbuildings:  "Используется Здания гарнизона",
+        hunterpets:         "Используется Питомцы охотников",
+        threats:            "Используется Угрозы",
+        classes:            "Используется Классы"
+    },
+
     // custom
     fienchantments: {
         id:             "Номер",
@@ -4359,6 +4473,54 @@ var LANG = {
     build:       "Версия",
     calculators: "Калькуляторы",
     patch:       "Обновление",
+
+    sound_activities: {
+        greeting: "Привет",
+        farewell: "Пока",
+        angry: "Злой",
+        exertion: "Атака",
+        exertioncritical: "Критический удар",
+        injury: "Ранение",
+        injurycritical: "Критическое ранение",
+        death: "Смерть",
+        stun: "Оглушен",
+        stand: "Стоять",
+        footstep: "След",
+        aggro: "Аггро",
+        wingflap: "Взмах крыльями",
+        wingglide: "Парить",
+        alert: "Предупреждение",
+        fidget: "[Fidget]",
+        customattack: "Свой",
+        loop: "Повторять",
+        jumpstart: "Прыгать",
+        jumpend: "Приземление",
+        petattack: "Атака питомца",
+        petorder: "Порядок питомцев",
+        petdismiss: "[Pet dismissal]",
+        birth: "Создано",
+        spellcast: "Заклинание",
+        submerge: "Погружаться",
+        submerged: "Погружённый",
+        transform: "Превратить",
+        transformanimated: "Превратить",
+        animation: "Анимация",
+        ready: "Готово",
+        precast: "Подготовка заклинания",
+        cast: "Применить",
+        impact: "Эффект",
+        state: "Состояние",
+        statedone: "Готово",
+        channel: "Направляемое",
+        casterimpact: "[Caster impact]",
+        targetimpact: "Влияние на цель",
+        castertargeting: "[Caster targeting]",
+        missiletargeting: "[Missile targeting]",
+        instantarea: "Зона мгновенного действия",
+        persistentarea: "Зона временного действия",
+        casterstate: "[Caster state]",
+        targetstate: "Состояние цели"
+    },
 
     /* custom */
     note_condition:       "Every one of these conditions must be met to satisfy the requirement.",

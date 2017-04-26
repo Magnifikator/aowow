@@ -33,7 +33,7 @@ class ItemsetPage extends GenericPage
 
         $this->subject = new ItemsetList(array(['id', $this->typeId]));
         if ($this->subject->error)
-            $this->notFound(Lang::game('itemset'), Lang::itemset('notFound'));
+            $this->notFound();
 
         $this->name = $this->subject->getField('name', true);
         $this->extendGlobalData($this->subject->getJSGlobals());
@@ -139,12 +139,11 @@ class ItemsetPage extends GenericPage
 
             $compare[] = $itemId;
 
-            $pieces[] = array(
-                'id'      => $itemId,
-                'name'    => $iList->getField('name', true),
-                'quality' => $iList->getField('quality'),
-                'icon'    => $iList->getField('iconString'),
-                'json'    => $data[$itemId]
+            $pieces[$itemId] = array(
+                'name_'.User::$localeString => $iList->getField('name', true),
+                'quality'                   => $iList->getField('quality'),
+                'icon'                      => $iList->getField('iconString'),
+                'jsonequip'                 => $data[$itemId]
             );
         }
 
@@ -164,15 +163,16 @@ class ItemsetPage extends GenericPage
         $this->expansion   = 0;
         $this->redButtons  = array(
             BUTTON_WOWHEAD => $this->typeId > 0,            // bool only
-            BUTTON_LINKS   => ['color' => '', 'linkId' => ''],
+            BUTTON_LINKS   => ['type' => $this->type, 'typeId' => $this->typeId],
             BUTTON_VIEW3D  => ['type' => TYPE_ITEMSET, 'typeId' => $this->typeId, 'equipList' => $eqList],
             BUTTON_COMPARE => ['eqList' => implode(':', $compare), 'qty' => $_cnt]
         );
-        $this->compare     = array(
-            'level' => $this->subject->getField('reqLevel'),
-            'items' => array_map(function ($v) {
-                           return [[$v]];
-                       }, $compare)
+        $this->summary     = array(
+            'id'       => 'itemset',
+            'template' => 'itemset',
+            'parent'   => 'summary-generic',
+            'groups'   => array_map(function ($v) { return [[$v]]; }, $compare),
+            'level'    => $this->subject->getField('reqLevel'),
         );
 
         /**************/
@@ -213,19 +213,16 @@ class ItemsetPage extends GenericPage
             $relSets = new ItemsetList($rel);
             if (!$relSets->error)
             {
-                $lv = array(
-                    'file'   => 'itemset',
-                    'data'   => $relSets->getListviewData(),
-                    'params' => array(
-                        'id'   => 'see-also',
-                        'name' => '$LANG.tab_seealso'
-                    )
+                $tabData = array(
+                    'data' => array_values($relSets->getListviewData()),
+                    'id'   => 'see-also',
+                    'name' => '$LANG.tab_seealso'
                 );
 
                 if (!$relSets->hasDiffFields(['classMask']))
-                    $lv['params']['hiddenCols'] = "$['classes']";
+                    $tabData['hiddenCols'] = ['classes'];
 
-                $this->lvTabs[] = $lv;
+                $this->lvTabs[] = ['itemset', $tabData];
 
                 $this->extendGlobalData($relSets->getJSGlobals());
             }
@@ -260,10 +257,10 @@ class ItemsetPage extends GenericPage
         die($tt);
     }
 
-    public function notFound()
+    public function notFound($title = '', $msg = '')
     {
         if ($this->mode != CACHE_TYPE_TOOLTIP)
-            return parent::notFound(Lang::game('itemset'), Lang::itemset('notFound'));
+            return parent::notFound($title ?: Lang::game('itemset'), $msg ?: Lang::itemset('notFound'));
 
         header('Content-type: application/x-javascript; charset=utf-8');
         echo $this->generateTooltip(true);

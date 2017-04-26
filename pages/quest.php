@@ -17,6 +17,7 @@ class QuestPage extends GenericPage
     protected $tabId         = 0;
     protected $mode          = CACHE_TYPE_PAGE;
     protected $css           = [['path' => 'Book.css']];
+    protected $js            = ['ShowOnMap.js'];
 
     public function __construct($pageCall, $id)
     {
@@ -54,7 +55,7 @@ class QuestPage extends GenericPage
         $_minLevel     = $this->subject->getField('minLevel');
         $_flags        = $this->subject->getField('flags');
         $_specialFlags = $this->subject->getField('specialFlags');
-        $_side         = Util::sideByRaceMask($this->subject->getField('reqRaceMask'));
+        $_side         = Game::sideByRaceMask($this->subject->getField('reqRaceMask'));
 
         /***********/
         /* Infobox */
@@ -114,7 +115,7 @@ class QuestPage extends GenericPage
         // type (maybe expand uppon?)
         $_ = [];
         if ($_flags & QUEST_FLAG_DAILY)
-            $_[] = Lang::quest('daily');
+            $_[] = '[tooltip=tooltip_dailyquest]'.Lang::quest('daily').'[/tooltip]';
         else if ($_flags & QUEST_FLAG_WEEKLY)
             $_[] = Lang::quest('weekly');
         else if ($_specialFlags & QUEST_FLAG_SPECIAL_MONTHLY)
@@ -169,7 +170,7 @@ class QuestPage extends GenericPage
         $startEnd = DB::Aowow()->select('SELECT * FROM ?_quests_startend WHERE questId = ?d', $this->typeId);
 
         // start
-        $start = '[icon name=quest_start'.($this->subject->isDaily() ? '_daily' : '').']'.Lang::event('start').Lang::main('colon').'[/icon]';
+        $start = '[icon name=quest_start'.($this->subject->isRepeatable() ? '_daily' : '').']'.Lang::event('start').Lang::main('colon').'[/icon]';
         $s     = [];
         foreach ($startEnd as $se)
         {
@@ -184,7 +185,7 @@ class QuestPage extends GenericPage
             $infobox[] = implode('[br]', $s);
 
         // end
-        $end = '[icon name=quest_end'.($this->subject->isDaily() ? '_daily' : '').']'.Lang::event('end').Lang::main('colon').'[/icon]';
+        $end = '[icon name=quest_end'.($this->subject->isRepeatable() ? '_daily' : '').']'.Lang::event('end').Lang::main('colon').'[/icon]';
         $e   = [];
         foreach ($startEnd as $se)
         {
@@ -199,7 +200,7 @@ class QuestPage extends GenericPage
             $infobox[] = implode('[br]', $e);
 
         // Repeatable
-        if ($_flags & QUEST_FLAG_REPEATABLE || $_specialFlags & QUEST_FLAG_SPECIAL_REPEATABLE)
+        if ($this->subject->isRepeatable())
             $infobox[] = Lang::quest('repeatable');
 
         // sharable | not sharable
@@ -257,12 +258,18 @@ class QuestPage extends GenericPage
         $_ = $chain[0][0];
         while ($_)
         {
-            if ($_ = DB::Aowow()->selectRow('SELECT id AS typeId, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8, reqRaceMask FROM ?_quests WHERE nextQuestIdChain = ?d', $_['typeId']))
+            if ($_ = DB::Aowow()->selectRow('SELECT id AS typeId, IF(id = nextQuestIdChain, 1, 0) AS error, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8, reqRaceMask FROM ?_quests WHERE nextQuestIdChain = ?d', $_['typeId']))
             {
+                if ($_['error'])
+                {
+                    trigger_error('Quest '.$_['typeId'].' is in a chain with itself');
+                    break;
+                }
+
                 $n = Util::localizedString($_, 'name');
                 array_unshift($chain, array(
                     array(
-                        'side'    => Util::sideByRaceMask($_['reqRaceMask']),
+                        'side'    => Game::sideByRaceMask($_['reqRaceMask']),
                         'typeStr' => Util::$typeStrings[TYPE_QUEST],
                         'typeId'  => $_['typeId'],
                         'name'    => mb_strlen($n) > 40 ? mb_substr($n, 0, 40).'…' : $n
@@ -274,12 +281,15 @@ class QuestPage extends GenericPage
         $_ = end($chain)[0];
         while ($_)
         {
-            if ($_ = DB::Aowow()->selectRow('SELECT id AS typeId, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8, reqRaceMask, nextQuestIdChain AS _next FROM ?_quests WHERE id = ?d', $_['_next']))
+            if ($_ = DB::Aowow()->selectRow('SELECT id AS typeId, IF(id = nextQuestIdChain, 1, 0) AS error, name_loc0, name_loc2, name_loc3, name_loc6, name_loc8, reqRaceMask, nextQuestIdChain AS _next FROM ?_quests WHERE id = ?d', $_['_next']))
             {
+                if ($_['error'])                                // error already triggered
+                    break;
+
                 $n = Util::localizedString($_, 'name');
                 array_push($chain, array(
                     array(
-                        'side'    => Util::sideByRaceMask($_['reqRaceMask']),
+                        'side'    => Game::sideByRaceMask($_['reqRaceMask']),
                         'typeStr' => Util::$typeStrings[TYPE_QUEST],
                         'typeId'  => $_['typeId'],
                         'name'    => mb_strlen($n) > 40 ? mb_substr($n, 0, 40).'…' : $n,
@@ -305,7 +315,7 @@ class QuestPage extends GenericPage
             {
                 $n = $list->getField('name', true);
                 $chain[] = array(array(
-                    'side'    => Util::sideByRaceMask($list->getField('reqRaceMask')),
+                    'side'    => Game::sideByRaceMask($list->getField('reqRaceMask')),
                     'typeStr' => Util::$typeStrings[TYPE_QUEST],
                     'typeId'  => $id,
                     'name'    => mb_strlen($n) > 40 ? mb_substr($n, 0, 40).'…' : $n
@@ -347,7 +357,8 @@ class QuestPage extends GenericPage
         $this->providedItem  = [];
 
         // gather ids for lookup
-        $olItems = $olNPCs = $olGOs = $olFactions = [];
+        $olItems    = $olNPCs    = $olGOs    = $olFactions = [];
+        $olItemData = $olNPCData = $olGOData = null;
 
         // items
         $olItems[0] = array(                                // srcItem on idx:0
@@ -459,7 +470,7 @@ class QuestPage extends GenericPage
             $olGOData = new GameObjectList(array(['id', $ids]));
             $this->extendGlobalData($olGOData->getJSGlobals(GLOBALINFO_SELF));
 
-            foreach ($olNPCs as $i => $pair)
+            foreach ($olGOs as $i => $pair)
             {
                 if (!$i || !in_array($i, $olGOData->getFoundIDs()))
                     continue;
@@ -469,6 +480,7 @@ class QuestPage extends GenericPage
                     'id'        => $i,
                     'name'      => $pair[1] ?: Util::localizedString($olGOData->getEntry($i), 'name'),
                     'qty'       => $pair[0] > 1 ? $pair[0] : 0,
+                    'extraText' => ''
                 );
             }
         }
@@ -531,17 +543,340 @@ class QuestPage extends GenericPage
 
         $this->addJS('?data=zones&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
 
-        /*
-            TODO (GODDAMNIT): jeez..
-        */
+        // gather points of interest
+        $mapNPCs = $mapGOs = [];                            // [typeId, start|end|objective, startItemId]
 
-        // $startend + reqNpcOrGo[1-4]
+        // todo (med): this double list creation very much sucks ...
+        $getItemSource = function ($itemId, $method = 0) use (&$mapNPCs, &$mapGOs)
+        {
+            $lootTabs  = new Loot();
+            if ($lootTabs->getByItem($itemId))
+            {
+                /*
+                    todo (med): sanity check:
+                        there are loot templates that are absolute tosh, containing hundrets of random items (e.g. Peacebloom for Quest "The Horde Needs Peacebloom!")
+                        even without these .. consider quests like "A Donation of Runecloth" .. oh my .....
+                        should we...
+                        .. display only a maximum of sources?
+                        .. filter sources for low drop chance?
 
-        $this->map = null;
-        // array(
-            // 'data' => ['zone' => $this->typeId],
-            // 'som'  => Util::toJSON($som)
-        // );
+                    for the moment:
+                        if an item has >10 sources, only display sources with >80% chance
+                        always filter sources with <1% chance
+                */
+
+                $nSources = 0;
+                foreach ($lootTabs->iterate() as list($type, $data))
+                    if ($type == 'creature' || $type == 'object')
+                        $nSources += count(array_filter($data['data'], function($val) { return $val['percent'] >= 1.0; }));
+
+                foreach ($lootTabs->iterate() as $idx => list($file, $tabData))
+                {
+                    if (!$tabData['data'])
+                        continue;
+
+                    foreach ($tabData['data'] as $data)
+                    {
+                        if ($data['percent'] < 1.0)
+                            continue;
+
+                        if ($nSources > 10 && $data['percent'] < 80.0)
+                            continue;
+
+                        switch ($file)
+                        {
+                            case 'creature':
+                                $mapNPCs[] = [$data['id'], $method, $itemId];
+                                break;
+                            case 'object':
+                                $mapGOs[]  = [$data['id'], $method, $itemId];
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+
+            // also there's vendors...
+            // dear god, if you are one of the types who puts queststarter-items in container-items, in conatiner-items, in container-items, in container-GOs .. you should kill yourself by killing yourself!
+            // so yeah .. no recursion checking
+            $vendors = DB::World()->selectCol('
+                SELECT nv.entry FROM npc_vendor nv WHERE nv.item = ?d UNION
+                SELECT c.id FROM game_event_npc_vendor genv JOIN creature c ON c.guid = genv.guid WHERE genv.item = ?d',
+                $itemId, $itemId
+            );
+            foreach ($vendors as $v)
+                $mapNPCs[] = [$v, $method, $itemId];
+        };
+
+        $addObjectiveSpawns = function (array $spawns, callable $processing) use (&$mObjectives)
+        {
+            foreach ($spawns as $zoneId => $zoneData)
+            {
+                if (!isset($mObjectives[$zoneId]))
+                    $mObjectives[$zoneId] = array(
+                        'zone'     => 'Zone #'.$zoneId,
+                        'mappable' => 1,
+                        'levels'   => []
+                    );
+
+                foreach ($zoneData as $floor => $floorData)
+                {
+                    if (!isset($mObjectives[$zoneId]['levels'][$floor]))
+                        $mObjectives[$zoneId]['levels'][$floor] = [];
+
+                    foreach ($floorData as $objId => $objData)
+                        $mObjectives[$zoneId]['levels'][$floor][] = $processing($objId, $objData);
+                }
+            }
+       };
+
+
+        // POI: start + end
+        foreach ($startEnd as $se)
+        {
+            if ($se['type'] == TYPE_NPC)
+                $mapNPCs[] = [$se['typeId'], $se['method'], 0];
+            else if ($se['type'] == TYPE_OBJECT)
+                $mapGOs[]  = [$se['typeId'], $se['method'], 0];
+            else if ($se['type'] == TYPE_ITEM)
+                $getItemSource($se['typeId'], $se['method']);
+        }
+
+        $itemObjectives = [];
+        $mObjectives    = [];
+        $mZones         = [];
+        $objectiveIdx   = 0;
+
+        // POI objectives
+        // also map olItems to objectiveIdx so every container gets the same pin color
+        foreach ($olItems as $i => list($itemId, $qty, $provided))
+        {
+            if (!$provided && $itemId)
+            {
+                $itemObjectives[$itemId] = $objectiveIdx++;
+                $getItemSource($itemId);
+            }
+        }
+
+        // PSA: 'redundant' data is on purpose (e.g. creature required for kill, also dropps item required to collect)
+
+        // external event / areatrigger
+        if ($_specialFlags & QUEST_FLAG_SPECIAL_EXT_COMPLETE)
+        {
+            if ($atir = DB::World()->selectCell('SELECT id FROM areatrigger_involvedrelation WHERE quest = ?d', $this->typeId))
+                if ($atsp = DB::AoWoW()->selectRow('SELECT guid, posX, posY, floor, areaId FROM ?_spawns WHERE `type` = ?d AND `typeId` = ?d', TYPE_AREATRIGGER, $atir))
+                    $mObjectives[$atsp['areaId']] = array(
+                        'zone'     => 'Zone #'.$atsp['areaId'],
+                        'mappable' => 1,
+                        'levels'   => array (
+                            $atsp['floor'] => array (
+                                array (
+                                    'type'      => -1,      // TYPE_AREATRIGGER is internal, the javascript doesn't know it
+                                    'point'     => 'requirement',
+                                    'name'      => $this->subject->parseText('end', false),
+                                    'coord'     => [$atsp['posX'], $atsp['posY']],
+                                    'coords'    => [[$atsp['posX'], $atsp['posY']]],
+                                    'objective' => $objectiveIdx++
+                                )
+                            )
+                        )
+                    );
+        }
+
+        // ..adding creature kill requirements
+        if ($olNPCData && !$olNPCData->error)
+        {
+            $spawns = $olNPCData->getSpawns(SPAWNINFO_QUEST);
+            $addObjectiveSpawns($spawns, function ($npcId, $npcData) use ($olNPCs, &$objectiveIdx)
+            {
+                $npcData['point'] = 'requirement';          // always requirement
+                foreach ($olNPCs as $proxyNpcId => $npc)
+                {
+                    if ($npc[1] && $npcId == $proxyNpcId)  // overwrite creature name with quest specific text, if set.
+                        $npcData['name'] = $npc[1];
+
+                    if (!empty($npc[2][$npcId]))
+                        $npcData['objective'] = $proxyNpcId;
+                }
+
+                if (!$npcData['objective'])
+                    $npcData['objective'] = $objectiveIdx++;
+
+                return $npcData;
+            });
+        }
+
+        // ..adding object interaction requirements
+        if ($olGOData && !$olGOData->error)
+        {
+            $spawns = $olGOData->getSpawns(SPAWNINFO_QUEST);
+            $addObjectiveSpawns($spawns, function ($goId, $goData) use ($olGOs, &$objectiveIdx)
+            {
+                foreach ($olGOs as $_goId => $go)
+                {
+                    if ($go[1] && $goId == $_goId)          // overwrite object name with quest specific text, if set.
+                    {
+                        $goData['name'] = $go[1];
+                        break;
+                    }
+                }
+
+                $goData['point']     = 'requirement';       // always requirement
+                $goData['objective'] = $objectiveIdx++;
+                return $goData;
+            });
+        }
+
+        // .. adding npc from: droping queststart item; dropping item needed to collect; starting quest; ending quest
+        if ($mapNPCs)
+        {
+            $npcs = new CreatureList(array(['id', array_column($mapNPCs, 0)]));
+            if (!$npcs->error)
+            {
+                $startEndDupe = [];                         // if quest starter/ender is the same creature, we need to add it twice
+                $spawns       = $npcs->getSpawns(SPAWNINFO_QUEST);
+                $addObjectiveSpawns($spawns, function ($npcId, $npcData) use ($mapNPCs, &$startEndDupe, $itemObjectives)
+                {
+                    foreach ($mapNPCs as $mn)
+                    {
+                        if ($mn[0] != $npcId)
+                            continue;
+
+                        if ($mn[2])                         // source for itemId
+                            $npcData['item'] = ItemList::getName($mn[2]);
+
+                        switch ($mn[1])                     // method
+                        {
+                            case 1:                         // quest start
+                                $npcData['point'] = $mn[2] ? 'sourcestart' : 'start';
+                                break;
+                            case 2:                         // quest end (sourceend doesn't actually make sense .. oh well....)
+                                $npcData['point'] = $mn[2] ? 'sourceend' : 'end';
+                                break;
+                            case 3:                         // quest start & end
+                                $npcData['point'] = $mn[2] ? 'sourcestart' : 'start';
+                                $startEndDupe = $npcData;
+                                $startEndDupe['point'] = $mn[2] ? 'sourceend' : 'end';
+                                break;
+                            default:                        // just something to kill for quest
+                                $npcData['point'] = $mn[2] ? 'sourcerequirement' : 'requirement';
+                                if ($mn[2] && !empty($itemObjectives[$mn[2]]))
+                                    $npcData['objective'] = $itemObjectives[$mn[2]];
+                        }
+                    }
+
+                    return $npcData;
+                });
+
+                if ($startEndDupe)
+                    foreach ($spawns as $zoneId => $zoneData)
+                        foreach ($zoneData as $floor => $floorData)
+                            foreach ($floorData as $objId => $objData)
+                                if ($objId == $startEndDupe['id'])
+                                {
+                                    $mObjectives[$zoneId]['levels'][$floor][] = $startEndDupe;
+                                    break 3;
+                                }
+            }
+        }
+
+        // .. adding go from: containing queststart item; containing item needed to collect; starting quest; ending quest
+        if ($mapGOs)
+        {
+            $gos = new GameObjectList(array(['id', array_column($mapGOs, 0)]));
+            if (!$gos->error)
+            {
+                $startEndDupe = [];                         // if quest starter/ender is the same object, we need to add it twice
+                $spawns       = $gos->getSpawns(SPAWNINFO_QUEST);
+                $addObjectiveSpawns($spawns, function ($goId, $goData) use ($mapGOs, &$startEndDupe, $itemObjectives)
+                {
+                    foreach ($mapGOs as $mgo)
+                    {
+                        if ($mgo[0] != $goId)
+                            continue;
+
+                        if ($mgo[2])                        // source for itemId
+                            $goData['item'] = ItemList::getName($mgo[2]);
+
+                        switch ($mgo[1])                    // method
+                        {
+                            case 1:                         // quest start
+                                $goData['point'] = $mgo[2] ? 'sourcestart' : 'start';
+                                break;
+                            case 2:                         // quest end (sourceend doesn't actually make sense .. oh well....)
+                                $goData['point'] = $mgo[2] ? 'sourceend' : 'end';
+                                break;
+                            case 3:                         // quest start & end
+                                $goData['point'] = $mgo[2] ? 'sourcestart' : 'start';
+                                $startEndDupe = $goData;
+                                $startEndDupe['point'] = $mgo[2] ? 'sourceend' : 'end';
+                                break;
+                            default:                        // just something to kill for quest
+                                $goData['point'] = $mgo[2] ? 'sourcerequirement' : 'requirement';
+                                if ($mgo[2] && !empty($itemObjectives[$mgo[2]]))
+                                    $goData['objective'] = $itemObjectives[$mgo[2]];
+                        }
+                    }
+
+                    return $goData;
+                });
+
+                if ($startEndDupe)
+                    foreach ($spawns as $zoneId => $zoneData)
+                        foreach ($zoneData as $floor => $floorData)
+                            foreach ($floorData as $objId => $objData)
+                                if ($objId == $startEndDupe['id'])
+                                {
+                                    $mObjectives[$zoneId]['levels'][$floor][] = $startEndDupe;
+                                    break 3;
+                                }
+            }
+        }
+
+        // ..process zone data
+        if ($mObjectives)
+        {
+            $areas = new ZoneList(array(['id', array_keys($mObjectives)]));
+            if (!$areas->error)
+            {
+                $someIDX = 0;                               // todo (low): UNK value ... map priority, floor, mapId..? values seen: 0 - 3; doesn't seem to affect anything
+                foreach ($areas->iterate() as $id => $__)
+                {
+                    $mObjectives[$id]['zone'] = $areas->getField('name', true);
+                    $mZones[] = [$id, ++$someIDX];
+                }
+            }
+        }
+
+        // has start & end?
+        $hasStartEnd = 0x0;
+        foreach ($mObjectives as $levels)
+        {
+            foreach ($levels['levels'] as $floor)
+            {
+                foreach ($floor as $entry)
+                {
+                    if ($entry['point'] == 'start' || $entry['point'] == 'sourcestart')
+                        $hasStartEnd |= 0x1;
+                    else if ($entry['point'] == 'end' || $entry['point'] == 'sourceend')
+                        $hasStartEnd |= 0x2;
+                }
+            }
+        }
+
+        $this->map = $mObjectives ? array(
+            'mapperData' => [],                             // always empty
+            'data'       => array(
+                'parent'     => 'mapper-generic',
+                'objectives' => $mObjectives,
+                'zoneparent' => 'mapper-zone-generic',
+                'zones'      => $mZones,
+                'missing'    => count($mZones) > 1 || $hasStartEnd != 0x3 ? 1 : 0  // 0 if everything happens in one zone, else 1
+            )
+        ) : null;
+
 
         /****************/
         /* Main Content */
@@ -549,7 +884,7 @@ class QuestPage extends GenericPage
 
         $this->gains         = $this->createGains();
         $this->mail          = $this->createMail($maTab, $startEnd);
-        $this->rewards       = $this->createRewards();
+        $this->rewards       = $this->createRewards($_side);
         $this->objectives    = $this->subject->parseText('objectives', false);
         $this->details       = $this->subject->parseText('details', false);
         $this->offerReward   = $this->subject->parseText('offerReward', false);
@@ -559,8 +894,14 @@ class QuestPage extends GenericPage
         $this->suggestedPl   = $this->subject->getField('suggestedPlayers');
         $this->unavailable   = $_flags & QUEST_FLAG_UNAVAILABLE || $this->subject->getField('cuFlags') & CUSTOM_EXCLUDE_FOR_LISTVIEW;
         $this->redButtons    = array(
-            BUTTON_LINKS   => ['color' => 'ffffff00', 'linkId' => 'quest:'.$this->typeId.':'.$_level.''],
-            BUTTON_WOWHEAD => true
+            BUTTON_WOWHEAD => true,
+            BUTTON_LINKS   => array(
+                'linkColor' => 'ffffff00',
+                'linkId'    => 'quest:'.$this->typeId.':'.$_level,
+                'linkName'  => $this->name,
+                'type'      => $this->type,
+                'typeId'    => $this->typeId
+            )
         );
 
         if ($maTab)
@@ -591,14 +932,11 @@ class QuestPage extends GenericPage
         if (!$seeAlso->error)
         {
             $this->extendGlobalData($seeAlso->getJSGlobals());
-            $this->lvTabs[] = array(
-                'file'   => 'quest',
-                'data'   => $seeAlso->getListviewData(),
-                'params' => array(
-                    'name' => '$LANG.tab_seealso',
-                    'id'   => 'see-also'
-                )
-            );
+            $this->lvTabs[] = ['quest', array(
+                'data' => array_values($seeAlso->getListviewData()),
+                'name' => '$LANG.tab_seealso',
+                'id'   => 'see-also'
+            )];
         }
 
         // tab: criteria of
@@ -606,27 +944,24 @@ class QuestPage extends GenericPage
         if (!$criteriaOf->error)
         {
             $this->extendGlobalData($criteriaOf->getJSGlobals());
-            $this->lvTabs[] = array(
-                'file'   => 'achievement',
-                'data'   => $criteriaOf->getListviewData(),
-                'params' => array(
-                    'name' => '$LANG.tab_criteriaof',
-                    'id'   => 'criteria-of'
-                )
-            );
+            $this->lvTabs[] = ['achievement', array(
+                'data' => array_values($criteriaOf->getListviewData()),
+                'name' => '$LANG.tab_criteriaof',
+                'id'   => 'criteria-of'
+            )];
         }
 
         // tab: conditions
         $cnd = [];
         if ($_ = $this->subject->getField('reqMinRepFaction'))
         {
-            $cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0][] = [CND_REPUTATION_RANK, $_, 1 << Util::getReputationLevelForPoints($this->subject->getField('reqMinRepValue'))];
+            $cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0][] = [CND_REPUTATION_RANK, $_, 1 << Game::getReputationLevelForPoints($this->subject->getField('reqMinRepValue'))];
             $this->extendGlobalIds(TYPE_FACTION, $_);
         }
 
         if ($_ = $this->subject->getField('reqMaxRepFaction'))
         {
-            $cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0][] = [-CND_REPUTATION_RANK, $_, 1 << Util::getReputationLevelForPoints($this->subject->getField('reqMaxRepValue'))];
+            $cnd[CND_SRC_QUEST_ACCEPT][$this->typeId][0][] = [-CND_REPUTATION_RANK, $_, 1 << Game::getReputationLevelForPoints($this->subject->getField('reqMaxRepValue'))];
             $this->extendGlobalIds(TYPE_FACTION, $_);
         }
 
@@ -655,14 +990,11 @@ class QuestPage extends GenericPage
                    "Markup.printHtml(markup, 'tab-conditions', { allow: Markup.CLASS_STAFF })" .
                    "</script>";
 
-            $this->lvTabs[] = array(
-                'file'   => null,
+            $this->lvTabs[] = [null, array(
                 'data'   => $tab,
-                'params' => array(
-                    'id'   => 'conditions',
-                    'name' => '$LANG.requires'
-                )
-            );
+                'id'   => 'conditions',
+                'name' => '$LANG.requires'
+            )];
         }
     }
 
@@ -696,17 +1028,17 @@ class QuestPage extends GenericPage
         die($tt);
     }
 
-    public function notFound()
+    public function notFound($title = '', $msg = '')
     {
         if ($this->mode != CACHE_TYPE_TOOLTIP)
-            return parent::notFound(Lang::game('quest'), Lang::quest('notFound'));
+            return parent::notFound($title ?: Lang::game('quest'), $msg ?: Lang::quest('notFound'));
 
         header('Content-type: application/x-javascript; charset=utf-8');
         echo $this->generateTooltip(true);
         exit();
     }
 
-    private function createRewards()
+    private function createRewards($side)
     {
         $rewards = [];
 
@@ -766,9 +1098,9 @@ class QuestPage extends GenericPage
             }
         }
 
-        if (!empty($this->subject->rewards[$this->typeId][TYPE_ITEM][TYPE_CURRENCY]))
+        if (!empty($this->subject->rewards[$this->typeId][TYPE_CURRENCY]))
         {
-            $rc      = $this->subject->rewards[$this->typeId][TYPE_ITEM][TYPE_CURRENCY];
+            $rc      = $this->subject->rewards[$this->typeId][TYPE_CURRENCY];
             $rewCurr = new CurrencyList(array(['id', array_keys($rc)]));
             if (!$rewCurr->error)
             {
@@ -780,7 +1112,7 @@ class QuestPage extends GenericPage
                         'id'        => $id,
                         'name'      => $rewCurr->getField('name', true),
                         'quality'   => 1,
-                        'qty'       => $rc[$id] * ($_side == 2 ? -1 : 1), // toggles the icon
+                        'qty'       => $rc[$id] * ($side == 2 ? -1 : 1), // toggles the icon
                         'globalStr' => 'g_gatheredcurrencies'
                     );
                 }
@@ -790,13 +1122,13 @@ class QuestPage extends GenericPage
         // spellRewards
         $displ = $this->subject->getField('rewardSpell');
         $cast  = $this->subject->getField('rewardSpellCast');
-        if (!$cast && $displ)
+        if ($cast <= 0 && $displ > 0)
         {
             $cast  = $displ;
             $displ = 0;
         }
 
-        if ($cast || $displ)
+        if ($cast > 0 || $displ > 0)
         {
             $rewSpells = new SpellList(array(['id', [$displ, $cast]]));
             $this->extendGlobalData($rewSpells->getJSGlobals());
@@ -891,29 +1223,26 @@ class QuestPage extends GenericPage
                 if (!($se['method'] & 0x2) || $se['type'] != TYPE_NPC)
                     continue;
 
-                if ($_ = CreatureList::getName($se['typeId']))
+                if ($ti = CreatureList::getName($se['typeId']))
                 {
-                    $mail['sender'] = sprintf(Lang::quest('mailBy'), $se['typeId'], $_);
+                    $mail['sender'] = sprintf(Lang::quest('mailBy'), $se['typeId'], $ti);
                     break;
                 }
             }
 
-            $extraCols = ['Listview.extraCols.percent'];
+            $extraCols = ['$Listview.extraCols.percent'];
             $mailLoot = new Loot();
 
             if ($mailLoot->getByContainer(LOOT_MAIL, $_))
             {
                 $this->extendGlobalData($mailLoot->jsGlobals);
-                $attachmentTab = array(
-                    'file'   => 'item',
-                    'data'   => $mailLoot->getResult(),
-                    'params' => array(
-                        'name'        => '[Mail Attachments]',
-                        'id'          => 'mail-attachments',
-                        'extraCols'   => "$[".implode(', ', array_merge($extraCols, $mailLoot->extraCols))."]",
-                        'hiddenCols'  => "$['side', 'slot', 'reqlevel']"
-                    )
-                );
+                $attachmentTab = ['item', array(
+                    'data'       => array_values($mailLoot->getResult()),
+                    'name'       => Lang::quest('attachment'),
+                    'id'         => 'mail-attachments',
+                    'extraCols'  => array_merge($extraCols, $mailLoot->extraCols),
+                    'hiddenCols' => ['side', 'slot', 'reqlevel']
+                )];
             }
         }
 
@@ -940,11 +1269,30 @@ class QuestPage extends GenericPage
             if (!$fac || !$qty)
                 continue;
 
-            $gains['rep'][] = array(
-                'qty'  => $qty,
+            $rep = array(
+                'qty'  => [$qty, 0],
                 'id'   => $fac,
                 'name' => FactionList::getName($fac)
             );
+
+            if ($cuRates = DB::World()->selectRow('SELECT * FROM reputation_reward_rate WHERE faction = ?d', $fac))
+            {
+                if ($dailyType = $this->subject->isDaily())
+                {
+                    if ($dailyType == 1 && $cuRates['quest_daily_rate'] != 1.0)
+                        $rep['qty'][1] = $rep['qty'][0] * ($cuRates['quest_daily_rate'] - 1);
+                    else if ($dailyType == 2 && $cuRates['quest_weekly_rate'] != 1.0)
+                        $rep['qty'][1] = $rep['qty'][0] * ($cuRates['quest_weekly_rate'] - 1);
+                    else if ($dailyType == 3 && $cuRates['quest_monthly_rate'] != 1.0)
+                        $rep['qty'][1] = $rep['qty'][0] * ($cuRates['quest_monthly_rate'] - 1);
+                }
+                else if ($this->subject->isRepeatable() && $cuRates['quest_repeatable_rate'] != 1.0)
+                    $rep['qty'][1] = $rep['qty'][0] * ($cuRates['quest_repeatable_rate'] - 1);
+                else if ($cuRates['quest_rate'] != 1.0)
+                    $rep['qty'][1] = $rep['qty'][0] * ($cuRates['quest_rate'] - 1);
+            }
+
+            $gains['rep'][] = $rep;
         }
 
         // title

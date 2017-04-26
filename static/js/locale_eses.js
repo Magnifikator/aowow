@@ -780,6 +780,52 @@ var mn_enchantments = [
     [6,"DPS","?enchantments&filter=ty=6"],
     [4,"Defensa","?enchantments&filter=ty=4"]
 ];
+var mn_sounds = [
+    [1000, "Mi Lista de Reproducción", "?sound&playlist"],
+    [, "Tipos"],
+    [19,"Armor","?sounds&filter=ty=19"],
+    [16,"Death","?sounds&filter=ty=16"],
+    [25,"Doodads","?sounds&filter=ty=25"],
+    [52,"Emitters","?sounds&filter=ty=52"],
+    [29,"Emotes","?sounds&filter=ty=29"],
+    [12,"Errors","?sounds&filter=ty=12"],
+    [20,"Footstep Splash","?sounds&filter=ty=20"],
+    [3,"Footsteps","?sounds&filter=ty=3"],
+    [24,"Misc Ambience","?sounds&filter=ty=24"],
+    [10,"NPC Combat","?sounds&filter=ty=10"],
+    [17,"NPC Greetings","?sounds&filter=ty=17"],
+    [27,"NPC Loops","?sounds&filter=ty=27"],
+    [31,"Narration","?sounds&filter=ty=31"],
+    [30,"Narration Music","?sounds&filter=ty=30"],
+    [13,"Nature","?sounds&filter=ty=13"],
+    [14,"Objects","?sounds&filter=ty=14"],
+    [9,"Pick Up/Put Down","?sounds&filter=ty=9"],
+    [26,"Spell Fizzle","?sounds&filter=ty=26"],
+    [1,"Spells","?sounds&filter=ty=1"],
+    [23,"Tradeskills","?sounds&filter=ty=23"],
+    [2,"User Interface","?sounds&filter=ty=2"],
+    [53,"Vehicles","?sounds&filter=ty=53"],
+    [22,"Water","?sounds&filter=ty=22"],
+    [21,"Water (Character)","?sounds&filter=ty=21"],
+    [4,"Weapons Impacts","?sounds&filter=ty=4"],
+    [6,"Weapons Misses","?sounds&filter=ty=6"],
+    [50,"Zone Ambience","?sounds&filter=ty=50"],
+    [28,"Zone Music","?sounds&filter=ty=28"]
+];
+mn_icons = [
+    [3, "Logros", "?icons&filter=cr=3;crs=1;crv=0"],
+    // [4, "Mascotas de duelo", "?icons&filter=cr=4;crs=1;crv=0"],
+    // [5, "Habilidades de mascota de batalla", "?icons&filter=cr=5;crs=1;crv=0"],
+    [11, "Clases", "?icons&filter=cr=11;crs=1;crv=0"],
+    [6, "Monedas", "?icons&filter=cr=6;crs=1;crv=0"],
+    // [8, "Construcciones de Ciudadela", "/icons?filter=cr=8;crs=1;crv=0"],
+    [1, "Objetos", "?icons&filter=cr=1;crs=1;crv=0"],
+    [9, "Mascotas de cazador", "?icons&filter=cr=9;crs=1;crv=0"],
+    // [7, "Habilidades del cuartel", "?icons&filter=cr=7;crs=1;crv=0"],
+    [2, "Hechizos", "?icons&filter=cr=2;crs=1;crv=0"],
+    // [10, "Amenazas", "?icons&filter=cr=10;crs=1;crv=0"],
+    [13, "Sin uso", "?icons&filter=cr=13;crs=3;crv=0"]
+];
 var mn_talentCalc = [
     [6,"Caballero de la muerte","?talent#j",,{className:"c6",tinyIcon:"class_deathknight"}],
     [11,"Druida","?talent#0",,{className:"c11",tinyIcon:"class_druid"}],
@@ -830,24 +876,30 @@ var mn_petCalc = [
     [42,"Gusano","?petcalc#mm",,{tinyIcon:"Ability_Hunter_Pet_Worm"}]
 ];
 var mn_database = [
-    [9,"Logros","?achievements",mn_achievements],
-    [12,"Clases","?classes",mn_classes],
-    [15,"Monedas","?currencies", mn_currencies],
-    [7,"Facciones","?factions",mn_factions],
-    [8,"Mascotas de cazador","?pets",mn_pets],
+    [, "Objetos"],
     [2,"Conjuntos de objetos","?itemsets",mn_itemSets],
     [0,"Objetos","?items",mn_items],
-    [4,"PNJs","?npcs",mn_npcs],
-    [5,"Entidades","?objects",mn_objects],
+    [101,"Encantamientos","?enchantments",mn_enchantments],
+    [, "Personaje"],
+    [9,"Logros","?achievements",mn_achievements],
+    [12,"Clases","?classes",mn_classes],
+    [100,"Emociones","?emotes",null],
+    [8,"Mascotas de cazador","?pets",mn_pets],
     [14,"Profesiones y habilidades","?skills",mn_skills],
-    [3,"Misiones","?quests",mn_quests],
     [13,"Razas","?races",mn_races],
     [1,"Hechizos","?spells",mn_spells],
     [10,"Títulos","?titles",mn_titles],
+    [, "Mundo"],
+    [15,"Monedas","?currencies", mn_currencies],
+    [7,"Facciones","?factions",mn_factions],
+    [4,"PNJs","?npcs",mn_npcs],
+    [5,"Entidades","?objects",mn_objects],
+    [3,"Misiones","?quests",mn_quests],
     [11,"Eventos del mundo","?events",mn_holidays],
     [6,"Zonas","?zones",mn_zones],
-    [100,"Emociones","?emotes",null],
-    [101,"Encantamientos","?enchantments",mn_enchantments]
+    [, "Otros"],
+    [31, "Iconos", "?icons", mn_icons],
+    [19,"Sonidos","?sounds",mn_sounds]
 ];
 var mn_tools = [
     [0,"Calculadora de talentos","?talent",mn_talentCalc],
@@ -890,13 +942,33 @@ var mn_tools = [
         [4,"Página aleatoria","?random"]
     ]]
 ];
+var mn_reputation = [
+    [0, "Mostrar todos los privilegios", "?privileges"],
+    [, "Privilegios"],
+    [1, "Escribir comentarios", "?privilege=1"],
+    // [2, "Escribir enlaces externos", "?privilege=2"],
+    // [4, "Sin CAPTCHAs", "?privilege=4"],
+    [5, "Los votos de comentario valen más", "?privilege=5"],
+    [9, "Más votos por día", "?privilege=9"],
+    [10, "Dar una valoración positiva a comentarios", "?privilege=10"],
+    [11, "Dar una valoración negativa a comentarios", "?privilege=11"],
+    [12, "Escribir respuestas a comentarios", "?privilege=12"],
+    // [13, "Borde: Poco Común", "?privilege=13"],
+    // [14, "Borde: Raro", "?privilege=14"],
+    // [15, "Borde: Épica", "?privilege=15"],
+    // [16, "Borde: Legendaria", "?privilege=16"],
+    [17, "AoWoW Premium", "?privilege=17"]
+];
 var mn_community = [
     [3,"Foros","http://forums.battle.net",null,{tinyIcon: g_staticUrl + "/images/icons/forum.png"}],
     [7,"Blog","http://worldpress.com",null,{tinyIcon: g_staticUrl + "/images/icons/blog.png"}],
     [4,"Canal de IRC","http://webchat.quakenet.org/",null,{tinyIcon: g_staticUrl + "/images/icons/irc.png"}],
+    [,"Comunidad"],
+    [10, "Reputación en la web", "?reputation", mn_reputation],
+    [11, "Usuarios más populares", "?top-users"],
     [,"Social"],
-    [6,"Página de Facebook","http://facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.gif"}],
-    [5,"Página de Twitter","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.gif"}]
+    [6,"Página de Facebook","http://facebook.com",null,{tinyIcon: g_staticUrl + "/images/icons/facebook.png"}],
+    [5,"Página de Twitter","http://twitter.com",null,{tinyIcon: g_staticUrl + "/images/icons/twitter.png"}]
 ];
 var mn_more = [
     [,"Todo sobre AoWoW"],
@@ -2049,8 +2121,8 @@ var g_zone_instancetypes = {
     4: 'Campo de batalla',
     5: 'Mazmorra',          // Heroic
     6: 'Arena',
-    7: 'Banda',             // 10-25
-    8: 'Banda'              // 10-25 Heroic
+    7: 'Banda 10-25',             // 10-25
+    8: 'Banda 10-25 Heroico'              // 10-25 Heroic
 };
 
 var g_zone_territories = {
@@ -2208,7 +2280,9 @@ var g_user_roles = {
     10: 'Traductor',
     11: 'Agente de ventas',
     12: 'Gestor de Capturas de pantalla',
-    13: 'Gestor de vídeos'
+    13: 'Gestor de vídeos',
+    14: 'Partner de API',
+    15: 'Pendiente'
 };
 
 var g_gem_colors = {
@@ -2230,96 +2304,101 @@ var g_socket_names = {
     14: 'Ranura prismática'
 };
 
-/* custom */
 // DRUNK_MESSAGE_*
 var g_drunk_states = {
-    0: 'sober',
-    1: 'tipsy',
-    2: 'drunk',
-    3: 'smashed'
+    0: 'sobrio',
+    1: 'achispado',
+    2: 'ebrio',
+    3: 'muy ebrio'
 };
 
 var g_operators = {
-    0: 'exact',
-    1: 'more than',
-    2: 'less than',
-    3: 'more than or exact',
-    4: 'less than or exact'
+    0: 'exacto',
+    1: 'mas que',
+    2: 'menos que',
+    3: 'mas que, o exacto',
+    4: 'menos que, o exacto'
 };
 
 var g_world_object_types = {
-    3: 'Creature',
-    4: 'Player',
+    3: 'Criatura',
+    4: 'Jugador',
     5: 'Entidad',
-    7: 'Player Corpse'
+    7: 'Cadaver de Jugador'
 };
 
 var g_condition_types = {
-     1: ['Looting',        'If the conditions are met, this item can be dropped by [npc=$1].'],                                 // CND_SRC_CREATURE_LOOT_TEMPLATE
-     2: ['Disenchanting',  'If the conditions are met, this item can be found when disenchanting [item=$1].'],                  // CND_SRC_DISENCHANT_LOOT_TEMPLATE
-     3: ['Fishing',        'If the conditions are met, fishing in [zone=$1] can yield this item.'],                             // CND_SRC_FISHING_LOOT_TEMPLATE
-     4: ['Object Opening', 'If the conditions are met, this item can be found in [object=$1].'],                                // CND_SRC_GAMEOBJECT_LOOT_TEMPLATE
-     5: ['Item Opening',   'If the conditions are met, this item can be found in [item=$1].'],                                  // CND_SRC_ITEM_LOOT_TEMPLATE
-     6: ['Mail Attachm.',  'If the conditions are met, this item can be attached to this mail.'],                               // CND_SRC_MAIL_LOOT_TEMPLATE
-     7: ['Milling',        'If the conditions are met, this item can be milled from [item=$1].'],                               // CND_SRC_MILLING_LOOT_TEMPLATE
-     8: ['Pickpocketing',  'If the conditions are met, this item can be picked from [npc=$1].'],                                // CND_SRC_PICKPOCKETING_LOOT_TEMPLATE
-     9: ['Prospecting',    'If the conditions are met, this item can be prospected from [item=$1].'],                           // CND_SRC_PROSPECTING_LOOT_TEMPLATE
+     1: ['Looting',        'Si las condiciones se cumplen, este objeto puede ser arrojado por [npc=$1].'],                          // CND_SRC_CREATURE_LOOT_TEMPLATE
+     2: ['Disenchanting',  'Si las condiciones se cumplen, este objeto puede ser encontrado al momento de desencantar [item=$1].'], // CND_SRC_DISENCHANT_LOOT_TEMPLATE
+     3: ['Fishing',        'Si las condiciones se cumplen, pescando en [zone=$1] puede obtener el objeto'],                         // CND_SRC_FISHING_LOOT_TEMPLATE
+     4: ['Object Opening', 'Si las condiciones se cumplen, este objeto puede ser encontrado en [object=$1].'],                                // CND_SRC_GAMEOBJECT_LOOT_TEMPLATE
+     5: ['Item Opening',   'Si las condiciones se cumplen, este objeto puede ser encontrado en [item=$1].'],                                  // CND_SRC_ITEM_LOOT_TEMPLATE
+     6: ['Mail Attachm.',  'Si las condiciones se cumplen, este objeto puede adjuntado a este correo.'],                               // CND_SRC_MAIL_LOOT_TEMPLATE
+     7: ['Milling',        'Si las condiciones se cumplen, este objeto puede ser molido de [item=$1].'],                               // CND_SRC_MILLING_LOOT_TEMPLATE
+     8: ['Pickpocketing',  'Si las condiciones se cumplen, este objeto puede ser tomado de [npc=$1].'],                                // CND_SRC_PICKPOCKETING_LOOT_TEMPLATE
+     9: ['Prospecting',    'Si las condiciones se cumplen, este objeto puede ser prospectado de [item=$1].'],                           // CND_SRC_PROSPECTING_LOOT_TEMPLATE
     10: ['Ref. Looting',   ''],                                                                                                 // CND_SRC_REFERENCE_LOOT_TEMPLATE
-    11: ['Skinning',       'If the conditions are met, this item can be skinned from [npc=$1].'],                               // CND_SRC_SKINNING_LOOT_TEMPLATE
-    12: ['Crafting',       'If the conditions are met, casting [spell=$1] may also create this item.'],                         // CND_SRC_SPELL_LOOT_TEMPLATE
-    13: ['Auto Target',    'Only targets matching the conditions can be affected by the spell.'],                               // CND_SRC_SPELL_IMPLICIT_TARGET
-    14: ['Gossip',         'Display the related Gossip entry on [npc=$2], if the conditions are met.'],                         // CND_SRC_GOSSIP_MENU
-    15: ['Gossip Menu',    'Display the related Gossip menu, if the conditions are met.'],                                      // CND_SRC_GOSSIP_MENU_OPTION
-    16: ['Vehicle',        'This Creature can be used as a vehicle, if the conditions are met.'],                               // CND_SRC_CREATURE_TEMPLATE_VEHICLE
-    17: ['Spell',          'This Spell can only be cast, if the conditions are met.'],                                          // CND_SRC_SPELL
-    18: ['Spell Click',    'If the conditions are met, [npc=$2] casts [spell=$1] if clicked on.'],                              // CND_SRC_SPELL_CLICK_EVENT
-    19: ['Quest Accept',   'The Player can accept this quest, if the condition is met.'],                                       // CND_SRC_QUEST_SHOW_MARK
-    20: ['Quest Sign',     'A [icon name=quest_startend]&nbsp;[/icon] will be shown for this quest, if the condition is met.'], // CND_SRC_QUEST_ACCEPT
-    21: ['Vehicle Spell',  'If the conditions are met, vehicle [npc=$2] has [spell=$1] available.'],                            // CND_SRC_VEHICLE_SPELL
-    22: ['SmartAI',        'If the conditions are met, the creatures AI may perform additional actions.'],                      // CND_SRC_SMART_EVENT
-    23: ['Vendor',         'If the conditions are met, the vendor will have this item available.'],                             // CND_SRC_NPC_VENDOR
-    24: ['Spell Proc',     'If the conditions are met, the spell is allowed to proc.']                                          // CND_SRC_SPELL_PROC
+    11: ['Skinning',       'Si las condiciones se cumplen, este objeto puede ser desollado por [npc=$1].'],                               // CND_SRC_SKINNING_LOOT_TEMPLATE
+    12: ['Crafting',       'Si las condiciones se cumplen, al lanzar [spell=$1] tambien puede crear este objeto.'],                         // CND_SRC_SPELL_LOOT_TEMPLATE
+    13: ['Auto Target',    'Solo los blancos que cumplan las condiciones, pueden ser afectados por el hechizo.'],                               // CND_SRC_SPELL_IMPLICIT_TARGET
+    14: ['Gossip',         'Muestra el texto relacionado del NPC [npc=$2], si las condiciones se cumplen.'],                         // CND_SRC_GOSSIP_MENU
+    15: ['Gossip Menu',    'Muestra el menú relacionado, si las condiciones se cumplen.'],                                      // CND_SRC_GOSSIP_MENU_OPTION
+    16: ['Vehicle',        'Esta criatura puede ser usada como vehículo, si las condiciones se cumplen.'],                               // CND_SRC_CREATURE_TEMPLATE_VEHICLE
+    17: ['Spell',          'Este hechizo solo puede ser lanzado, si las condiciones se cumplen.'],                                          // CND_SRC_SPELL
+    18: ['Spell Click',    'Si las condiciones se cumplen, [npc=$2] lanzará [spell=$1] si ha sido cliqueado.'],                              // CND_SRC_SPELL_CLICK_EVENT
+    19: ['Quest Accept',   'El Jugador puede aceptar esta misión, si las condiciones se cumplen.'],                                       // CND_SRC_QUEST_SHOW_MARK
+    20: ['Quest Sign',     'El [icon name=quest_startend]&nbsp;[/icon] será mostrado para esta misión, si las condiciones se cumplen.'], // CND_SRC_QUEST_ACCEPT
+    21: ['Vehicle Spell',  'Si las condiciones se cumplen, el vehículo [npc=$2] tendrá disponible [spell=$1].'],                            // CND_SRC_VEHICLE_SPELL
+    22: ['SmartAI',        'Si las condiciones se cumplen, la criatura con IA puede realizar acciones adicionales.'],                      // CND_SRC_SMART_EVENT
+    23: ['Vendor',         'Si las condiciones se cumplen, el vendedor tendrá este objeto disponible.'],                             // CND_SRC_NPC_VENDOR
+    24: ['Spell Proc',     'Si las condiciones se cumplen, el hechizó tendrá permiso a tener chance en uso.']                                          // CND_SRC_SPELL_PROC
 };
 
 var g_conditions = {
-     1: 'The Player $has:does not have; an aura of $1',
-     2: 'The Player $owns: does not own; $1',
-     3: 'The Player $has:does not have; $1 equipped',
-     4: 'The Player is$: not; in $1',                       // also used by 22, 23
-     5: 'The Player\'s standing with $1 is$: not; $2',
-     6: 'The Player is$: not; $1',
-     7: 'The Player $knows: does not know; $1',
-     8: 'The Player has$: not; finished $1',
-     9: 'The Player has$: not; accepted $1',
-    10: 'The Player is$: not; $1',
-    11: 'The game word is$: not; in a certain state',       // nyi
-    12: '$1 must$: not; be active',
-    13: 'The instance $has:does not have; a certain state', // nyi
-    14: 'The Player has $never:; interacted with $1',
-    15: 'The Player is$: not; a $1',                        // also used by 16
-    17: 'The Player has$: not; achieved $1',
-    18: 'The Player has$: not; obtained $1',
-    20: 'The Player\'s gender is$: not; [span class=icon-$2]$1[/span]',
-    21: 'The target $has:does not have; a certain state',   // nyi
+     1: 'El Jugador $tiene:no tiene; un aura de $1',
+     2: 'El Jugador $posee: no posee; $1',
+     3: 'El Jugador $tiene:no tiene ; $1 equipado',
+     4: 'El Jugador es$: no; en $1',                       // also used by 22, 23
+     5: 'El/Los Jugador/es que tienen $1 es$: no; $2',
+     6: 'El Jugador es$: no; $1',
+     7: 'El Jugador $sabe: no sabe; $1',
+     8: 'El Jugador tiene$: no; finalizado $1',
+     9: 'El Jugador tiene$: no; aceptado $1',
+    10: 'El Jugador es$: no; $1',
+    11: 'WorldState #$1 es$: no; $2',
+    12: '$1 debe$: no; estar activo',
+    13: 'La instancia $debe:no debe; en cierto estado', // nyi
+    14: 'El Jugador tiene $nunca:; ha interactuado con $1',
+    15: 'El Jugador es$: no; un $1',                        // also used by 16
+    17: 'El Jugador tiene$: no; alcanzado $1',
+    18: 'El Jugador tiene$: no; obtenido $1',
+    20: 'El/Los genero/s del/los Jugador/es es$: no; [span class=icon-$2]$1[/span]',
+    21: 'El objetivo $tiene:no tiene; un cierto estado',   // nyi
     24: '',                                                 // not used
-    25: 'The Player $knows: does not know; $1',
-    26: 'The Creature is$: not; in phase $1',
-    27: 'The target\'s level is$: not; $2 $1',
-    28: 'The Player has$: not; completed $1',
-    29: 'The Player is$: not; within $2yd of $1',           // also used by 30
-    31: 'Casters\'s target is$: not; $1',                   // also used by 32
-    33: 'The Player $has:does not have; a certain relation to the target',  // nyi
-    34: 'The target $has:does not have; a certain reaction to the Player',  // nyi
-    35: 'The target is$: not; $2 $1yd away',
-    36: 'The target is$: not; alive',
-    37: 'The target\'s health is$: not; $2 $1',
-    37: 'The target\'s health is$: not; $2 $1%'
+    25: 'El Jugador $sabe: no sabe; $1',
+    26: 'La criatura es$: no; en fase $1',
+    27: 'El/Los nivel/es del/los objetivo/s es/son$: no; $2 $1',
+    28: 'El Jugador tiene$: no; completado $1',
+    29: 'El Jugador esta$: no; entre $2yardas de $1',           // also used by 30
+    31: 'El/los objetivo/s del lanzador esta$: no; $1',                   // also used by 32
+    33: 'El Jugador $tiene:no tiene; cierta relación con el objetivo',  // nyi
+    34: 'El objetivo $tiene:no tiene; cierta reacción al Jugador',  // nyi
+    35: 'El objetivo esta$: no; $2 $1yarda cerca',
+    36: 'El objetivo esta$: no; vivo',
+    37: 'La salud del objetivo/s esta$: no; $2 $1',
+    37: 'La salud del objetivo/s esta$: no; $2 $1%'
 };
-/* end custom */
 
 var LANG = {
+    alltime_stc:   "Todo el tiempo",
+    lastmonth_stc: "Mes pasado",
+    lastweek_stc:  "Semana pasada",
+
+    linkremoved:     "enlace eliminado",
+    linkremoved_tip: "Los nuevos usuarios no pueden enlazar a<br />webs que no estén aprobadas.",
+
     and:      " y ",
-    or:       " o ",
+    or:       " o ",                                        // custom
     comma:    ", ",
     ellipsis: "…",
     dash:     " – ",
@@ -2342,6 +2421,7 @@ var LANG = {
     amount:                 "Cantidad",
     abilities:              "Habilidades",
     activity:               "Actividad",
+    add:                    "Añadir",
     animation:              "Animación",
     armor:                  "Armadura",
     text:                   "Texto",
@@ -2363,10 +2443,12 @@ var LANG = {
     daily:                  "Diaria",
     weekly:                 "Semanal",
     damage:                 "Daño",
+    'delete':               "Borrar",
     diet:                   "Dieta",
     dps:                    "DPS",
     earned:                 "Logrados",
     enchant:                "Encantar",
+    entitycount:            "$1 $2",
     exp:                    "Exp.",
     faction:                "Facción",
     gains:                  "Ganancias",
@@ -2459,6 +2541,7 @@ var LANG = {
     tp:                     "PI",
     trending:               "Tendencia",
     type:                   "Tipo",
+    unused:                 "Sin uso",
     up:                     "Arriba",
     cooldown:               "Reutilización",
     duration:               "Duración",
@@ -2483,6 +2566,8 @@ var LANG = {
 
     male:   "Hombre",
     female: "Mujer",
+
+    searchdb: "Buscar en la Base de Datos...",
 
     source_bossdrop: "Botín de Jefe",
     source_zonedrop: "Despojo de zona",
@@ -2565,6 +2650,9 @@ var LANG = {
     lvpage_next:     "Siguiente ",
     lvpage_last:     "Última ",
 
+    lvsearchresults: "Buscar en resultados",
+    lvsearchdisplayedresults: "Buscar en los resultados mostrados",
+
     lvscreenshot_submit: "Envia una captura de pantalla",
     lvscreenshot_from:   "Desde ",
     lvscreenshot_hires:  "Ver",
@@ -2587,11 +2675,14 @@ var LANG = {
     lvnodata_vi2: "¡Sé el primero en <a>sugerir un vídeo</a> para esta página!",
     lvnodata_vi3: "Por favor <a>inicia sesión</a> para sugerir un vídeo, o <a>crea tu cuenta</a> si aun no tienes una.",
 
+    lvnote_sort: "Ordenar por: ",
+
     lvnote_tryfiltering: "Trata de <a>filtrar</a> tus resultados",
     lvnote_trynarrowing: "Trata de ser más específica(o) en tu búsqueda",
     lvnote_upgradesfor:  'Buscando mejoras para <a href="?item=$1" class="q$2"><b>$3</b></a>.',
     lvnote_witherrors:   "Algunos filtros en tus búsquedas eran inválidos y han sido ignorados.",
 
+    lvnote_entitiesfound:     "Se encontraron $1 $2 (se muestran $3)",
     lvnote_itemsfound:        "$1 objetos encontrados (mostrando $2)",
     lvnote_itemsetsfound:     "$1 conjuntos de objetos encontrados (mostrando $2)",
     lvnote_npcsfound:         "$1 PNJs encontrados (mostrando $2)",
@@ -2619,6 +2710,7 @@ var LANG = {
     lvnote_arenateamsfound2:  "$1 equipos de arena en total, $2 coincidente(s)",
     lvnote_currenciesfound:   "$1 monedas encontradas ($2 mostradas)",
     lvnote_enchantmentsfound: "$1 encantamientos encontrados (mostrados $2)",
+    lvnote_soundsfound:       "$1 sonidos encontrados ($2 mostrados)",
 
     lvnote_createafilter:  '<small><a href="$1">Crea un filtro</a></small>',
     lvnote_filterresults:  '<small><a href="$1">Filtrar estos resultados</a></small>',
@@ -2714,6 +2806,7 @@ var LANG = {
     dialog_mouseovertoload: "Pasa el ratón por encima para cargar...",
 
     message_ajaxnotsupported:     "Por favor, instale un navegador de internet más moderno (como Firefox) que pueda hacer peticiones 'Ajax'.",
+    message_browsernoaudio:       "Lo sentimos pero tu navegador no puede reproducir el formato de audio requerido: $1",
     message_cantdeletecomment:    "Este comentario fue automaticamente eliminado debido a que tiene una valoración negativa. No puede ser borrado.",
     message_cantdetachcomment:    "Este comentario ya fue separado.",
     message_codenotentered:       "No introdujo el código.",
@@ -3207,6 +3300,8 @@ var LANG = {
          15: ["Habilidad",           "habilidad",            "Habilidades",          "habilidades"],
          16: ["Atributo",            "atributo",             "Atributos",            "atributos"],
          17: ["Monedas",             "monedas",              "Monedas",              "monedas"],
+         19: ["Sonido",              "sonido",               "Sonidos",              "sonidos"],
+         29: ["Icono",               "icono",                "Iconos",               "íconos"],
         501: ["Emoción",             "emoción",              "Emociones",            "emociones"],
         502: ["Encantamiento",       "encantamiento",        "Encantamientos",       "encantamientos"]
     },
@@ -3884,6 +3979,23 @@ var LANG = {
         teamcontrib5v5:       "Contribución de equipo de arena 5v5"
     },
 
+    fiicons: {                                              // derived from from LANG.filters_icons
+        sepgeneral:         "General",
+        sepuses:            "Usos",
+        used:               "Veces Usado",
+        items:              "Usado(a) por Objetos",
+        spells:             "Usado(a) por Hechizos",
+        achievements:       "Usado(a) por Logros",
+     // battlepets:         "Usado(a) por Mascotas de duelo",
+     // battlepetabilities: "Usado(a) por Habilidades de mascota(s) de duelo",
+        currencies:         "Usado(a) por Monedas",
+     // missionabilities:   "Usado(a) por Aptitudes de misión",
+     // garrisonbuildings:  "Usado(a) por Construcciones de Ciudadela",
+        hunterpets:         "Usado(a) por Mascotas de cazador",
+     // threats:            "Usado(a) por Amenazas",
+        classes:            "Usado(a) por Clases"
+    },
+
     // custom
     fienchantments: {
         id:             "ID",
@@ -4372,8 +4484,54 @@ var LANG = {
     calculators: "Calculadoras",
     patch:       "Parche",
 
-    /* custom */
-    note_condition:       "Every one of these conditions must be met to satisfy the requirement.",
-    note_condition_group: "Any one of these groups must be met in full to satisfy the requirement."
-    /* end custom */
+    sound_activities: {
+        greeting:          "Saludo",
+        farewell:          "Adios",
+        angry:             "Enojado",
+        exertion:          "Ataque",
+        exertioncritical:  "Golpe crítico",
+        injury:            "Lesión",
+        injurycritical:    "Herida Critica",
+        death:             "Muerte",
+        stun:              "Aturdido",
+        stand:             "Parado",
+        footstep:          "Paso",
+        aggro:             "Aggro",
+        wingflap:          "Aleteo",
+        wingglide:         "Planear",
+        alert:             "Alerta",
+        fidget:            "Estar inquieto",
+        customattack:      "Personalizado",
+        loop:              "Repetir",
+        jumpstart:         "Saltar",
+        jumpend:           "Aterrizaje",
+        petattack:         "Ataque de Mascota",
+        petorder:          "Orden a la Mascota",
+        petdismiss:        "Retiro de la Mascota",
+        birth:             "Creado",
+        spellcast:         "Hechizo",
+        submerge:          "Sumergir",
+        submerged:         "Sumergido",
+        transform:         "Transformar",
+        transformanimated: "Transformar",
+        animation:         "Animación",
+        ready:             "Listo",
+        precast:           "Antes de conjurar",
+        cast:              "Lanzar",
+        impact:            "Impacto",
+        state:             "Estado",
+        statedone:         "Listo",
+        channel:           "Canalizado",
+        casterimpact:      "Impacto en el taumaturgo",
+        targetimpact:      "Impacto en el Objetivo",
+        castertargeting:   "Objetivo del taumaturgo",
+        missiletargeting:  "Focalización de un Misil",
+        instantarea:       "Área instantánea",
+        persistentarea:    "Área de permanencia",
+        casterstate:       "Estado del taumaturgo",
+        targetstate:       "Estado del Objetivo"
+    },
+
+    note_condition:       "Cada una de estas condiciones se deben cumplir para satisfacer el requerimiento",
+    note_condition_group: "Cualquiera de estos grupos de cumplir en totalidad para satisfacer el requerimiento"
 };

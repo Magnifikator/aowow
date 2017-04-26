@@ -8,14 +8,15 @@ class SpellList extends BaseType
 {
     use listviewHelper;
 
-    public        $ranks       = [];
-    public        $relItems    = null;
-    public        $sources     = [];
+    public          $ranks       = [];
+    public          $relItems    = null;
+    public          $sources     = [];
 
-    public static $type        = TYPE_SPELL;
-    public static $brickFile   = 'spell';
+    public static   $type        = TYPE_SPELL;
+    public static   $brickFile   = 'spell';
+    public static   $dataTable   = '?_spell';
 
-    public static $skillLines  = array(
+    public static   $skillLines  = array(
          6 => [ 43,  44,  45,  46,  54,  55,  95, 118, 136, 160, 162, 172, 173, 176, 226, 228, 229, 473], // Weapons
          8 => [293, 413, 414, 415, 433],                                                                  // Armor
          9 => [129, 185, 356, 762],                                                                       // sec. Professions
@@ -23,20 +24,21 @@ class SpellList extends BaseType
         11 => [164, 165, 171, 182, 186, 197, 202, 333, 393, 755, 773]                                     // prim. Professions
     );
 
-    public static $spellTypes  = array(
+    public static   $spellTypes  = array(
          6 => 1,
          8 => 2,
         10 => 4
     );
 
-    public static $effects     = array(
+    public static   $effects     = array(
         'heal'       => [ 0,  3,  10,  67,  75, 136                         ],  // <no effect>, Dummy, Heal, Heal Max Health, Heal Mechanical, Heal Percent
         'damage'     => [ 0,  2,   3,   9,  62                              ],  // <no effect>, Dummy, School Damage, Health Leech, Power Burn
         'itemCreate' => [24, 34,  59,  66, 157                              ],  // createItem, changeItem, randomItem, createManaGem, createItem2
         'trigger'    => [ 3, 32,  64, 101, 142, 148, 151, 152, 155, 160, 164],  // dummy, trigger missile, trigger spell, feed pet, force cast, force cast with value, unk, trigger spell 2, unk, dualwield 2H, unk, remove aura
         'teach'      => [36, 57, /*133*/                                    ]   // learn spell, learn pet spell, /*unlearn specialization*/
     );
-    public static $auras       = array(
+
+    public static   $auras       = array(
         'heal'       => [ 4,  8, 62, 69,  97, 226                           ],  // Dummy, Periodic Heal, Periodic Health Funnel, School Absorb, Mana Shield, Periodic Dummy
         'damage'     => [ 3,  4, 15, 53,  89, 162, 226                      ],  // Periodic Damage, Dummy, Damage Shield, Periodic Health Leech, Periodic Damage Percent, Power Burn Mana, Periodic Dummy
         'itemCreate' => [86                                                 ],  // Channel Death Item
@@ -44,20 +46,20 @@ class SpellList extends BaseType
         'teach'      => [                                                   ]
     );
 
-    private       $spellVars   = [];
-    private       $refSpells   = [];
-    private       $tools       = [];
-    private       $interactive = false;
-    private       $charLevel   = MAX_LEVEL;
+    private         $spellVars   = [];
+    private         $refSpells   = [];
+    private         $tools       = [];
+    private         $interactive = false;
+    private         $charLevel   = MAX_LEVEL;
 
-    protected     $queryBase   = 'SELECT s.*, s.id AS ARRAY_KEY FROM ?_spell s';
-    protected     $queryOpts   = array(
-                      's'   => [['src', 'sr', 'si', 'si', 'sia']],             //  6: TYPE_SPELL
-                      'si'  => ['j' => ['?_icons si  ON si.id  = s.iconId',    true], 's' => ', IFNULL (si.iconString,  "inv_misc_questionmark") AS iconString'],
-                      'sia' => ['j' => ['?_icons sia ON sia.id = s.iconIdAlt', true], 's' => ', sia.iconString AS iconStringAlt'],
-                      'sr'  => ['j' => ['?_spellrange sr ON sr.id = s.rangeId'], 's' => ', sr.rangeMinHostile, sr.rangeMinFriend, sr.rangeMaxHostile, sr.rangeMaxFriend, sr.name_loc0 AS rangeText_loc0, sr.name_loc2 AS rangeText_loc2, sr.name_loc3 AS rangeText_loc3, sr.name_loc6 AS rangeText_loc6, sr.name_loc8 AS rangeText_loc8'],
-                      'src' => ['j' => ['?_source src ON type = 6 AND typeId = s.id', true], 's' => ', src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14, src15, src16, src17, src18, src19, src20, src21, src22, src23, src24']
-    );
+    protected       $queryBase   = 'SELECT s.*, s.id AS ARRAY_KEY FROM ?_spell s';
+    protected       $queryOpts   = array(
+                        's'   => [['src', 'sr', 'ic', 'ica']],  //  6: TYPE_SPELL
+                        'ic'  => ['j' => ['?_icons ic  ON ic.id  = s.iconId',    true], 's' => ', ic.name AS iconString'],
+                        'ica' => ['j' => ['?_icons ica ON ica.id = s.iconIdAlt', true], 's' => ', ica.name AS iconStringAlt'],
+                        'sr'  => ['j' => ['?_spellrange sr ON sr.id = s.rangeId'], 's' => ', sr.rangeMinHostile, sr.rangeMinFriend, sr.rangeMaxHostile, sr.rangeMaxFriend, sr.name_loc0 AS rangeText_loc0, sr.name_loc2 AS rangeText_loc2, sr.name_loc3 AS rangeText_loc3, sr.name_loc6 AS rangeText_loc6, sr.name_loc8 AS rangeText_loc8'],
+                        'src' => ['j' => ['?_source src ON type = 6 AND typeId = s.id', true], 's' => ', src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14, src15, src16, src17, src18, src19, src20, src21, src22, src23, src24']
+                    );
 
     public function __construct($conditions = [])
     {
@@ -108,7 +110,7 @@ class SpellList extends BaseType
             $_curTpl['skillLines'] = [];
             if ($_curTpl['skillLine1'] < 0)
             {
-                foreach (Util::$skillLineMask[$_curTpl['skillLine1']] as $idx => $pair)
+                foreach (Game::$skillLineMask[$_curTpl['skillLine1']] as $idx => $pair)
                     if ($_curTpl['skillLine2OrMask'] & (1 << $idx))
                         $_curTpl['skillLines'][] = $pair[1];
             }
@@ -124,6 +126,9 @@ class SpellList extends BaseType
 
             unset($_curTpl['skillLine1']);
             unset($_curTpl['skillLine2OrMask']);
+
+            if (!$_curTpl['iconString'])
+                $_curTpl['iconString'] = 'inv_misc_questionmark';
         }
 
         if ($foo)
@@ -160,7 +165,7 @@ class SpellList extends BaseType
                     {
                         $mods = [];
                         foreach ($json as $str => $val)
-                            if ($val && ($idx = array_search($str, Util::$itemMods)))
+                            if ($val && ($idx = array_search($str, Game::$itemMods)))
                                 $mods[$idx] = $val;
 
                         if ($mods)
@@ -255,7 +260,7 @@ class SpellList extends BaseType
                         break;
                     case 189:                               // CombatRating MiscVal:ratingMask
                     case 220:
-                        if ($mod = Util::itemModByRatingMask($mv))
+                        if ($mod = Game::itemModByRatingMask($mv))
                             Util::arraySumByKey($stats, [$mod => $pts]);
                         break;
                     case 143:                               // Resistance MiscVal:school
@@ -537,7 +542,7 @@ class SpellList extends BaseType
             return sprintf(Lang::spell('range'), $this->curTpl['rangeMinHostile'].' - '.$this->curTpl['rangeMaxHostile']);
         // friend and hostile differ; do color
         else if ($this->curTpl['rangeMaxHostile'] != $this->curTpl['rangeMaxFriend'])
-            return sprintf(Lang::spell('range'), '<span class="q10">'.$this->curTpl['rangeMaxHostile'].'</span> - <span class="q2">'.$this->curTpl['rangeMaxHostile']. '</span>');
+            return sprintf(Lang::spell('range'), '<span class="q10">'.$this->curTpl['rangeMaxHostile'].'</span> - <span class="q2">'.$this->curTpl['rangeMaxFriend']. '</span>');
         // hardcode: "melee range"
         else if ($this->curTpl['rangeMaxHostile'] == 5)
             return Lang::spell('meleeRange');
@@ -657,7 +662,7 @@ class SpellList extends BaseType
         $idx = [];
         for ($i = 1; $i < 4; $i++)
             if (in_array($this->curTpl['effect'.$i.'Id'], SpellList::$effects['trigger']) || in_array($this->curTpl['effect'.$i.'AuraId'], SpellList::$auras['trigger']))
-                if ($this->curTpl['effect'.$i.'TriggerSpell'] > 0 || $this->curTpl['effect'.$i.'MiscValue'] > 0)
+                if ($this->curTpl['effect'.$i.'TriggerSpell'] > 0 || ($this->curTpl['effect'.$i.'Id'] == 155 && $this->curTpl['effect'.$i.'MiscValue'] > 0))
                     $idx[] = $i;
 
         return $idx;
@@ -810,17 +815,58 @@ class SpellList extends BaseType
     }
 
     // description-, buff-parsing component
+    // a variables structure is pretty .. flexile. match in steps
+    private function matchVariableString($varString, &$len = 0)
+    {
+        $varParts = array(
+            'op'     => null,
+            'oparg'  => null,
+            'lookup' => null,
+            'var'    => null,
+            'effIdx' => null,
+            'switch' => null
+        );
+
+        // last value or gender -switch                 $[lg]ifText:elseText;
+        if (preg_match('/^([lg])([^:]*:[^;]*);/i', $varString, $m))
+        {
+            $len                = strlen($m[0]);
+            $varParts['var']    = $m[1];
+            $varParts['switch'] = explode(':', $m[2]);
+        }
+        // basic variable ref (most common case)        $(refSpell)?(var)(effIdx)?
+        else if (preg_match('/^(\d*)([a-z])([123]?)\b/i', $varString, $m))
+        {
+            $len                = strlen($m[0]);
+            $varParts['lookup'] = $m[1];
+            $varParts['var']    = $m[2];
+            $varParts['effIdx'] = $m[3];
+        }
+        // variable ref /w formula                      $( (op) (oparg); )? (refSpell) ( (var) (effIdx) )   OR   $(refSpell) ( (op) (oparg); )? ( (var) (effIdx) )
+        else if (preg_match('/^(([\+\-\*\/])(\d+);)?(\d*)(([\+\-\*\/])(\d+);)?([a-z])([123]?)\b/i', $varString, $m))
+        {
+            $len                = strlen($m[0]);
+            $varParts['lookup'] = $m[4];
+            $varParts['var']    = $m[8];
+            $varParts['effIdx'] = $m[9];
+            $varParts['op']     = $m[6] ?: $m[2];
+            $varParts['oparg']  = $m[7] ?: $m[3];
+        }
+        // something .. else?
+        else
+            return [];
+
+        return $varParts;
+    }
+
+    // description-, buff-parsing component
     // returns [min, max, minFulltext, maxFulltext, ratingId]
-    private function resolveVariableString($variable, &$usesScalingRating)
+    private function resolveVariableString($varParts, &$usesScalingRating)
     {
         $signs  = ['+', '-', '/', '*', '%', '^'];
 
-        $op     = $variable[2];
-        $oparg  = $variable[3];
-        $lookup = (int)$variable[4];
-        $var    = $variable[6] ? $variable[6] : $variable[8];
-        $effIdx = $variable[6] ? null         : $variable[9];
-        $switch = $variable[7] ? explode(':', $variable[7]) : null;
+        foreach ($varParts as $k => $v)
+            $$k = $v;
 
         $result = [null];
 
@@ -914,7 +960,8 @@ class SpellList extends BaseType
                 break;
             case 'l':                                       // boolean choice with last value as condition $lX:Y;
             case 'L':
-                $result[2] = '$l'.$switch[0].':'.$switch[1];// resolve later by backtracking
+                // resolve later by backtracking
+                $result[2] = '$l'.$switch[0].':'.$switch[1].';';
                 break;
             case 'm':                                       // BasePoints (minValue)
             case 'M':                                       // BasePoints (maxValue)
@@ -934,7 +981,7 @@ class SpellList extends BaseType
                 // Aura giving combat ratings
                 $rType = 0;
                 if ($aura == 189)
-                    if ($rType = Util::itemModByRatingMask($mv))
+                    if ($rType = Game::itemModByRatingMask($mv))
                         $usesScalingRating = true;
                 // Aura end
 
@@ -962,7 +1009,14 @@ class SpellList extends BaseType
                 $duration = $srcSpell->getField('duration');
 
                 if (!$periode)
-                    $periode = 3000;
+                {
+                    // Mod Power Regeneration & Mod Health Regeneration have an implicit periode of 5sec
+                    $aura = $srcSpell->getField('effect'.$effIdx.'AuraId');
+                    if ($aura == 84 || $aura == 85)
+                        $periode = 5000;
+                    else
+                        $periode = 3000;
+                }
 
                 $min  *= $duration / $periode;
                 $max  *= $duration / $periode;
@@ -1017,7 +1071,7 @@ class SpellList extends BaseType
                 // Aura giving combat ratings
                 $rType = 0;
                 if ($aura == 189)
-                    if ($rType = Util::itemModByRatingMask($mv))
+                    if ($rType = Game::itemModByRatingMask($mv))
                         $usesScalingRating = true;
                 // Aura end
 
@@ -1147,18 +1201,20 @@ class SpellList extends BaseType
             if ($formula[$pos] == '$')
                 $pos++;
 
-            if (!preg_match('/^(([\+\-\*\/])(\d+);)?(\d*)(([g])([\w\s]*:[\w\s]*);|([a-z])([123]?)\b)/i', substr($formula, $pos), $result))
+            $varParts = $this->matchVariableString(substr($formula, $pos), $len);
+            if (!$varParts)
             {
                 $str .= '#';                                // mark as done, reset below
                 continue;
             }
-            $pos += strlen($result[0]);
+
+            $pos += $len;
 
             // we are resolving a formula -> omit ranges
-            $var = $this->resolveVariableString($result, $scaling);
+            $var = $this->resolveVariableString($varParts, $scaling);
 
             // time within formula -> rebase to seconds and omit timeUnit
-            if (strtolower($result[6] ?: $result[8]) == 'd')
+            if (strtolower($varParts['var']) == 'd')
             {
                $var[0] /= 1000;
                unset($var[2]);
@@ -1253,6 +1309,7 @@ class SpellList extends BaseType
 
         deviations from standard procedures
             division    - example: $/10;2687s1 => $2687s1/10
+                        - also:    $61829/5;s1 => $61829s1/5
 
         functions in use .. caseInsensitive
             $cond(a, b, c) - like SQL, if A is met use B otherwise use C
@@ -1325,10 +1382,43 @@ class SpellList extends BaseType
         $data = $this->handleVariables($data, $scaling, true);
 
     // step 5: variable-dependant variable-text
-        // special case $lONE:ELSE;
-        // todo (low): russian uses THREE (wtf?! oO) cases ($l[singular]:[plural1]:[plural2]) .. explode() chooses always the first plural option :/
-        while (preg_match('/([\d\.]+)([^\d]*)(\$l:*)([^:]*):([^;]*);/i', $data, $m))
-            $data = str_ireplace($m[1].$m[2].$m[3].$m[4].':'.$m[5].';', $m[1].$m[2].($m[1] == 1 ? $m[4] : explode(':', $m[5])[0]), $data);
+        // special case $lONE:ELSE[:ELSE2]; or $|ONE:ELSE[:ELSE2];
+        while (preg_match('/([\d\.]+)([^\d]*)(\$[l|]:*)([^:]*):([^;]*);/i', $data, $m))
+        {
+            $plurals = explode(':', $m[5]);
+            $replace = '';
+
+            if (count($plurals) == 2)                       // special case: ruRU
+            {
+                switch (substr($m[1], -1))                  // check last digit of number
+                {
+                    case 1:
+                        // but not 11 (teen number)
+                        if (!in_array($m[1], [11]))
+                        {
+                            $replace = $m[4];
+                            break;
+                        }
+                    case 2:
+                    case 3:
+                    case 4:
+                        // but not 12, 13, 14 (teen number) [11 is passthrough]
+                        if (!in_array($m[1], [11, 12, 13, 14]))
+                        {
+                            $replace = $plurals[0];
+                            break;
+                        }
+                        break;
+                    default:
+                        $replace = $plurals[1];
+                }
+
+            }
+            else
+                $replace = ($m[1] == 1 ? $m[4] : $plurals[0]);
+
+            $data = str_ireplace($m[1].$m[2].$m[3].$m[4].':'.$m[5].';', $m[1].$m[2].$replace, $data);
+        }
 
     // step 6: HTMLize
         // colors
@@ -1381,12 +1471,12 @@ class SpellList extends BaseType
             }
             list($formOutVal, $formOutStr, $ratingId) = $this->resolveFormulaString($formOutStr, $formPrecision ?: ($topLevel ? 0 : 10), $scaling);
 
-            if ($ratingId && is_numeric($formOutVal) && $this->interactive)
+            if ($ratingId && Util::checkNumeric($formOutVal) && $this->interactive)
                 $resolved = sprintf($formOutStr, $ratingId, abs($formOutVal), sprintf(Util::$setRatingLevelString, $this->charLevel, $ratingId, abs($formOutVal), Util::setRatingLevel($this->charLevel, $ratingId, abs($formOutVal))));
-            else if ($ratingId && is_numeric($formOutVal))
+            else if ($ratingId && Util::checkNumeric($formOutVal))
                 $resolved = sprintf($formOutStr, $ratingId, abs($formOutVal), Util::setRatingLevel($this->charLevel, $ratingId, abs($formOutVal)));
             else
-                $resolved = sprintf($formOutStr, is_numeric($formOutVal) ? abs($formOutVal) : $formOutVal);
+                $resolved = sprintf($formOutStr, Util::checkNumeric($formOutVal) ? abs($formOutVal) : $formOutVal);
 
             $data = substr_replace($data, $resolved, $formStartPos, ($formCurPos - $formStartPos));
         }
@@ -1408,16 +1498,16 @@ class SpellList extends BaseType
             if ($data[$pos] == '$')
                 $pos++;
 
-            //            ( (op) (oparg); )? (refSpell) ( ([g]ifText:elseText; | (var) (effIdx) )
-            if (!preg_match('/^(([\+\-\*\/])(\d+);)?(\d*)(([g])([\w\s]*:[\w\s]*);|([a-z])([123]?)\b)/i', substr($data, $pos), $result))
+            $varParts = $this->matchVariableString(substr($data, $pos), $len);
+            if (!$varParts)
             {
                 $str .= '#';                                // mark as done, reset below
                 continue;
             }
 
-            $pos += strlen($result[0]);
+            $pos += $len;
 
-            $var = $this->resolveVariableString($result, $scaling);
+            $var = $this->resolveVariableString($varParts, $scaling);
             $resolved = is_numeric($var[0]) ? abs($var[0]) : $var[0];
             if (isset($var[2]))
             {
@@ -1435,9 +1525,6 @@ class SpellList extends BaseType
                 $resolved .= Lang::game('valueDelim');
                 $resolved .= isset($var[3]) ? sprintf($var[3], $_) : $_;
             }
-
-            if ($var[0] === null && $topLevel)              // {Unknown}
-                $resolved .= '{'.Lang::game('sources', 0).'}';
 
             $str .= $resolved;
         }
@@ -1915,6 +2002,11 @@ class SpellList extends BaseType
                     for ($i = 0; $i < 11; $i++)
                         if ($mask & (1 << $i))
                             $data[TYPE_RACE][$i + 1] = $i + 1;
+
+                // play sound effect
+                for ($i = 1; $i < 4; $i++)
+                    if ($this->getField('effect'.$i.'Id') == 131 || $this->getField('effect'.$i.'Id') == 132)
+                        $data[TYPE_SOUND][$this->getField('effect'.$i.'MiscValue')] = $this->getField('effect'.$i.'MiscValue');
             }
 
             if ($addMask & GLOBALINFO_SELF)
@@ -2067,65 +2159,50 @@ class SpellListFilter extends Filter
 
     // cr => [type, field, misc, extraCol]
     protected $genericFilter = array(                       // misc (bool): _NUMERIC => useFloat; _STRING => localized; _FLAG => match Value; _BOOLEAN => stringSet
-         2 => [FILTER_CR_NUMERIC, 'powerCostPercent',                         ],    // prcntbasemanarequired
-         3 => [FILTER_CR_BOOLEAN, 'spellFocusObject'                          ],    // requiresnearbyobject
-         4 => [FILTER_CR_NUMERIC, 'trainingcost'                              ],    // trainingcost
-         5 => [FILTER_CR_BOOLEAN, 'reqSpellId'                                ],    // requiresprofspec
-        10 => [FILTER_CR_FLAG,    'cuFlags',          SPELL_CU_FIRST_RANK     ],    // firstrank
-        12 => [FILTER_CR_FLAG,    'cuFlags',          SPELL_CU_LAST_RANK      ],    // lastrank
-        13 => [FILTER_CR_NUMERIC, 'rankNo',                                   ],    // rankno
-        14 => [FILTER_CR_NUMERIC, 'id',               null,               true],    // id
-        15 => [FILTER_CR_STRING,  'si.iconString',                            ],    // icon
-        19 => [FILTER_CR_FLAG,    'attributes0',      0x80000                 ],    // scaling
-        25 => [FILTER_CR_BOOLEAN, 'skillLevelYellow'                          ],    // rewardsskillups
-        11 => [FILTER_CR_FLAG,    'cuFlags',          CUSTOM_HAS_COMMENT      ],    // hascomments
-         8 => [FILTER_CR_FLAG,    'cuFlags',          CUSTOM_HAS_SCREENSHOT   ],    // hasscreenshots
-        17 => [FILTER_CR_FLAG,    'cuFlags',          CUSTOM_HAS_VIDEO        ],    // hasvideos
+         1 => [FILTER_CR_CALLBACK, 'cbCost',           null,                 null], // costAbs [op] [int]
+         2 => [FILTER_CR_NUMERIC,  'powerCostPercent', NUM_CAST_INT              ], // prcntbasemanarequired
+         3 => [FILTER_CR_BOOLEAN,  'spellFocusObject'                            ], // requiresnearbyobject
+         4 => [FILTER_CR_NUMERIC,  'trainingcost',     NUM_CAST_INT              ], // trainingcost
+         5 => [FILTER_CR_BOOLEAN,  'reqSpellId'                                  ], // requiresprofspec
+         8 => [FILTER_CR_FLAG,     'cuFlags',          CUSTOM_HAS_SCREENSHOT     ], // hasscreenshots
+         9 => [FILTER_CR_CALLBACK, 'cbSource',         null,                 null], // source [enum]
+        10 => [FILTER_CR_FLAG,     'cuFlags',          SPELL_CU_FIRST_RANK       ], // firstrank
+        11 => [FILTER_CR_FLAG,     'cuFlags',          CUSTOM_HAS_COMMENT        ], // hascomments
+        12 => [FILTER_CR_FLAG,     'cuFlags',          SPELL_CU_LAST_RANK        ], // lastrank
+        13 => [FILTER_CR_NUMERIC,  'rankNo',           NUM_CAST_INT              ], // rankno
+        14 => [FILTER_CR_NUMERIC,  'id',               NUM_CAST_INT,         true], // id
+        15 => [FILTER_CR_STRING,   'ic.name',                                    ], // icon
+        17 => [FILTER_CR_FLAG,     'cuFlags',          CUSTOM_HAS_VIDEO          ], // hasvideos
+        19 => [FILTER_CR_FLAG,     'attributes0',      0x80000                   ], // scaling
+        20 => [FILTER_CR_CALLBACK, 'cbReagents',       null,                 null], // has Reagents [yn]
+        25 => [FILTER_CR_BOOLEAN,  'skillLevelYellow'                            ]  // rewardsskillups
+    );
+
+    // fieldId => [checkType, checkValue[, fieldIsArray]]
+    protected $inputFields = array(
+        'cr'    => [FILTER_V_RANGE,    [1, 25],                                         true ], // criteria ids
+        'crs'   => [FILTER_V_LIST,     [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 99999]], true ], // criteria operators
+        'crv'   => [FILTER_V_REGEX,    '/[\p{C};:]/ui',                                 true ], // criteria values - only printable chars, no delimiters
+        'na'    => [FILTER_V_REGEX,    '/[\p{C};]/ui',                                  false], // name / text - only printable chars, no delimiter
+        'ex'    => [FILTER_V_EQUAL,    'on',                                            false], // extended name search
+        'ma'    => [FILTER_V_EQUAL,    1,                                               false], // match any / all filter
+        'minle' => [FILTER_V_RANGE,    [1, 99],                                         false], // spell level min
+        'maxle' => [FILTER_V_RANGE,    [1, 99],                                         false], // spell level max
+        'minrs' => [FILTER_V_RANGE,    [1, 999],                                        false], // required skill level min
+        'maxrs' => [FILTER_V_RANGE,    [1, 999],                                        false], // required skill level max
+        'ra'    => [FILTER_V_LIST,     [[1, 8], 10, 11],                                false], // races
+        'cl'    => [FILTER_V_CALLBACK, 'cbClasses',                                     true ], // classes
+        'gl'    => [FILTER_V_CALLBACK, 'cbGlyphs',                                      true ], // glyph type
+        'sc'    => [FILTER_V_RANGE,    [0, 6],                                          true ], // magic schools
+        'dt'    => [FILTER_V_LIST,     [[1, 6], 9],                                     false], // dispel types
+        'me'    => [FILTER_V_RANGE,    [1, 31],                                         false]  // mechanics
     );
 
     protected function createSQLForCriterium(&$cr)
     {
         if (in_array($cr[0], array_keys($this->genericFilter)))
-        {
             if ($genCr = $this->genericCriterion($cr))
                 return $genCr;
-
-            unset($cr);
-            $this->error = true;
-            return [1];
-        }
-
-        switch ($cr[0])
-        {
-            case 1:                                         // costAbs [op] [int]
-                if (!$this->isSaneNumeric($cr[2]))
-                    break;
-
-                if (!$this->int2Op($cr[1]))
-                    break;
-
-                return ['OR', ['AND', ['powerType', [1, 6]], ['powerCost', (10 * $cr[2]), $cr[1]]], ['AND', ['powerType', [1, 6], '!'], ['powerCost', $cr[2], $cr[1]]]];
-            case 9:                                         // source [enum]
-                $_ = isset($this->enums[$cr[0]][$cr[1]]) ? $this->enums[$cr[0]][$cr[1]] : null;
-                if ($_ !== null)
-                {
-                    if (is_int($_))                         // specific
-                        return ['src.src'.$_, null, '!'];
-                    else if ($_)                            // any
-                        return ['OR', ['src.src1', null, '!'], ['src.src2', null, '!'], ['src.src4', null, '!'], ['src.src5', null, '!'], ['src.src6', null, '!'], ['src.src7', null, '!'], ['src.src9', null, '!']];
-                    else if (!$_)                           // none
-                        return ['AND', ['src.src1', null], ['src.src2', null], ['src.src4', null], ['src.src5', null], ['src.src6', null], ['src.src7', null], ['src.src9', null]];
-                }
-                break;
-            case 20:                                        // has Reagents [yn]
-                if ($this->int2Bool($cr[1]))
-                {
-                    if ($cr[1])
-                        return ['OR', ['reagent1', 0, '>'], ['reagent2', 0, '>'], ['reagent3', 0, '>'], ['reagent4', 0, '>'], ['reagent5', 0, '>'], ['reagent6', 0, '>'], ['reagent7', 0, '>'], ['reagent8', 0, '>']];
-                    else
-                        return ['AND', ['reagent1', 0], ['reagent2', 0], ['reagent3', 0], ['reagent4', 0], ['reagent5', 0], ['reagent6', 0], ['reagent7', 0], ['reagent8', 0]];
-                }
-        }
 
         unset($cr);
         $this->error = true;
@@ -2152,97 +2229,108 @@ class SpellListFilter extends Filter
 
         // spellLevel min                                   todo (low): talentSpells (typeCat -2) commonly have spellLevel 1 (and talentLevel >1) -> query is inaccurate
         if (isset($_v['minle']))
-        {
-            if (is_int($_v['minle']) && $_v['minle'] > 0)
-                $parts[] = ['spellLevel', $_v['minle'], '>='];
-            else
-                unset($_v['minle']);
-        }
+            $parts[] = ['spellLevel', $_v['minle'], '>='];
 
         // spellLevel max
         if (isset($_v['maxle']))
-        {
-            if (is_int($_v['maxle']) && $_v['maxle'] > 0)
-                $parts[] = ['spellLevel', $_v['maxle'], '<='];
-            else
-                unset($_v['maxle']);
-        }
+            $parts[] = ['spellLevel', $_v['maxle'], '<='];
 
         // skillLevel min
         if (isset($_v['minrs']))
-        {
-            if (is_int($_v['minrs']) && $_v['minrs'] > 0)
-                $parts[] = ['learnedAt', $_v['minrs'], '>='];
-            else
-                unset($_v['minrs']);
-        }
+            $parts[] = ['learnedAt', $_v['minrs'], '>='];
 
         // skillLevel max
         if (isset($_v['maxrs']))
-        {
-            if (is_int($_v['maxrs']) && $_v['maxrs'] > 0)
-                $parts[] = ['learnedAt', $_v['maxrs'], '<='];
-            else
-                unset($_v['maxrs']);
-        }
+            $parts[] = ['learnedAt', $_v['maxrs'], '<='];
 
         // race
         if (isset($_v['ra']))
-        {
-            if (in_array($_v['ra'], [1, 2, 3, 4, 5, 6, 7, 8, 10, 11]))
-                $parts[] = ['AND', [['reqRaceMask', RACE_MASK_ALL, '&'], RACE_MASK_ALL, '!'], ['reqRaceMask', $this->list2Mask($_v['ra']), '&']];
-            else
-                unset($_v['ra']);
-        }
+            $parts[] = ['AND', [['reqRaceMask', RACE_MASK_ALL, '&'], RACE_MASK_ALL, '!'], ['reqRaceMask', $this->list2Mask([$_v['ra']]), '&']];
 
         // class [list]
         if (isset($_v['cl']))
-        {
-            $_ = (array)$_v['cl'];
-            if (!array_diff($_, [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]))
-                $parts[] = ['reqClassMask', $this->list2Mask($_), '&'];
-            else
-                unset($_v['cl']);
-        }
+            $parts[] = ['reqClassMask', $this->list2Mask($_v['cl']), '&'];
 
         // school [list]
         if (isset($_v['sc']))
-        {
-            $_ = (array)$_v['sc'];
-            if (!array_diff($_, [0, 1, 2, 3, 4, 5, 6]))
-                $parts[] = ['schoolMask', $this->list2Mask($_, true), '&'];
-            else
-                unset($_v['sc']);
-        }
+            $parts[] = ['schoolMask', $this->list2Mask($_v['sc'], true), '&'];
 
         // glyph type [list]                                wonky, admittedly, but consult SPELL_CU_* in defines and it makes sense
         if (isset($_v['gl']))
-        {
-            if (in_array($_v['gl'], [1, 2]))
-                $parts[] = ['cuFlags', ($this->list2Mask($_v['gl']) << 6), '&'];
-            else
-                unset($_v['gl']);
-        }
+            $parts[] = ['cuFlags', ($this->list2Mask($_v['gl']) << 6), '&'];
 
         // dispel type
         if (isset($_v['dt']))
-        {
-            if (in_array($_v['dt'], [1, 2, 3, 4, 5, 6, 9]))
-                $parts[] = ['dispelType', $_v['dt']];
-            else
-                unset($_v['dt']);
-        }
+            $parts[] = ['dispelType', $_v['dt']];
 
         // mechanic
         if (isset($_v['me']))
-        {
-            if ($_v['me'] > 0 && $_v['me'] < 32)
-                $parts[] = ['OR', ['mechanic', $_v['me']], ['effect1Mechanic', $_v['me']], ['effect2Mechanic', $_v['me']], ['effect3Mechanic', $_v['me']]];
-            else
-                unset($_v['me']);
-        }
+            $parts[] = ['OR', ['mechanic', $_v['me']], ['effect1Mechanic', $_v['me']], ['effect2Mechanic', $_v['me']], ['effect3Mechanic', $_v['me']]];
 
         return $parts;
+    }
+
+    protected function cbClasses(&$val)
+    {
+        if (!$this->parentCats || !in_array($this->parentCats[0], [-13, -2, 7]))
+            return false;
+
+        if (!Util::checkNumeric($val, NUM_REQ_INT))
+            return false;
+
+        $type  = FILTER_V_LIST;
+        $valid = [[1, 9], 11];
+
+        return $this->checkInput($type, $valid, $val);
+    }
+
+    protected function cbGlyphs(&$val)
+    {
+        if (!$this->parentCats || $this->parentCats[0] != -13)
+            return false;
+
+        if (!Util::checkNumeric($val, NUM_REQ_INT))
+            return false;
+
+        $type  = FILTER_V_LIST;
+        $valid = [1, 2];
+
+        return $this->checkInput($type, $valid, $val);
+    }
+
+    protected function cbCost($cr)
+    {
+        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
+            return false;
+
+        return ['OR', ['AND', ['powerType', [1, 6]], ['powerCost', (10 * $cr[2]), $cr[1]]], ['AND', ['powerType', [1, 6], '!'], ['powerCost', $cr[2], $cr[1]]]];
+    }
+
+    protected function cbSource($cr)
+    {
+        if (!isset($this->enums[$cr[0]][$cr[1]]))
+            return false;
+
+        $_ = $this->enums[$cr[0]][$cr[1]];
+        if (is_int($_))                         // specific
+            return ['src.src'.$_, null, '!'];
+        else if ($_)                            // any
+            return ['OR', ['src.src1', null, '!'], ['src.src2', null, '!'], ['src.src4', null, '!'], ['src.src5', null, '!'], ['src.src6', null, '!'], ['src.src7', null, '!'], ['src.src9', null, '!']];
+        else if (!$_)                           // none
+            return ['AND', ['src.src1', null], ['src.src2', null], ['src.src4', null], ['src.src5', null], ['src.src6', null], ['src.src7', null], ['src.src9', null]];
+
+        return false;
+    }
+
+    protected function cbReagents($cr)
+    {
+        if (!$this->int2Bool($cr[1]))
+            return false;
+
+        if ($cr[1])
+            return ['OR', ['reagent1', 0, '>'], ['reagent2', 0, '>'], ['reagent3', 0, '>'], ['reagent4', 0, '>'], ['reagent5', 0, '>'], ['reagent6', 0, '>'], ['reagent7', 0, '>'], ['reagent8', 0, '>']];
+        else
+            return ['AND', ['reagent1', 0], ['reagent2', 0], ['reagent3', 0], ['reagent4', 0], ['reagent5', 0], ['reagent6', 0], ['reagent7', 0], ['reagent8', 0]];
     }
 }
 

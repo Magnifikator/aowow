@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 class AjaxProfile extends AjaxHandler
 {
@@ -136,7 +136,13 @@ class AjaxProfile extends AjaxHandler
         */
 
         if ($this->params[0] == 'resync')
+        {
+            if ($chars = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_profiles WHERE id IN (?a)', $this->_get['id']))
+                foreach ($chars as $c)
+                    Util::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
+
             return '1';
+        }
         else // $this->params[0] == 'status'
         {
             /*
@@ -159,11 +165,11 @@ class AjaxProfile extends AjaxHandler
                 ]
             */
             $response = [(int)!!CFG_PROFILER_QUEUE];        // in theory you could have multiple queues but lets be frank .. you will NEVER be under THAT kind of load for it to be relevant
-            if (!$this->get('id'))
+            if (!$this->_get['id'])
                 $response[] = [PR_QUEUE_STATUS_ENDED, 0, 0, PR_QUEUE_ERROR_CHAR];
             else
             {
-                $charGUIDs  = explode(',', $this->get('id'));
+                $charGUIDs  = $this->_get['id'];
                 $charStatus = DB::Aowow()->select('SELECT typeId AS ARRAY_KEY, status, realm FROM ?_profiler_sync WHERE `type` = ?d AND typeId IN (?a)', TYPE_PROFILE, $charGUIDs);
                 $queue      = DB::Aowow()->selectCol('SELECT typeId FROM ?_profiler_sync WHERE `type` = ?d AND status = ?d AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC', TYPE_PROFILE, PR_QUEUE_STATUS_WAITING);
                 foreach ($charGUIDs as $guid)
@@ -249,6 +255,7 @@ class AjaxProfile extends AjaxHandler
         $spec2 = explode(' ', $pBase['spec2']);
 
         $profile = array(
+            'source'            => $pBase['id'],            // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
             'id'                => $pBase['id'],
             'name'              => $pBase['name'],
             'region'            => [$rData['region'], Lang::profiler('regions', $rData['region'])],
@@ -257,7 +264,7 @@ class AjaxProfile extends AjaxHandler
             'level'             => $pBase['level'],
             'classs'            => $pBase['class'],
             'race'              => $pBase['race'],
-            'faction'           => Util::sideByRaceMask(1 << ($pBase['race'] - 1), true),
+            'faction'           => Game::sideByRaceMask(1 << ($pBase['race'] - 1), true),
             'gender'            => $pBase['gender'],
             'skincolor'         => $pBase['skincolor'],
             'hairstyle'         => $pBase['hairstyle'],
@@ -385,7 +392,7 @@ class AjaxProfile extends AjaxHandler
                     // {
                         // if (is_array($v))
                             // $mods[] = $v;
-                        // else if ($str = @Util::$itemMods[$k])
+                        // else if ($str = @Game::$itemMods[$k])
                             // $mods[$str] = $v;
                     // }
                 // }
@@ -431,7 +438,7 @@ class AjaxProfile extends AjaxHandler
     {
         // expecting id-list
         if (preg_match('/\d+(,\d+)*/', $val))
-            return array_map('intVal', explode(', ', $val));
+            return array_map('intVal', explode(',', $val));
 
         return null;
     }
