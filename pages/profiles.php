@@ -158,7 +158,7 @@ class ProfilesPage extends GenericPage
             'onBeforeCreate' => '$pr_initRosterListview'        // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
         );
 
-        if ($_ = $this->filterObj->getForm('extraCols', true))
+        if ($_ = $this->filterObj->getExtraCols())
         {
             $xc = [];
             foreach ($_ as $skId)

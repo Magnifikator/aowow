@@ -34,10 +34,7 @@ $tCycle = 0.0;
 while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profiler_queue"'))
 {
     if (($tDiff = ($tCycle + CFG_PROFILER_QUEUE_DELAY * 1000) - microtime(true)) > 0.0)
-    {
-        CLI::write('sleeping '.Util::formatTime($tDiff / 1000, true).'..', CLI::LOG_INFO);
         usleep($tDiff);
-    }
 
     $tCycle = microtime(true);
 

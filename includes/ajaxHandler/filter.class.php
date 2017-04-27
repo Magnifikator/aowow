@@ -62,6 +62,9 @@ class AjaxFilter extends AjaxHandler
             case 'spells':
                 $this->filter = (new SpellListFilter(true, $opts));
                 break;
+            case 'profiles':
+                $this->filter = (new ProfileListFilter(true, $opts));
+                break;
             default:
                 return;
         }

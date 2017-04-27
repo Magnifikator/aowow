@@ -350,6 +350,22 @@ class ProfileListFilter extends Filter
         10 => [FILTER_CR_NUMERIC,   'gm.rank'            ], // guildrank
     );
 
+    // fieldId => [checkType, checkValue[, fieldIsArray]]
+    protected $inputFields = array(
+        'cr'     => [FILTER_V_LIST,  [9, 10],                                        true ], // criteria ids
+        'crs'    => [FILTER_V_LIST,  [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 5000]], true ], // criteria operators
+        'crv'    => [FILTER_V_RANGE, [0, 99999],                                     true ], // criteria values - only numeric input values expected
+        'na'     => [FILTER_V_REGEX, '/[\p{C};]/ui',                                 false], // name - only printable chars, no delimiter
+        'ma'     => [FILTER_V_EQUAL, 1,                                              false], // match any / all filter
+        'ex'     => [FILTER_V_EQUAL, 'on',                                           false], // only match exact
+        'si'     => [FILTER_V_LIST, [1, 2],                                          false], // side
+        'ra'     => [FILTER_V_LIST, [[1, 8], 10, 11],                                true ], // race
+        'cl'     => [FILTER_V_LIST, [[1, 9], 11],                                    true ], // class
+        'minle'  => [FILTER_V_RANGE, [1, MAX_LEVEL],                                 false], // min level
+        'maxle'  => [FILTER_V_RANGE, [1, MAX_LEVEL],                                 false]  // max level
+
+    );
+
     protected function createSQLForCriterium(&$cr)
     {
         if (in_array($cr[0], array_keys($this->genericFilter)))
@@ -430,48 +446,23 @@ class ProfileListFilter extends Filter
                 $parts[] = ['c.race', [1, 3, 4, 7, 11]];
             else if ($_v['si'] == 2)
                 $parts[] = ['c.race', [2, 5, 6, 8, 10]];
-            else
-                unset($_v['ra']);
         }
 
         // race [list]
         if (!empty($_v['ra']))
-        {
-            $_ = (array)$_v['ra'];
-            if ($_ = array_intersect([1, 2, 3, 4, 5, 6, 7, 8, 10, 11], $_))
-                $parts[] = ['c.race', $_];
-            else
-                unset($_v['ra']);
-        }
+            $parts[] = ['c.race', $_v['ra']];
 
         // class [list]
         if (!empty($_v['cl']))
-        {
-            $_ = (array)$_v['cl'];
-            if ($_ = array_intersect([1, 2, 3, 4, 5, 6, 7, 8, 9, 11], $_))
-                $parts[] = ['c.class', $_];
-            else
-                unset($_v['cl']);
-        }
+            $parts[] = ['c.class', $_v['cl']];
 
         // min level [int]
         if (isset($_v['minle']))
-        {
-            if (is_int($_v['minle']) && $_v['minle'] > 0)
-                $parts[] = ['c.level', $_v['minle'], '>='];
-            else
-                unset($_v['minle']);
-        }
+            $parts[] = ['c.level', $_v['minle'], '>='];
 
         // max level [int]
         if (isset($_v['maxle']))
-        {
-            if (is_int($_v['maxle']) && $_v['maxle'] > 0)
-                $parts[] = ['c.level', $_v['maxle'], '<='];
-            else
-                unset($_v['maxle']);
-        }
-
+            $parts[] = ['c.level', $_v['maxle'], '<='];
 
         return $parts;
     }
