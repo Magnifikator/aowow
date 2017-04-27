@@ -15,8 +15,17 @@ function siteconfig()
 {
     $reqKeys    = ['site_host', 'static_host'];
     $postChange = array(
-        'profiler_queue' => 'Profiler::queue'
-    )
+        'profiler_queue' => function($x) {
+            if (!$x)
+                return true;
+
+            $ok = Profiler::queueStart($msg);
+            if ($msg)
+                CLI::write($msg, CLI::LOG_ERROR);
+
+            return $ok;
+        }
+    );
 
     if (!DB::isConnected(DB_AOWOW))
     {
@@ -285,6 +294,17 @@ function siteconfig()
                                         else
                                         {
                                             DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $use['idx'], strtolower($conf['key']));
+                                            if (isset($postChange[strtolower($conf['key'])]))
+                                            {
+                                                $f = $postChange[strtolower($conf['key'])];
+                                                if (!$f($use['idx']))
+                                                {
+                                                    // disable again
+                                                    DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', 0, strtolower($conf['key']));
+                                                    sleep(1);
+                                                    break;
+                                                }
+                                            }
                                             CLI::write("setting updated", CLI::LOG_OK);
                                             sleep(1);
                                             break 3;

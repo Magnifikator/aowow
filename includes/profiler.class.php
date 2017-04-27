@@ -19,6 +19,27 @@ class Profiler
         return 0;
     }
 
+    public static function queueStart(&$msg = '')
+    {
+        $queuePID = self::queueStatus();
+
+        if ($queuePID)
+        {
+            $msg = 'queue already running';
+            return true;
+        }
+
+        exec('php prQueue --log=cache/pr-queue-'.date('dmY-His').'.log > /dev/null 2>/dev/null &');
+        usleep(500000);
+        if (self::queueStatus())
+            return true;
+        else
+        {
+            $msg = 'failed to start queue';
+            return false;
+        }
+    }
+
     public static function queueStatus()
     {
         if (!file_exists(self::$pidFile))

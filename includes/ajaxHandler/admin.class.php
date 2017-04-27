@@ -23,6 +23,10 @@ class AjaxAdmin extends AjaxHandler
         '__icon' => [FILTER_CALLBACK,            ['options' => 'AjaxAdmin::checkKey']],
     );
 
+    private $onConfChange  = array(
+        'profiler_queue' => 'AjaxAdmin::checkProfilerQueue'
+    );
+
     public function __construct(array $params)
     {
         parent::__construct($params);
@@ -337,6 +341,14 @@ class AjaxAdmin extends AjaxHandler
             $val = (int)!!$val;                 // *snort* bwahahaa
 
         DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $val, $key);
+        if (isset($this->onConfChange[strtolower($key)]))
+        {
+            $f = $this->onConfChange[strtolower($key)];
+            if (!$f($val, $msg))
+                DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', 0, $key);
+
+            return $msg;
+        }
         return '';
     }
 
@@ -442,5 +454,13 @@ class AjaxAdmin extends AjaxHandler
             return $val;
 
         return null;
+    }
+
+    private function checkProfilerQueue($x, &$msg)
+    {
+        if (!$x)
+            return true;
+
+        return Profiler::queueStart($msg);
     }
 }
