@@ -9,12 +9,18 @@ if (file_exists('config/config.php'))
 else
     $AoWoWconf = [];
 
+
 mb_internal_encoding('UTF-8');
+
+
+define('OS_WIN', substr(PHP_OS, 0, 3) == 'WIN');
+
 
 require_once 'includes/defines.php';
 require_once 'includes/libs/DbSimple/Generic.php';          // Libraray: http://en.dklab.ru/lib/DbSimple (using variant: https://github.com/ivan1986/DbSimple/tree/master)
 require_once 'includes/utilities.php';                      // helper functions
 require_once 'includes/game.php';                           // game related data & functions
+require_once 'includes/profiler.class.php';
 require_once 'includes/user.class.php';
 require_once 'includes/markup.class.php';                   // manipulate markup text
 require_once 'includes/database.class.php';                 // wrap DBSimple
@@ -201,7 +207,7 @@ if (!CLI)
         die('error: SITE_HOST or STATIC_HOST not configured');
 
     // Setup Session
-    if (CFG_SESSION_CACHE_DIR && Util::checkOrCreateDirectory(CFG_SESSION_CACHE_DIR))
+    if (CFG_SESSION_CACHE_DIR && Util::writeDir(CFG_SESSION_CACHE_DIR))
         session_save_path(getcwd().'/'.CFG_SESSION_CACHE_DIR);
 
     session_set_cookie_params(15 * YEAR, '/', '', $secure, true);

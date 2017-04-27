@@ -68,7 +68,7 @@ class ProfilePage extends GenericPage
             // 2) not yet synced but exists on realm
             else if ($guid = DB::Characters($this->realmId)->selectCell('SELECT guid FROM characters WHERE name = ?', Util::ucFirst($this->subjectName)))
             {
-                $newId = Util::scheduleResync(TYPE_PROFILE, $this->realmId, $guid);
+                $newId = Profiler::scheduleResync(TYPE_PROFILE, $this->realmId, $guid);
                 $this->doResync = ['profile', $newId];
                 $this->initialSync();
             }
@@ -76,7 +76,7 @@ class ProfilePage extends GenericPage
             else
                 $this->notFound();
         }
-        else if ($params || !isset($_GET['new']))
+        else if (($params && $params[0]) || !isset($_GET['new']))
             $this->notFound();
     }
 

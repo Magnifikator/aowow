@@ -114,12 +114,12 @@ class AjaxData extends AjaxHandler
         return $result;
     }
 
-    private function checkSkill($val)
+    protected function checkSkill($val)
     {
         return array_intersect([171, 164, 333, 202, 182, 773, 755, 165, 186, 393, 197, 185, 129, 356], explode(',', $val));
     }
 
-    private function checkCallback($val)
+    protected function checkCallback($val)
     {
         return substr($val, 0, 29) == '$WowheadProfiler.loadOnDemand';
     }

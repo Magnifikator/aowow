@@ -30,7 +30,7 @@ class ArenaTeamsPage extends GenericPage
         {
             $url = '?arena-teams='.$form['rg'];
             if (!empty($form['sv']))
-                $url .= '.'.Util::urlize($form['sv']);
+                $url .= '.'.Profiler::urlize($form['sv']);
 
             if ($_ = $this->filterObj->urlize(['sv' => '', 'rg' => '']))
                 $url .= '&filter='.$_;
@@ -38,7 +38,7 @@ class ArenaTeamsPage extends GenericPage
             header('Location: '.$url , true, 302);
         }
 
-        foreach (Util::getRealms() as $idx => $r)
+        foreach (Profiler::getRealms() as $idx => $r)
         {
             if ($this->region && $r['region'] != $this->region)
                 continue;

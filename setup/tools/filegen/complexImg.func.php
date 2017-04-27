@@ -83,7 +83,7 @@ if (!CLI)
             $file = $path.'.png';
             if (CLISetup::fileExists($file))
             {
-                CLISetup::log('manually converted png file present for '.$path.'.', CLISetup::LOG_INFO);
+                CLI::write('manually converted png file present for '.$path.'.', CLI::LOG_INFO);
                 $result = imagecreatefrompng($file);
             }
 
@@ -112,7 +112,7 @@ if (!CLI)
                     $src = $loadImageFile($baseName.$suffix);
                     if (!$src)
                     {
-                        CLISetup::log(' - complexImg: tile '.$baseName.$suffix.'.blp missing.', CLISetup::LOG_ERROR);
+                        CLI::write(' - complexImg: tile '.$baseName.$suffix.'.blp missing.', CLI::LOG_ERROR);
                         unset($dest);
                         return null;
                     }
@@ -145,7 +145,7 @@ if (!CLI)
                     $ok = imagepng($dest, $name.'.'.$ext);
                     break;
                 default:
-                    CLISetup::log($done.' - unsupported file fromat: '.$ext, CLISetup::LOG_WARN);
+                    CLI::write($done.' - unsupported file fromat: '.$ext, CLI::LOG_WARN);
             }
 
             imagedestroy($dest);
@@ -153,17 +153,17 @@ if (!CLI)
             if ($ok)
             {
                 chmod($name.'.'.$ext, Util::FILE_ACCESS);
-                CLISetup::log($done.' - image '.$name.'.'.$ext.' written', CLISetup::LOG_OK);
+                CLI::write($done.' - image '.$name.'.'.$ext.' written', CLI::LOG_OK);
             }
             else
-                CLISetup::log($done.' - could not create image '.$name.'.'.$ext, CLISetup::LOG_ERROR);
+                CLI::write($done.' - could not create image '.$name.'.'.$ext, CLI::LOG_ERROR);
 
             return $ok;
         };
 
         $createSpawnMap = function($img, $zoneId) use ($mapHeight, $mapWidth, $threshold)
         {
-            CLISetup::log(' - creating spawn map');
+            CLI::write(' - creating spawn map');
 
             $tmp = imagecreate(1000, 1000);
             $cbg = imagecolorallocate($tmp, 255, 255, 255);
@@ -238,9 +238,9 @@ if (!CLI)
         // if no subdir had sufficient data, diaf
         if ($locStr === null)
         {
-            CLISetup::log('one or more required directories are missing:', CLISetup::LOG_ERROR);
+            CLI::write('one or more required directories are missing:', CLI::LOG_ERROR);
             foreach ($missing as $m)
-                CLISetup::log(' - '.$m, CLISetup::LOG_ERROR);
+                CLI::write(' - '.$m, CLI::LOG_ERROR);
 
             return;
         }
@@ -266,7 +266,7 @@ if (!CLI)
                 {
                     $sum   = 0;
                     $total = count($tTabs);
-                    CLISetup::log('Processing '.$total.' files from TalentFrame/ ...');
+                    CLI::write('Processing '.$total.' files from TalentFrame/ ...');
 
                     foreach ($tTabs as $tt)
                     {
@@ -287,14 +287,14 @@ if (!CLI)
 
                         if (!isset(FileGen::$cliOpts['force']) && file_exists($name.'.jpg'))
                         {
-                            CLISetup::log($done.' - file '.$name.'.jpg was already processed');
+                            CLI::write($done.' - file '.$name.'.jpg was already processed');
                             continue;
                         }
 
                         $im = $assembleImage(sprintf($imgPath, $locStr).'TalentFrame/'.$tt['textureFile'], $order, 256 + 44, 256 + 75);
                         if (!$im)
                         {
-                            CLISetup::log(' - could not assemble file '.$tt['textureFile'], CLISetup::LOG_ERROR);
+                            CLI::write(' - could not assemble file '.$tt['textureFile'], CLI::LOG_ERROR);
                             continue;
                         }
 
@@ -341,7 +341,7 @@ if (!CLI)
             if (!$wma || !$wmo)
             {
                 $success = false;
-                CLISetup::log(' - could not read required dbc files: WorldMapArea.dbc ['.count($wma).' entries]; WorldMapOverlay.dbc  ['.count($wmo).' entries]', CLISetup::LOG_ERROR);
+                CLI::write(' - could not read required dbc files: WorldMapArea.dbc ['.count($wma).' entries]; WorldMapOverlay.dbc  ['.count($wmo).' entries]', CLI::LOG_ERROR);
                 return;
             }
 
@@ -363,7 +363,7 @@ if (!CLI)
 
             $sumMaps = count(CLISetup::$localeIds) * count($wma);
 
-            CLISetup::log('Processing '.$sumMaps.' files from WorldMap/ ...');
+            CLI::write('Processing '.$sumMaps.' files from WorldMap/ ...');
 
             foreach (CLISetup::$localeIds as $progressLoc => $l)
             {
@@ -380,7 +380,7 @@ if (!CLI)
                 if ($dirError)
                 {
                     $success = false;
-                    CLISetup::log(' - complexImg: could not create map directories for locale '.$l.'. skipping...', CLISetup::LOG_ERROR);
+                    CLI::write(' - complexImg: could not create map directories for locale '.$l.'. skipping...', CLI::LOG_ERROR);
                     continue;
                 }
 
@@ -396,7 +396,7 @@ if (!CLI)
                     $p = sprintf($imgPath, $mapLoc).$paths[0];
                     if (CLISetup::fileExists($p))
                     {
-                        CLISetup::log(' - using files from '.($mapLoc ?: '/').' for locale '.Util::$localeStrings[$l], CLISetup::LOG_INFO);
+                        CLI::write(' - using files from '.($mapLoc ?: '/').' for locale '.Util::$localeStrings[$l], CLI::LOG_INFO);
                         $mapSrcDir = $p.'/';
                         break;
                     }
@@ -405,7 +405,7 @@ if (!CLI)
                 if ($mapSrcDir === null)
                 {
                     $success = false;
-                    CLISetup::log(' - no suitable localized map files found for locale '.$l, CLISetup::LOG_ERROR);
+                    CLI::write(' - no suitable localized map files found for locale '.$l, CLI::LOG_ERROR);
                     continue;
                 }
 
@@ -423,7 +423,7 @@ if (!CLI)
                     if (!CLISetup::fileExists($path))
                     {
                         $success = false;
-                        CLISetup::log('worldmap file '.$path.' missing for selected locale '.Util::$localeStrings[$l], CLISetup::LOG_ERROR);
+                        CLI::write('worldmap file '.$path.' missing for selected locale '.Util::$localeStrings[$l], CLI::LOG_ERROR);
                         continue;
                     }
 
@@ -433,14 +433,14 @@ if (!CLI)
                         [9, 10, 11, 12]
                     );
 
-                    CLISetup::log($textureStr . " [" . $zoneId . "]");
+                    CLI::write($textureStr . " [" . $zoneId . "]");
 
                     $overlay = $createAlphaImage($mapWidth, $mapHeight);
 
                     // zone has overlays (is in open world; is not multiLeveled)
                     if (isset($wmo[$wmaId]))
                     {
-                        CLISetup::log(' - area has '.count($wmo[$wmaId]).' overlays');
+                        CLI::write(' - area has '.count($wmo[$wmaId]).' overlays');
 
                         foreach ($wmo[$wmaId] as &$row)
                         {
@@ -454,7 +454,7 @@ if (!CLI)
                                     $img = $loadImageFile($path . '/' . $row['textureString'] . $i);
                                     if (!$img)
                                     {
-                                        CLISetup::log(' - complexImg: tile '.$path.'/'.$row['textureString'].$i.'.blp missing.', CLISetup::LOG_ERROR);
+                                        CLI::write(' - complexImg: tile '.$path.'/'.$row['textureString'].$i.'.blp missing.', CLI::LOG_ERROR);
                                         break 2;
                                     }
 
@@ -507,7 +507,7 @@ if (!CLI)
                     $file       = $path.'/'.$textureStr.'1.blp';
                     $hasBaseMap = CLISetup::fileExists($file);
 
-                    CLISetup::log(' - area has '.($multiLeveled ? $multiLevel . ' levels' : 'only base level'));
+                    CLI::write(' - area has '.($multiLeveled ? $multiLevel . ' levels' : 'only base level'));
 
                     $map = null;
                     for ($i = 0; $i <= $multiLevel; $i++)
@@ -539,7 +539,7 @@ if (!CLI)
 
                             if (!isset(FileGen::$cliOpts['force']) && file_exists($outFile[$idx].'.'.$info[1]))
                             {
-                                CLISetup::log($progress.' - file '.$outFile[$idx].'.'.$info[1].' was already processed');
+                                CLI::write($progress.' - file '.$outFile[$idx].'.'.$info[1].' was already processed');
                                 $doSkip |= (1 << $idx);
                             }
                         }
@@ -551,7 +551,7 @@ if (!CLI)
                         if (!$map)
                         {
                             $success = false;
-                            CLISetup::log(' - could not create image resource for map '.$zoneId.($multiLevel ? ' level '.$i : ''));
+                            CLI::write(' - could not create image resource for map '.$zoneId.($multiLevel ? ' level '.$i : ''));
                             continue;
                         }
 
@@ -588,7 +588,7 @@ if (!CLI)
                                 $outFile[$idx] = $destDir . sprintf($info[0], strtolower(Util::$localeStrings[$l]).'/') . $row['areaTableId'];
                                 if (!isset(FileGen::$cliOpts['force']) && file_exists($outFile[$idx].'.'.$info[1]))
                                 {
-                                    CLISetup::log($progress.' - file '.$outFile[$idx].'.'.$info[1].' was already processed');
+                                    CLI::write($progress.' - file '.$outFile[$idx].'.'.$info[1].' was already processed');
                                     $doSkip |= (1 << $idx);
                                 }
                             }
@@ -677,7 +677,7 @@ if (!CLI)
                 $total = count($imgGroups);
                 $sum   = 0;
 
-                CLISetup::log('Processing '.$total.' files from Glues/Credits/...');
+                CLI::write('Processing '.$total.' files from Glues/Credits/...');
 
                 foreach ($imgGroups as $file => $fmt)
                 {
@@ -689,20 +689,20 @@ if (!CLI)
 
                     if (!isset(FileGen::$cliOpts['force']) && file_exists($name.'.png'))
                     {
-                        CLISetup::log($done.' - file '.$name.'.png was already processed');
+                        CLI::write($done.' - file '.$name.'.png was already processed');
                         continue;
                     }
 
                     if (!isset($order[$fmt]))
                     {
-                        CLISetup::log(' - pattern for file '.$name.' not set. skipping', CLISetup::LOG_WARN);
+                        CLI::write(' - pattern for file '.$name.' not set. skipping', CLI::LOG_WARN);
                         continue;
                     }
 
                     $im = $assembleImage($srcPath.$file, $order[$fmt], count($order[$fmt][0]) * 256, count($order[$fmt]) * 256);
                     if (!$im)
                     {
-                        CLISetup::log(' - could not assemble file '.$name, CLISetup::LOG_ERROR);
+                        CLI::write(' - could not assemble file '.$name, CLI::LOG_ERROR);
                         continue;
                     }
 

@@ -753,12 +753,12 @@ trait profilerHelper
     {
         $this->dbNames = [];
 
-        foreach(Util::getRealms() as $idx => $r)
+        foreach(Profiler::getRealms() as $idx => $r)
         {
-            if (!empty($fi['sv']) && $r['name'] != $fi['sv'])
+            if (!empty($fi['sv']) && Profiler::urlize($r['name']) != Profiler::urlize($fi['sv']))
                 continue;
 
-            if (!empty($fi['rg']) && $r['region'] != $fi['rg'])
+            if (!empty($fi['rg']) && Profiler::urlize($r['region']) != Profiler::urlize($fi['rg']))
                 continue;
 
             $this->dbNames[$idx] = 'Characters';

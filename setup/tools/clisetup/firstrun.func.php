@@ -26,7 +26,7 @@ function firstrun()
     $steps = array(
         // clisetup/, params, test script result,  introText,                                                                   errorText
         ['dbconfig',          null,                      'testDB',    'Please enter your database credentials.', 'could not establish connection to:'],
-        ['siteconfig',        null,                      'testSelf',  'SITE_HOST and STATIC_HOST '.CLISetup::bold('must').' be set. Also enable FORCE_SSL if needed. You may also want to change other variables such as NAME, NAME_SHORT OR LOCALES.', 'could not access:'],
+        ['siteconfig',        null,                      'testSelf',  'SITE_HOST and STATIC_HOST '.CLI::bold('must').' be set. Also enable FORCE_SSL if needed. You may also want to change other variables such as NAME, NAME_SHORT OR LOCALES.', 'could not access:'],
         // sql- and build- stuff here
         ['SqlGen::generate',  'achievementcategory',      null, null, null],
         ['SqlGen::generate',  'achievementcriteria',      null, null, null],
@@ -202,10 +202,10 @@ function firstrun()
     if ($startStep)
     {
 
-        CLISetup::log('Found firstrun progression info. (Halted on subscript '.($steps[$startStep][1] ?: $steps[$startStep][0]).')', CLISetup::LOG_INFO);
+        CLI::write('Found firstrun progression info. (Halted on subscript '.($steps[$startStep][1] ?: $steps[$startStep][0]).')', CLI::LOG_INFO);
         $inp = ['x' => ['continue setup? (y/n)', true, '/y|n/i']];
         $msg = '';
-        if (!CLISetup::readInput($inp, true) || !$inp || strtolower($inp['x']) == 'n')
+        if (!CLI::readInput($inp, true) || !$inp || strtolower($inp['x']) == 'n')
         {
             $msg = 'Starting setup from scratch...';
             $startStep = 0;
@@ -213,8 +213,8 @@ function firstrun()
         else
             $msg = 'Resuming setup from step '.$startStep.'...';
 
-        CLISetup::log();
-        CLISetup::log($msg);
+        CLI::write();
+        CLI::write($msg);
         sleep(1);
     }
 
@@ -232,10 +232,10 @@ function firstrun()
 
         if ($step[3])
         {
-            CLISetup::log($step[3]);
+            CLI::write($step[3]);
             $inp = ['x' => ['Press any key to continue', true]];
 
-            if (!CLISetup::readInput($inp, true))                // we don't actually care about the input
+            if (!CLI::readInput($inp, true))                // we don't actually care about the input
                 return;
         }
 
@@ -248,9 +248,9 @@ function firstrun()
             {
                 if (!$step[2]($errors))
                 {
-                    CLISetup::log($step[4], CLISetup::LOG_ERROR);
+                    CLI::write($step[4], CLI::LOG_ERROR);
                     foreach ($errors as $e)
-                        CLISetup::log($e);
+                        CLI::write($e);
                 }
                 else
                 {
@@ -264,10 +264,10 @@ function firstrun()
                 break;
             }
 
-            $inp = ['x' => ['['.CLISetup::bold('c').']ontinue anyway? ['.CLISetup::bold('r').']etry? ['.CLISetup::bold('a').']bort?', true, '/c|r|a/i']];
-            if (CLISetup::readInput($inp, true) && $inp)
+            $inp = ['x' => ['['.CLI::bold('c').']ontinue anyway? ['.CLI::bold('r').']etry? ['.CLI::bold('a').']bort?', true, '/c|r|a/i']];
+            if (CLI::readInput($inp, true) && $inp)
             {
-                CLISetup::log();
+                CLI::write();
                 switch(strtolower($inp['x']))
                 {
                     case 'c':
@@ -281,14 +281,14 @@ function firstrun()
             }
             else
             {
-                CLISetup::log();
+                CLI::write();
                 return;
             }
         }
     }
 
     unlink('cache/firstrun');
-    CLISetup::log('setup finished', CLISetup::LOG_OK);
+    CLI::write('setup finished', CLI::LOG_OK);
 }
 
 ?>

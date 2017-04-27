@@ -114,7 +114,7 @@ class ProfileList extends BaseType
 
         reset($this->dbNames);                              // only use when querying single realm
         $realmId     = key($this->dbNames);
-        $realms      = Util::getRealms();
+        $realms      = Profiler::getRealms();
         $acvCache    = [];
         $talentCache = [];
         $atCache     = [];
@@ -258,11 +258,11 @@ class ProfileList extends BaseType
                 'achievementpoints' => $this->curTpl['achievementpoints'],
                 'guild'             => $this->curTpl['guild'],                      // 0 if none
                 'guildrank'         => $this->curTpl['guildRank'],
-                'realm'             => Util::urlize($this->curTpl['realm']),
+                'realm'             => Profiler::urlize($this->curTpl['realm']),
                 'realmname'         => $this->curTpl['realm'],
-                // 'battlegroup'       => Util::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
+                // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
                 // 'battlegroupname'   => $this->curTpl['battlegroup'],
-                'region'            => Util::urlize($this->curTpl['region'])
+                'region'            => Profiler::urlize($this->curTpl['region'])
             );
 
             if ($addInfo == PROFILEINFO_ARENA_2S)

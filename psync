@@ -3,9 +3,6 @@
 require 'includes/shared.php';
 
 /* todo (med):
-    * move CLI-Interface from setup to something common
-    * use for output
-    * use for logging
     * tidy this file
     * make win-safe
 */
@@ -15,30 +12,17 @@ if (!CLI)
 if (CLI && getcwd().DIRECTORY_SEPARATOR.'psync' != __FILE__)
     die("this script must be run from root directory\n");
 
-set_time_limit(0);
 
 // check if we already have a queue running
-$myPID   = getmypid();
-$pidFile = 'config/pr-queue-pid';
-
-if (file_exists($pidFile))
+if (!Profiler::queueLock(getmypid(), $err))
 {
-    if ($oldPID = file_get_contents($pidFile))
-    {
-        exec('ps --no-headers p '.$oldPID, $out);
-        if ($out)
-        {
-            trigger_error('pSync - another queue with PID #'.$oldPID.' is already running', E_USER_ERROR);
-            echo "another queue with PID #".$oldPID." is already runnung\n";
-            exit();
-        }
-    }
+    trigger_error('pSync - '.$err, E_USER_ERROR);
+    CLI::write($err, CLI::LOG_ERROR);
+    exit();
 }
 
-// no queue running; create or overwrite pidFile
-$fh = fopen($pidFile, 'w');
-fwrite($fh, $myPID);
-fclose($fh);
+
+set_time_limit(0);
 
 $tCycle = 0.0;
 
@@ -47,7 +31,7 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
 {
     if (($tDiff = ($tCycle + CFG_PROFILER_QUEUE_DELAY * 1000) - microtime(true)) > 0.0)
     {
-        echo "sleeping ".Util::formatTime($tDiff / 1000, true)."..\n";
+        CLI::write('sleeping '.Util::formatTime($tDiff / 1000, true).'..', CLI::LOG_INFO);
         usleep($tDiff);
     }
 
@@ -57,9 +41,10 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
     if (!$row)
         continue;
 
-    if (empty(Util::getRealms()[$row['realm']]))
+    if (empty(Profiler::getRealms()[$row['realm']]))
     {
         DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_ARMORY, $row['realm'], $row['type'], $row['typeId']);
+        CLI::write('realm #'.$row['realm'].' for character guid '.$row['realmGUID'].' is undefined', CLI::LOG_WARN);
         continue;
     }
     else
@@ -68,173 +53,11 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
     switch ($row['type'])
     {
         case TYPE_PROFILE:
-            if ($char = DB::Characters($row['realm'])->selectRow('SELECT * FROM characters WHERE guid = ?d', $row['realmGUID']))
-            {
-                /**************/
-                /* basic info */
-                /**************/
-
-                $data = array(
-                    'realm'       =>  $row['realm'],
-                    'realmGUID'   =>  $char['guid'],
-                    'name'        =>  $char['name'],
-                    'race'        =>  $char['race'],
-                    'class'       =>  $char['class'],
-                    'level'       =>  $char['level'],
-                    'gender'      =>  $char['gender'],
-                    'skincolor'   =>  $char['playerBytes']        & 0xFF,
-                    'facetype'    => ($char['playerBytes'] >>  8) & 0xFF, // maybe features
-                    'hairstyle'   => ($char['playerBytes'] >> 16) & 0xFF,
-                    'haircolor'   => ($char['playerBytes'] >> 24) & 0xFF,
-                    'features'    =>  $char['playerBytes2']       & 0xFF, // maybe facetype
-                    'title'       =>  $char['chosenTitle'] ? DB::Aowow()->selectCell('SELECT id FROM ?_titles WHERE bitIdx = ?d', $char['chosenTitle']) : 0,
-                    'playedtime'  =>  $char['totaltime'],
-                    'nomodelMask' => ($char['playerFlags'] & 0x400 ? (1 << SLOT_HEAD) : 0) | ($char['playerFlags'] & 0x800 ? (1 << SLOT_BACK) : 0),
-                    'spec1'       => [],                    // space separated - tree1 tree2 tree3 glyph1 glyph2 glyph3 glyph4 glyph5 glyph6
-                    'spec2'       => [],
-                    'activespec'  =>  $char['activespec'],
-                );
-
-                // talents + glyphs
-                $t = DB::Characters($row['realm'])->selectCol('SELECT spec AS ARRAY_KEY, spell AS ARRAY_KEY2, spell FROM character_talent WHERE guid = ?d', $char['guid']);
-                $g = DB::Characters($row['realm'])->select('SELECT spec AS ARRAY_KEY, glyph1 AS g1, glyph2 AS g4, glyph3 AS g5, glyph4 AS g2, glyph5 AS g3, glyph6 AS g6 FROM character_glyphs WHERE guid = ?d', $char['guid']);
-                for ($i = 0; $i < 2; $i++)
-                {
-                    // talents
-                    for ($j = 0; $j < 3; $j++)
-                    {
-                        $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell in (?a), rank, 0)) FROM ?_talents WHERE class = ?d AND tab = ?d GROUP BY id ORDER BY row, col ASC', !empty($t[$i]) ? $t[$i] : [0], $char['class'], $j);
-                        $data['spec'.($i + 1)][$j] = implode('', $_);
-                    }
-
-                    // glyphs
-                    if (isset($g[$i]))
-                    {
-                        $gProps = [];
-                        for ($j = 1; $j <= 6; $j++)
-                            if ($g[$i]['g'.$j])
-                                $gProps[$j] = $g[$i]['g'.$j];
-
-                        if ($gProps)
-                            $gItems = DB::Aowow()->selectCol('SELECT i.id, gp.id AS ARRAY_KEY FROM ?_glyphproperties gp JOIN ?_spell s ON s.effect1MiscValue = gp.id AND s.effect1Id = 74 JOIN ?_items i ON i.class = 16 AND i.spellId1 = s.id WHERE gp.id IN (?a)', $gProps);
-
-                        for ($j = 1; $j <= 6; $j++)
-                            $data['spec'.($i + 1)][$j + 2] = !empty($gProps[$j]) && !empty($gItems[$gProps[$j]]) ? $gItems[$gProps[$j]] : 0;
-
-                    }
-                    else
-                        array_push($data['spec'.($i + 1)], 0, 0, 0, 0, 0, 0);
-
-                    $data['spec'.($i + 1)] = implode(' ', $data['spec'.($i + 1)]);
-                }
-
-                DB::Aowow()->query('INSERT INTO ?_profiler_profiles (?#) VALUES (?a) ON DUPLICATE KEY UPDATE ?a', array_keys($data), array_values($data), $data);
-                $charGuid = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $row['realm'], $char['guid']);
-
-                // equipment
-                /* enchantment-Indizes
-                 *  0: permEnchant
-                 *  3: tempEnchant
-                 *  6: gem1
-                 *  9: gem2
-                 * 12: gem3
-                 * 15: socketBonus [not used]
-                 * 18: extraSocket [only check existance]
-                 * 21 - 30: randomProp enchantments
-                 */
-                $items = DB::Characters($row['realm'])->select('SELECT ci.slot AS ARRAY_KEY, ii.itemEntry, ii.enchantments, ii.randomPropertyId FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = ?d AND bag = 0 AND slot BETWEEN 0 AND 18', $char['guid']);
-                foreach ($items as $slot => $item)
-                {
-                    $ench   = explode(' ', $item['enchantments']);
-                    $gEnch  = [];
-                    $gitems = [];
-                    foreach ([6, 9, 12] as $idx)
-                        if ($ench[$idx])
-                            $gEnch[$idx] = $ench[$idx];
-
-                    if ($gEnch)
-                        $gItems = DB::Aowow()->selectCol('SELECT gemEnchantmentId AS ARRAY_KEY, id FROM ?_items WHERE class = 3 AND gemEnchantmentId IN (?a)', $gEnch);
-
-                    $data = array(
-                        'id'          => $charGuid,
-                        'slot'        => $slot + 1,
-                        'item'        => $item['itemEntry'],
-                        'subItem'     => $item['randomPropertyId'],
-                        'permEnchant' => $ench[0],
-                        'tempEnchant' => $ench[3],
-                        'extraSocket' => (int)!!$ench[18],
-                        'gem1'        => isset($gItems[$ench[6]])  ? $gItems[$ench[6]]  : 0,
-                        'gem2'        => isset($gItems[$ench[9]])  ? $gItems[$ench[9]]  : 0,
-                        'gem3'        => isset($gItems[$ench[12]]) ? $gItems[$ench[12]] : 0,
-                        'gem4'        => 0                  // not used, items can have a max of 3 sockets (including extraSockets) but is expected by js
-                    );
-
-                    DB::Aowow()->query('REPLACE INTO ?_profiler_items (?#) VALUES (?a)', array_keys($data), array_values($data));
-                }
-
-                /*******************/
-                /* completion data */
-                /*******************/
-
-                // done quests
-                $quests = DB::Characters($row['realm'])->select('SELECT ?d AS id, ?d AS `type`, quest AS typeId FROM character_queststatus_rewarded WHERE guid = ?d', $charGuid, TYPE_QUEST, $char['guid']);
-                DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_QUEST, $charGuid);
-                foreach ($quests as $q)
-                    DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($q), array_values($q));
-
-                // known skills (professions only)
-                $skAllowed = DB::Aowow()->selectCol('SELECT id FROM ?_skillline WHERE typeCat IN (9, 11) AND (cuFlags & ?d) = 0', CUSTOM_EXCLUDE_FOR_LISTVIEW);
-                $skills = DB::Characters($row['realm'])->select('SELECT ?d AS id, ?d AS `type`, skill AS typeId, `value` AS cur, max FROM character_skills WHERE guid = ?d AND skill IN (?a)', $charGuid, TYPE_SKILL, $char['guid'], $skAllowed);
-                DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SKILL, $charGuid);
-                foreach ($skills as $sk)
-                    DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($sk), array_values($sk));
-
-                // reputation
-                $reputation = DB::Characters($row['realm'])->select('SELECT ?d AS id, ?d AS `type`, faction AS typeId, standing AS cur FROM character_reputation WHERE guid = ?d AND (flags & 0xC) = 0', $charGuid, TYPE_FACTION, $char['guid']);
-                DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_FACTION, $charGuid);
-                foreach ($reputation as $rep)
-                    DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($rep), array_values($rep));
-
-                // known titles
-                $tBlocks = explode(' ', $char['knownTitles']);
-                $indizes = [];
-                for ($i = 0; $i < 6; $i++)
-                    for ($j = 0; $j < 32; $j++)
-                        if ($tBlocks[$i] & (1 << $j))
-                            $indizes[] = $j + ($i * 32);
-
-                DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_TITLE, $charGuid);
-                if ($indizes)
-                    DB::Aowow()->query('INSERT INTO ?_profiler_completion SELECT ?d, ?d, id, NULL, NULL FROM ?_titles WHERE bitIdx IN (?a)', $charGuid, TYPE_TITLE, $indizes);
-
-                // achievements
-                $achievements = DB::Characters($row['realm'])->select('SELECT ?d AS id, ?d AS `type`, achievement AS typeId, date AS cur FROM character_achievement WHERE guid = ?d', $charGuid, TYPE_ACHIEVEMENT, $char['guid']);
-                DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_ACHIEVEMENT, $charGuid);
-                foreach ($achievements as $a)
-                    DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($a), array_values($a));
-
-                // known spells
-                $spells = DB::Characters($row['realm'])->select('SELECT ?d AS id, ?d AS `type`, spell AS typeId FROM character_spell WHERE guid = ?d AND disabled = 0', $charGuid, TYPE_SPELL, $char['guid']);
-                DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SPELL, $charGuid);
-                foreach ($spells as $s)
-                    DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($s), array_values($s));
-
-
-                /****************/
-                /* related data */
-                /****************/
-
-                // pets (hunter)
-
-                // guilds
-
-                // arena teams
-
-            }
-            else
+            if (!Profiler::getCharFromRealm($row['realm'], $row['realmGUID']))
             {
                 DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_CHAR, $row['realm'], $row['type'], $row['typeId']);
-                trigger_error('unknown char guid #'.$row['typeId'].' on realm #'.$row['realm'].' to sync into profiler.', E_USER_WARNING);
+                trigger_error('psync - unknown char guid #'.$row['typeId'].' on realm #'.$row['realm'].' to sync into profiler.', E_USER_WARNING);
+                CLI::write('unknown char guid #'.$row['typeId'].' on realm #'.$row['realm'].' to sync into profiler.', CLI::LOG_WARN);
             }
 
             break;
@@ -245,15 +68,16 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
 
             break;
         default:
-            trigger_error('unknown type #'.$row['type'].' to sync into profiler. Removing from queue...', E_USER_WARNING);
             DB::Aowow()->query('DELETE FROM ?_profiler_sync WHERE realm = ?d AND type = ?d AND typeId = ?d', $row['realm'], $row['type'], $row['typeId']);
+            trigger_error('psync - unknown type #'.$row['type'].' to sync into profiler. Removing from queue...', E_USER_ERROR);
+            CLI::write('unknown type #'.$row['type'].' to sync into profiler. Removing from queue...', CLI::LOG_ERROR);
     }
 
     // mark as ready
     DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = 0 WHERE realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_READY, $row['realm'], $row['type'], $row['typeId']);
 }
 
-unlink($pidFile);
-echo "profiler queue stopped!\n";
+Profiler::queueFree();
+CLI::write('profiler queue halted!', CLI::LOG_INFO);
 
 ?>

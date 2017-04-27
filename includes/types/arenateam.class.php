@@ -43,7 +43,7 @@ class ArenaTeamList extends BaseType
 
         reset($this->dbNames);                              // only use when querying single realm
         $realmId     = key($this->dbNames);
-        $realms      = Util::getRealms();
+        $realms      = Profiler::getRealms();
         $distrib     = [];
 
         // post processing
@@ -127,11 +127,11 @@ class ArenaTeamList extends BaseType
             $data[$this->id] = array(
                 'id'                => $this->curTpl['arenaTeamId'],
                 'name'              => $this->curTpl['name'],
-                'realm'             => Util::urlize($this->curTpl['realm']),
+                'realm'             => Profiler::urlize($this->curTpl['realm']),
                 'realmname'         => $this->curTpl['realm'],
-                // 'battlegroup'       => Util::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
+                // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
                 // 'battlegroupname'   => $this->curTpl['battlegroup'],
-                'region'            => Util::urlize($this->curTpl['region']),
+                'region'            => Profiler::urlize($this->curTpl['region']),
                 'faction'           => $this->curTpl['faction'],
                 'size'              => $this->curTpl['type'],
                 'rank'              => $this->curTpl['rank'],

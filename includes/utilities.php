@@ -16,6 +16,255 @@ class SimpleXML extends SimpleXMLElement
     }
 }
 
+class CLI
+{
+    const CHR_BELL      = 7;
+    const CHR_BACK      = 8;
+    const CHR_TAB       = 9;
+    const CHR_LF        = 10;
+    const CHR_CR        = 13;
+    const CHR_ESC       = 27;
+    const CHR_BACKSPACE = 127;
+
+    const LOG_OK        = 0;
+    const LOG_WARN      = 1;
+    const LOG_ERROR     = 2;
+    const LOG_INFO      = 3;
+
+    private static $logHandle   = null;
+    private static $hasReadline = null;
+
+    /***********/
+    /* logging */
+    /***********/
+
+    public static function initLogFile($file = '')
+    {
+        if (!$file)
+            return;
+
+        $file = self::nicePath($file);
+        if (!file_exists($file))
+            self::$logHandle = fopen($file, 'w');
+        else
+        {
+            $logFileParts = pathinfo($file);
+
+            $i = 1;
+            while (file_exists($logFileParts['dirname'].'/'.$logFileParts['filename'].$i.(isset($logFileParts['extension']) ? '.'.$logFileParts['extension'] : '')))
+                $i++;
+
+            $file = $logFileParts['dirname'].'/'.$logFileParts['filename'].$i.(isset($logFileParts['extension']) ? '.'.$logFileParts['extension'] : '');
+            self::$logHandle = fopen($file, 'w');
+        }
+    }
+
+    public static function red($str)
+    {
+        return OS_WIN ? $str : "\e[31m".$str."\e[0m";
+    }
+
+    public static function green($str)
+    {
+        return OS_WIN ? $str : "\e[32m".$str."\e[0m";
+    }
+
+    public static function yellow($str)
+    {
+        return OS_WIN ? $str : "\e[33m".$str."\e[0m";
+    }
+
+    public static function blue($str)
+    {
+        return OS_WIN ? $str : "\e[36m".$str."\e[0m";
+    }
+
+    public static function bold($str)
+    {
+        return OS_WIN ? $str : "\e[1m".$str."\e[0m";
+    }
+
+    public static function write($txt = '', $lvl = -1)
+    {
+        $msg = "\n";
+        if ($txt)
+        {
+            $msg = str_pad(date('H:i:s'), 10);
+            switch ($lvl)
+            {
+                case self::LOG_ERROR:                       // red      critical error
+                    $msg .= '['.self::red('ERR').']   ';
+                    break;
+                case self::LOG_WARN:                        // yellow   notice
+                    $msg .= '['.self::yellow('WARN').']  ';
+                    break;
+                case self::LOG_OK:                          // green    success
+                    $msg .= '['.self::green('OK').']    ';
+                    break;
+                case self::LOG_INFO:                        // blue     info
+                    $msg .= '['.self::blue('INFO').']  ';
+                    break;
+                default:
+                    $msg .= '        ';
+            }
+
+            $msg .= $txt."\n";
+        }
+
+        echo $msg;
+
+        if (self::$logHandle)                               // remove highlights for logging
+            fwrite(self::$logHandle, preg_replace(["/\e\[\d+m/", "/\e\[0m/"], '', $msg));
+
+        flush();
+    }
+
+    public static function nicePath(/* $file = '', ...$pathParts */)
+    {
+        $path = '';
+
+        switch (func_num_args())
+        {
+            case 0:
+                return '';
+            case 1:
+                $path = func_get_arg(0);
+                break;
+            default:
+                $args = func_get_args();
+                $file = array_shift($args);
+                $path = implode(DIRECTORY_SEPARATOR, $args).DIRECTORY_SEPARATOR.$file;
+        }
+
+        if (DIRECTORY_SEPARATOR == '/')                     // *nix
+        {
+            $path = str_replace('\\', '/', $path);
+            $path = preg_replace('/\/+/i', '/', $path);
+        }
+        else if (DIRECTORY_SEPARATOR == '\\')               // win
+        {
+            $path = str_replace('/', '\\', $path);
+            $path = preg_replace('/\\\\+/i', '\\', $path);
+        }
+        else
+            CLISetup::log('Dafuq! Your directory separator is "'.DIRECTORY_SEPARATOR.'". Please report this!', CLISetup::LOG_ERROR);
+
+        $path = trim($path);
+
+        // resolve *nix home shorthand
+        if (!OS_WIN)
+        {
+            if (preg_match('/^~(\w+)\/.*/i', $path, $m))
+                $path = '/home/'.substr($path, 1);
+            else if (substr($path, 0, 2) == '~/')
+                $path = getenv('HOME').substr($path, 1);
+            else if ($path[0] == DIRECTORY_SEPARATOR && substr($path, 0, 6) != '/home/')
+                $path = substr($path, 1);
+        }
+
+        // remove quotes (from erronous user input)
+        $path = str_replace(['"', "'"], ['', ''], $path);
+
+        return $path;
+    }
+
+
+    /**************/
+    /* read input */
+    /**************/
+
+    /*
+        since the CLI on WIN ist not interactive, the following things have to be considered
+        you do not receive keystrokes but whole strings upon pressing <Enter> (wich also appends a \r)
+        as such <ESC> and probably other control chars can not be registered
+        this also means, you can't hide input at all, least process it
+    */
+
+    public static function readInput(&$fields, $singleChar = false)
+    {
+        // first time set
+        if (self::$hasReadline === null)
+            self::$hasReadline = function_exists('readline_callback_handler_install');
+
+        // prevent default output if able
+        if (self::$hasReadline)
+            readline_callback_handler_install('', function() { });
+
+        foreach ($fields as $name => $data)
+        {
+            $vars = ['desc', 'isHidden', 'validPattern'];
+            foreach ($vars as $idx => $v)
+                $$v = isset($data[$idx]) ? $data[$idx] : false;
+
+            $charBuff = '';
+
+            if ($desc)
+                echo "\n".$desc.": ";
+
+            while (true) {
+                $r = [STDIN];
+                $w = $e = null;
+                $n = stream_select($r, $w, $e, 200000);
+
+                if ($n && in_array(STDIN, $r)) {
+                    $char  = stream_get_contents(STDIN, 1);
+                    $keyId = ord($char);
+
+                    // ignore this one
+                    if ($keyId == self::CHR_TAB)
+                        continue;
+
+                    // WIN sends \r\n as sequence, ignore one
+                    if ($keyId == self::CHR_CR && OS_WIN)
+                        continue;
+
+                    // will not be send on WIN .. other ways of returning from setup? (besides ctrl + c)
+                    if ($keyId == self::CHR_ESC)
+                    {
+                        echo chr(self::CHR_BELL);
+                        return false;
+                    }
+                    else if ($keyId == self::CHR_BACKSPACE)
+                    {
+                        if (!$charBuff)
+                            continue;
+
+                        $charBuff = mb_substr($charBuff, 0, -1);
+                        if (!$isHidden && self::$hasReadline)
+                            echo chr(self::CHR_BACK)." ".chr(self::CHR_BACK);
+                    }
+                    else if ($keyId == self::CHR_LF)
+                    {
+                        $fields[$name] = $charBuff;
+                        break;
+                    }
+                    else if (!$validPattern || preg_match($validPattern, $char))
+                    {
+                        $charBuff .= $char;
+                        if (!$isHidden && self::$hasReadline)
+                            echo $char;
+
+                        if ($singleChar && self::$hasReadline)
+                        {
+                            $fields[$name] = $charBuff;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        echo chr(self::CHR_BELL);
+
+        foreach ($fields as $f)
+            if (strlen($f))
+                return true;
+
+        $fields = null;
+        return true;
+    }
+}
+
 class Util
 {
     const FILE_ACCESS = 0755;
@@ -154,16 +403,6 @@ class Util
         self::$execTime = $newTime;
 
         return self::formatTime($tDiff * 1000, true);
-    }
-
-    public static function getBuyoutForItem($itemId)
-    {
-        if (!$itemId)
-            return 0;
-
-        // try, when having filled char-DB at hand
-        // return DB::Characters()->selectCell('SELECT SUM(a.buyoutprice) / SUM(ii.count) FROM auctionhouse a JOIN item_instance ii ON ii.guid = a.itemguid WHERE ii.itemEntry = ?d', $itemId);
-        return 0;
     }
 
     public static function formatMoney($qty)
@@ -552,42 +791,6 @@ class Util
         }
     }
 
-    public static function urlize($str)
-    {
-        $search  = ['<', '>', ' / ', "'", '(', ')'];
-        $replace = ['&lt;', '&gt;', '-', '', '', ''];
-        $str = str_replace($search, $replace, $str);
-
-        $accents = array(
-            "ß" => "ss",
-            "á" => "a", "ä" => "a", "à" => "a", "â" => "a",
-            "è" => "e", "ê" => "e", "é" => "e", "ë" => "e",
-            "í" => "i", "î" => "i", "ì" => "i", "ï" => "i",
-            "ñ" => "n",
-            "ò" => "o", "ó" => "o", "ö" => "o", "ô" => "o",
-            "ú" => "u", "ü" => "u", "û" => "u", "ù" => "u",
-            "œ" => "oe",
-            "Á" => "A", "Ä" => "A", "À" => "A", "Â" => "A",
-            "È" => "E", "Ê" => "E", "É" => "E", "Ë" => "E",
-            "Í" => "I", "Î" => "I", "Ì" => "I", "Ï" => "I",
-            "Ñ" => "N",
-            "Ò" => "O", "Ó" => "O", "Ö" => "O", "Ô" => "O",
-            "Ú" => "U", "Ü" => "U", "Û" => "U", "Ù" => "U",
-            "œ" => "Oe"
-        );
-        $str = strtr($str, $accents);
-        $str = trim($str);
-        $str = preg_replace('/[^a-z0-9]/i', '-', $str);
-
-        $str = str_replace('--', '-', $str);
-        $str = str_replace('--', '-', $str);
-
-        $str = rtrim($str, '-');
-        $str = strtolower($str);
-
-        return $str;
-    }
-
     public static function isValidEmail($email)
     {
         return preg_match('/^([a-z0-9._-]+)(\+[a-z0-9._-]+)?(@[a-z0-9.-]+\.[a-z]{2,4})$/i', $email);
@@ -911,75 +1114,50 @@ class Util
         return $json;
     }
 
-    public static function checkOrCreateDirectory($path)
+
+    /*****************/
+    /* file handling */
+    /*****************/
+
+    public static function writeFile($file, $content)
+    {
+        $success = false;
+        if ($handle = @fOpen($file, "w"))
+        {
+            if (fWrite($handle, $content))
+                $success = true;
+            else
+                trigger_error('could not write to file', E_USER_ERROR);
+
+            fClose($handle);
+        }
+        else
+            trigger_error('could not create file', E_USER_ERROR);
+
+        if ($success)
+            @chmod($file, Util::FILE_ACCESS);
+
+        return $success;
+    }
+
+    public static function writeDir($dir)
     {
         // remove multiple slashes
-        $path = preg_replace('|/+|', '/', $path);
+        $dir = preg_replace('|/+|', '/', $dir);
 
-        if (!is_dir($path) && !@mkdir($path, self::FILE_ACCESS, true))
-            trigger_error('Could not create directory: '.$path, E_USER_ERROR);
-        else if (!is_writable($path) && !@chmod($path, self::FILE_ACCESS))
-            trigger_error('Cannot write into directory: '.$path, E_USER_ERROR);
-        else
+        if (is_dir($dir))
+        {
+            if (!is_writable($dir) && !@chmod($dir, Util::FILE_ACCESS))
+                trigger_error('cannot write into directory', E_USER_ERROR);
+
+            return is_writable($dir);
+        }
+
+        if (@mkdir($dir, Util::FILE_ACCESS, true))
             return true;
 
+        trigger_error('could not create directory', E_USER_ERROR);
         return false;
-    }
-
-    private static $realms = [];
-    public static function getRealms()
-    {
-        if (DB::isConnectable(DB_AUTH) && !self::$realms)
-        {
-            self::$realms = DB::Auth()->select('SELECT id AS ARRAY_KEY, name, IF(timezone IN (8, 9, 10, 11, 12), "eu", "us") AS region FROM realmlist WHERE allowedSecurityLevel = 0 AND gamebuild = ?d', WOW_BUILD);
-            foreach (self::$realms as $rId => $rData)
-            {
-                if (DB::isConnectable(DB_CHARACTERS . $rId))
-                    continue;
-
-                unset(self::$realms[$rId]);
-                // maybe remove; can get annoying
-                // trigger_error('Realm #'.$rId.' ('.$rData['name'].') has no connection info set.', E_USER_NOTICE);
-            }
-        }
-
-        return self::$realms;
-    }
-
-    public static function scheduleResync($type, $realmId, $guid)
-    {
-        $newId = 0;
-
-        switch ($type)
-        {
-            case TYPE_PROFILE:
-                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (realm, realmGUID) VALUES (?d, ?d)', $realmId, $guid);
-                $newId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $guid);
-
-                if ($rData = DB::Aowow()->selectRow('SELECT requestTime AS time, status FROM ?_profiler_sync WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d AND status <> ?d', $realmId, $guid, $type, $newId, PR_QUEUE_STATUS_WORKING))
-                {
-                    // not on already scheduled - recalc time and set status to PR_QUEUE_STATUS_WAITING
-                    if ($rData['status'] != PR_QUEUE_STATUS_WAITING)
-                    {
-                        $newTime = max($rData['time'] + CFG_PROFILER_RESYNC_DELAY, time());
-                        DB::Aowow()->query('UPDATE ?_profiler_sync SET requestTime = ?d, status = ?d, errorCode = 0 WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d', $newTime, PR_QUEUE_STATUS_WAITING, $realmId, $guid, $type, $newId);
-                    }
-                }
-                else
-                    DB::Aowow()->query('REPLACE INTO ?_profiler_sync (realm, realmGUID, `type`, typeId, requestTime, status, errorCode) VALUES (?d, ?d, ?d, ?d, UNIX_TIMESTAMP(), ?d, 0)', $realmId, $guid, $type, $newId, PR_QUEUE_STATUS_WAITING);
-
-                break;
-            case TYPE_GUILD:
-
-                break;
-            case TYPE_ARENA_TEAM:
-
-                break;
-            default:
-                trigger_error('scheduling resync for unknown type #'.$type.' omiting..', E_USER_WARNING);
-        }
-
-        return $newId;
     }
 }
 

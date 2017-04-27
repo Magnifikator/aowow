@@ -23,7 +23,7 @@ if (!CLI)
             $weights = DB::Aowow()->selectCol('SELECT field AS ARRAY_KEY, val FROM ?_account_weightscale_data WHERE id = ?d', $s['id']);
             if (!$weights)
             {
-                CLISetup::log('WeightScale \''.CLISetup::bold($s['name']).'\' has no data set. Skipping...', CLISetup::LOG_WARN);
+                CLI::write('WeightScale \''.CLI::bold($s['name']).'\' has no data set. Skipping...', CLI::LOG_WARN);
                 continue;
             }
 

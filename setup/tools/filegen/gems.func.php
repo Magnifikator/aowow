@@ -55,8 +55,8 @@ if (!CLI)
         $enchantments = new EnchantmentList(array(['id', $enchIds], CFG_SQL_LIMIT_NONE));
         if ($enchantments->error)
         {
-            CLISetup::log('Required table ?_itemenchantment seems to be empty! Leaving gems()...', CLISetup::LOG_ERROR);
-            CLISetup::log();
+            CLI::write('Required table ?_itemenchantment seems to be empty! Leaving gems()...', CLI::LOG_ERROR);
+            CLI::write();
             return false;
         }
 
@@ -72,7 +72,7 @@ if (!CLI)
             {
                 if (!$enchantments->getEntry($pop['enchId']))
                 {
-                    CLISetup::log(' * could not find enchantment #'.$pop['enchId'].' referenced by item #'.$gem['itemId'], CLISetup::LOG_WARN);
+                    CLI::write(' * could not find enchantment #'.$pop['enchId'].' referenced by item #'.$gem['itemId'], CLI::LOG_WARN);
                     continue;
                 }
 

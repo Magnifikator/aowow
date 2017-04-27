@@ -44,14 +44,14 @@ class ProfilesPage extends GenericPage
         {
             $this->region = $cat[0];
 
-            // if ($cat[1] == Util::urlize(CFG_BATTLEGROUP))
+            // if ($cat[1] == Profiler::urlize(CFG_BATTLEGROUP))
                 // $this->realm = CFG_BATTLEGROUP;
 
             if (isset($cat[1]))
             {
-                foreach (Util::getRealms() as $r)
+                foreach (Profiler::getRealms() as $r)
                 {
-                    if (Util::urlize($r['name']) == $cat[1])
+                    if (Profiler::urlize($r['name']) == $cat[1])
                     {
                         $this->realm = $r['name'];
                         break;
@@ -68,7 +68,7 @@ class ProfilesPage extends GenericPage
         {
             $url = '?profiles='.$form['rg'];
             if (!empty($form['sv']))
-                $url .= '.'.Util::urlize($form['sv']);
+                $url .= '.'.Profiler::urlize($form['sv']);
 
             if ($_ = $this->filterObj->urlize(['sv' => '', 'rg' => '']))
                 $url .= '&filter='.$_;
@@ -76,7 +76,7 @@ class ProfilesPage extends GenericPage
             header('Location: '.$url , true, 302);
         }
 
-        foreach (Util::getRealms() as $idx => $r)
+        foreach (Profiler::getRealms() as $idx => $r)
         {
             if ($this->region && $r['region'] != $this->region)
                 continue;
@@ -117,9 +117,9 @@ class ProfilesPage extends GenericPage
 
             if ($this->realm)
             {
-                $this->path[] = Util::urlize(CFG_BATTLEGROUP);
+                $this->path[] = Profiler::urlize(CFG_BATTLEGROUP);
                 if ($this->realm != CFG_BATTLEGROUP)
-                    $this->path[] = Util::urlize($this->realm);
+                    $this->path[] = Profiler::urlize($this->realm);
             }
         }
     }

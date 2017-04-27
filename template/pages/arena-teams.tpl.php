@@ -31,7 +31,7 @@ $this->brick('pageTemplate', ['fi' => empty($f['query']) ? null : ['query' => $f
                             <td class="padded">&nbsp;<select name="rg" onchange="pr_onChangeRegion(this.form, null, null)">
                             <option></option>
 <?php
-    foreach (array_unique(array_column(Util::getRealms(), 'region')) as $rg):
+    foreach (array_unique(array_column(Profiler::getRealms(), 'region')) as $rg):
         echo "                             <option value=\"".$rg."\">".Lang::profiler('regions', $rg)."</option>\n";
     endforeach;
 ?>

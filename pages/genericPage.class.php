@@ -104,13 +104,13 @@ trait TrProfiler
 
         $this->region = $cat[0];
 
-        // if ($cat[1] == Util::urlize(CFG_BATTLEGROUP))
+        // if ($cat[1] == Profiler::urlize(CFG_BATTLEGROUP))
             // $this->battlegroup = CFG_BATTLEGROUP;
         if (isset($cat[1]))
         {
-            foreach (Util::getRealms() as $rId => $r)
+            foreach (Profiler::getRealms() as $rId => $r)
             {
-                if (Util::urlize($r['name']) == $cat[1])
+                if (Profiler::urlize($r['name']) == $cat[1])
                 {
                     $this->realm   = $r['name'];
                     $this->realmId = $rId;
@@ -152,9 +152,9 @@ trait TrProfiler
             $this->path[] = $this->region;
 
             if ($this->realm)
-                $this->path[] = Util::urlize($this->realm);
+                $this->path[] = Profiler::urlize($this->realm);
             // else
-                // $this->path[] = Util::urlize(CFG_BATTLEGROUP);
+                // $this->path[] = Profiler::urlize(CFG_BATTLEGROUP);
         }
     }
 }
@@ -233,7 +233,7 @@ class GenericPage
         if ($pageParam)
             $this->fullParams .= '='.$pageParam;
 
-        if (CFG_CACHE_DIR && Util::checkOrCreateDirectory(CFG_CACHE_DIR))
+        if (CFG_CACHE_DIR && Util::writeDir(CFG_CACHE_DIR))
             $this->cacheDir = mb_substr(CFG_CACHE_DIR, -1) != '/' ? CFG_CACHE_DIR.'/' : CFG_CACHE_DIR;
 
         // force page refresh

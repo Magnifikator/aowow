@@ -139,7 +139,7 @@ class AjaxProfile extends AjaxHandler
         {
             if ($chars = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_profiles WHERE id IN (?a)', $this->_get['id']))
                 foreach ($chars as $c)
-                    Util::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
+                    Profiler::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
 
             return '1';
         }
@@ -247,7 +247,7 @@ class AjaxProfile extends AjaxHandler
             return 'alert("whoops!");';
 
         $rData = [];
-        foreach (Util::getRealms() as $rId => $rData)
+        foreach (Profiler::getRealms() as $rId => $rData)
             if ($rId == $pBase['realm'])
                 break;
 
@@ -259,8 +259,8 @@ class AjaxProfile extends AjaxHandler
             'id'                => $pBase['id'],
             'name'              => $pBase['name'],
             'region'            => [$rData['region'], Lang::profiler('regions', $rData['region'])],
-            'battlegroup'       => [Util::urlize(CFG_BATTLEGROUP), CFG_BATTLEGROUP],
-            'realm'             => [Util::urlize($rData['name']), $rData['name']],
+            'battlegroup'       => [Profiler::urlize(CFG_BATTLEGROUP), CFG_BATTLEGROUP],
+            'realm'             => [Profiler::urlize($rData['name']), $rData['name']],
             'level'             => $pBase['level'],
             'classs'            => $pBase['class'],
             'race'              => $pBase['race'],
