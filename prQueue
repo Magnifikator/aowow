@@ -34,12 +34,24 @@ $tCycle = 0.0;
 while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profiler_queue"'))
 {
     if (($tDiff = ($tCycle + CFG_PROFILER_QUEUE_DELAY * 1000) - microtime(true)) > 0.0)
+    {
+        CLI::write('sleeping '.Lang::nf($tDiff / 1000000, 2).'s..');
         usleep($tDiff);
+    }
 
     $tCycle = microtime(true);
 
-    $row = DB::Aowow()->selectRow('SELECT * FROM ?_profiler_sync WHERE status = 1 AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC');
+    $row = DB::Aowow()->selectRow('SELECT * FROM ?_profiler_sync WHERE status = ?d ORDER BY requestTime ASC', PR_QUEUE_STATUS_WAITING);
     if (!$row)
+    {
+        // nothing more to do
+        CLI::write('profiler queue empty - process halted!', CLI::LOG_INFO);
+        Profiler::queueFree();
+        exit();
+    }
+
+    // scheduled for future date
+    if ($row['requestTime'] > time())
         continue;
 
     if (empty(Profiler::getRealms()[$row['realm']]))

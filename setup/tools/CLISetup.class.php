@@ -182,15 +182,13 @@ class CLISetup
     {
         if (Util::writeFile($file, $content))
         {
-            $e = error_get_last();
-            CLI::write($e['message'].' '.CLI::bold($file), CLI::LOG_ERROR);
+            CLI::write(sprintf(ERR_NONE, CLI::bold($file)), CLI::LOG_OK);
             return true;
         }
-        else
-        {
-            CLI::write(sprintf(ERR_NONE, CLI::bold($file)), CLI::LOG_OK);
-            return false;
-        }
+
+        $e = error_get_last();
+        CLI::write($e['message'].' '.CLI::bold($file), CLI::LOG_ERROR);
+        return false;
     }
 
     public static function writeDir($dir)

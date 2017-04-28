@@ -235,7 +235,7 @@ class AjaxProfile extends AjaxHandler
                 lots...
         */
 
-        // titles, achievements, characterData, talents (, pets)
+        // titles, achievements, characterData, talents, pets
         // and some onLoad-hook to .. load it registerProfile($data)
         // everything else goes through data.php .. strangely enough
 
@@ -290,7 +290,7 @@ class AjaxProfile extends AjaxHandler
             'skills'            => [],                      // skillId => [curVal, maxVal]
             'reputation'        => [],                      // factionId => curVal
             'titles'            => [],                      // titleId => 1
-            'spells'            => [],                      // spellId => 1; recipes, pets, mounts
+            'spells'            => [],                      // spellId => 1; recipes, vanity pets, mounts
             'achievements'      => [],                      // achievementId => timestamp
             'quests'            => [],                      // questId => 1
             'achievementpoints' => 0,                       // max you have
@@ -315,10 +315,12 @@ class AjaxProfile extends AjaxHandler
 
             // UNKNOWN
             'glyphs'            => [],                      // not really used .. i guess..?
-            'pets'              => array(                   // UNK
-                [],                                         // one array per pet, structure UNK
-            ),
         */
+
+        // pets if hunter fields: [name:name, family:petFamily, npc:npcId, displayId:modelId, talents:talentString]
+        if ($pets = DB::Aowow()->select('SELECT name, family, npc, displayId, talents FROM ?_profiler_pets WHERE owner = ?d', $pBase['id']))
+            $profile['pets'] = $pets;
+
 
         $completion = DB::Aowow()->select('SELECT type AS ARRAY_KEY, typeId AS ARRAY_KEY2, cur, max FROM ?_profiler_completion WHERE id = ?d', $pBase['id']);
         foreach ($completion as $type => $data)

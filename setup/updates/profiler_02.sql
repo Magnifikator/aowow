@@ -4,3 +4,8 @@ INSERT INTO aowow_config (`key`, `value`, `cat`, `flags`, `comment`) VALUES
     ('profiler_queue_delay', 3000, 7, 0x81, 'default: 3000 - min. delay between queue cycles (in ms)'),
     ('profiler_resync_ping', 5000, 7, 0x81, 'default: 5000 - how often the javascript asks for for updates, when queued (in ms)'),
     ('profiler_resync_delay', 1*60*60, 7, 0x81, 'default: 1*60*60 - how often a character can be refreshed (in sec)');
+
+ALTER TABLE `aowow_talents`
+	ADD COLUMN `petTypeMask` TINYINT(3) UNSIGNED NOT NULL AFTER `class`;
+
+UPDATE aowow_dbversion SET `sql` = CONCAT(IFNULL(`sql`, ''), ' talents');

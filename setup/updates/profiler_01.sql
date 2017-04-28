@@ -75,3 +75,15 @@ CREATE TABLE `aowow_profiler_achievement_progress` (
     `cirterium` SMALLINT(6) NULL DEFAULT NULL,
     INDEX `id` (`id`)
 ) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+
+CREATE TABLE `aowow_profiler_pets` (
+	`id` MEDIUMINT(8) UNSIGNED NOT NULL AUTO_INCREMENT,
+	`owner` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`name` VARCHAR(50) NULL DEFAULT NULL,
+	`family` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`displayId` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`talents` VARCHAR(20) NULL DEFAULT NULL,
+	PRIMARY KEY (`id`),
+	INDEX `owner` (`owner`),
+	CONSTRAINT `FK_pr_pets` FOREIGN KEY (`owner`) REFERENCES `aowow_profiler_profiles` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+) COLLATE='utf8_general_ci' ENGINE=InnoDB;

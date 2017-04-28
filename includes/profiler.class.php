@@ -29,7 +29,8 @@ class Profiler
             return true;
         }
 
-        exec('php prQueue --log=cache/pr-queue-'.date('dmY-His').'.log > /dev/null 2>/dev/null &');
+        // exec('screen -c config/screen.conf -dmS ao-pr-queue php prQueue > /dev/null 2>/dev/null &');
+        exec('php prQueue > /dev/null 2>/dev/null &');
         usleep(500000);
         if (self::queueStatus())
             return true;
@@ -161,6 +162,9 @@ class Profiler
                 else
                     DB::Aowow()->query('REPLACE INTO ?_profiler_sync (realm, realmGUID, `type`, typeId, requestTime, status, errorCode) VALUES (?d, ?d, ?d, ?d, UNIX_TIMESTAMP(), ?d, 0)', $realmId, $guid, $type, $newId, PR_QUEUE_STATUS_WAITING);
 
+                if (!self::queueStart($msg))
+                    trigger_error('Profiler::scheduleResync() - '.$msg, E_USER_ERROR);
+
                 break;
             case TYPE_GUILD:
 
@@ -245,7 +249,7 @@ class Profiler
         }
 
         DB::Aowow()->query('INSERT INTO ?_profiler_profiles (?#) VALUES (?a) ON DUPLICATE KEY UPDATE ?a', array_keys($data), array_values($data), $data);
-        $charGuid = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $char['guid']);
+        $profileId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $char['guid']);
 
         CLI::write(' ..basic info');
 
@@ -274,7 +278,7 @@ class Profiler
                 $gItems = DB::Aowow()->selectCol('SELECT gemEnchantmentId AS ARRAY_KEY, id FROM ?_items WHERE class = 3 AND gemEnchantmentId IN (?a)', $gEnch);
 
             $data = array(
-                'id'          => $charGuid,
+                'id'          => $profileId,
                 'slot'        => $slot + 1,
                 'item'        => $item['itemEntry'],
                 'subItem'     => $item['randomPropertyId'],
@@ -293,13 +297,37 @@ class Profiler
         CLI::write(' ..inventory');
 
 
+        // hunter pets
+        $pets = DB::Characters($realmId)->select('SELECT id AS ARRAY_KEY, id, entry, modelId, name FROM character_pet WHERE owner = ?d', $charGuid);
+        foreach ($pets as $petGuid => $petData)
+        {
+            $morePet   = DB::Aowow()->selectRow('SELECT p.`type`, c.family FROM ?_pet p JOIN ?_creature c ON c.family = p.id WHERE c.id = ?d', $petData['entry']);
+            $petSpells = DB::Characters($realmId)->selectCol('SELECT spell FROM pet_spell WHERE guid = ?d', $petGuid);
+
+            $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell in (?a), rank, 0)) FROM ?_talents WHERE class = 0 AND petTypeMask = ?d GROUP BY id ORDER BY row, col ASC', $petSpells ?: [0], 1 << $morePet['type']);
+            $pet = array(
+                'id'        => $petGuid,
+                'owner'     => $profileId,
+                'name'      => $petData['name'],
+                'family'    => $morePet['family'],
+                'npc'       => $petData['entry'],
+                'displayId' => $petData['modelId'],
+                'talents'   => implode('', $_)
+            );
+
+            DB::Aowow()->query('REPLACE INTO ?_profiler_pets (?#) VALUES (?a)', array_keys($pet), array_values($pet));
+        }
+
+        CLI::write(' ..hunter pets');
+
+
         /*******************/
         /* completion data */
         /*******************/
 
         // done quests
-        $quests = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, quest AS typeId FROM character_queststatus_rewarded WHERE guid = ?d', $charGuid, TYPE_QUEST, $char['guid']);
-        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_QUEST, $charGuid);
+        $quests = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, quest AS typeId FROM character_queststatus_rewarded WHERE guid = ?d', $profileId, TYPE_QUEST, $char['guid']);
+        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_QUEST, $profileId);
         foreach ($quests as $q)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($q), array_values($q));
 
@@ -308,8 +336,8 @@ class Profiler
 
         // known skills (professions only)
         $skAllowed = DB::Aowow()->selectCol('SELECT id FROM ?_skillline WHERE typeCat IN (9, 11) AND (cuFlags & ?d) = 0', CUSTOM_EXCLUDE_FOR_LISTVIEW);
-        $skills = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, skill AS typeId, `value` AS cur, max FROM character_skills WHERE guid = ?d AND skill IN (?a)', $charGuid, TYPE_SKILL, $char['guid'], $skAllowed);
-        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SKILL, $charGuid);
+        $skills = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, skill AS typeId, `value` AS cur, max FROM character_skills WHERE guid = ?d AND skill IN (?a)', $profileId, TYPE_SKILL, $char['guid'], $skAllowed);
+        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SKILL, $profileId);
         foreach ($skills as $sk)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($sk), array_values($sk));
 
@@ -317,8 +345,8 @@ class Profiler
 
 
         // reputation
-        $reputation = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, faction AS typeId, standing AS cur FROM character_reputation WHERE guid = ?d AND (flags & 0xC) = 0', $charGuid, TYPE_FACTION, $char['guid']);
-        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_FACTION, $charGuid);
+        $reputation = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, faction AS typeId, standing AS cur FROM character_reputation WHERE guid = ?d AND (flags & 0xC) = 0', $profileId, TYPE_FACTION, $char['guid']);
+        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_FACTION, $profileId);
         foreach ($reputation as $rep)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($rep), array_values($rep));
 
@@ -333,16 +361,16 @@ class Profiler
                 if ($tBlocks[$i] & (1 << $j))
                     $indizes[] = $j + ($i * 32);
 
-        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_TITLE, $charGuid);
+        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_TITLE, $profileId);
         if ($indizes)
-            DB::Aowow()->query('INSERT INTO ?_profiler_completion SELECT ?d, ?d, id, NULL, NULL FROM ?_titles WHERE bitIdx IN (?a)', $charGuid, TYPE_TITLE, $indizes);
+            DB::Aowow()->query('INSERT INTO ?_profiler_completion SELECT ?d, ?d, id, NULL, NULL FROM ?_titles WHERE bitIdx IN (?a)', $profileId, TYPE_TITLE, $indizes);
 
         CLI::write(' ..titles');
 
 
         // achievements
-        $achievements = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, achievement AS typeId, date AS cur FROM character_achievement WHERE guid = ?d', $charGuid, TYPE_ACHIEVEMENT, $char['guid']);
-        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_ACHIEVEMENT, $charGuid);
+        $achievements = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, achievement AS typeId, date AS cur FROM character_achievement WHERE guid = ?d', $profileId, TYPE_ACHIEVEMENT, $char['guid']);
+        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_ACHIEVEMENT, $profileId);
         foreach ($achievements as $a)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($a), array_values($a));
 
@@ -350,8 +378,8 @@ class Profiler
 
 
         // known spells
-        $spells = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, spell AS typeId FROM character_spell WHERE guid = ?d AND disabled = 0', $charGuid, TYPE_SPELL, $char['guid']);
-        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SPELL, $charGuid);
+        $spells = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, spell AS typeId FROM character_spell WHERE guid = ?d AND disabled = 0', $profileId, TYPE_SPELL, $char['guid']);
+        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SPELL, $profileId);
         foreach ($spells as $s)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($s), array_values($s));
 
