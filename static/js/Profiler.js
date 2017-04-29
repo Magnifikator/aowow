@@ -51,7 +51,7 @@ function Profiler() {
                     _tdRaidCompletion,
                     _tdRaidGearMeter,
             _divStatistics,
-            _divAuras,
+            // _divAuras,
         _divTalents,
         _divPets,
         _divReputation,
@@ -630,23 +630,23 @@ function Profiler() {
 
 /* custom auras */
 
-        var tbl = $WH.ce('table');
+        // var tbl = $WH.ce('table');
 
-        _divAuras = $WH.ce('div');
-        _divAuras.id = 'aura-container';
-        _divAuras.style.cssFloat = 'left';
-        _divAuras.style.marginLeft = '390px';
-        _divAuras.style.width = '325px';
-        _divAuras.style.display = 'none';
+        // _divAuras = $WH.ce('div');
+        // _divAuras.id = 'aura-container';
+        // _divAuras.style.cssFloat = 'left';
+        // _divAuras.style.marginLeft = '390px';
+        // _divAuras.style.width = '325px';
+        // _divAuras.style.display = 'none';
 
-        _ = $WH.ce('h3');
-        $WH.ae(_, $WH.ct('[Auras]'));
-        $WH.ae(_divAuras, _);
+        // _ = $WH.ce('h3');
+        // $WH.ae(_, $WH.ct('[Auras]'));
+        // $WH.ae(_divAuras, _);
 
-        tbl.className = 'iconlist';
+        // tbl.className = 'iconlist';
 
-        $WH.ae(_divAuras, tbl);
-        $WH.aef(_divInventory, _divAuras);
+        // $WH.ae(_divAuras, tbl);
+        // $WH.aef(_divInventory, _divAuras);
 
 /* end custom */
 
@@ -1081,6 +1081,7 @@ function Profiler() {
         }
     }
 
+/* Aowow custom
     function _updateAuras() {
         var
             show = false,
@@ -1148,7 +1149,7 @@ function Profiler() {
 
         _divAuras.style.display = show ? 'block' : 'none';
     }
-
+*/
     function _showCharacterMenu(e) {
         if (!_isArmoryProfile()) {
             return;
@@ -1830,7 +1831,7 @@ function Profiler() {
         for (var i in g_spells) {
             _fixJson(g_spells[i].modifier || 0);
         }
-        _updateAuras();
+        // _updateAuras();
 
         _statistics.updateModifiers();
 

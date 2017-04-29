@@ -17,12 +17,8 @@ if ($_ = getopt('', ['log::']))
         CLI::initLogFile(trim($_['log']));
 
 // check if we already have a queue running
-if (!Profiler::queueLock(getmypid(), $err))
-{
-    trigger_error('prQueue - '.$err, E_USER_ERROR);
-    CLI::write($err, CLI::LOG_ERROR);
+if (!Profiler::queueLock(getmypid()))
     exit();
-}
 
 
 CLI::write('profiler queue started', CLI::LOG_OK);

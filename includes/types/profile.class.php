@@ -51,64 +51,6 @@ class ProfileList extends BaseType
 
         parent::__construct($conditions, $miscData);
 
-        // $character = array(
-            // 'id'                => 2,
-            // 'name'              => 'CharName',
-            // 'region'            => ['eu', 'Europe'],
-            // 'battlegroup'       => ['pure-pwnage', 'Pure Pwnage'],
-            // 'realm'             => ['dafuque', 'da\'Fuqúe'],
-            // 'level'             => 80,
-            // 'classs'            => 11,
-            // 'race'              => 6,
-            // 'faction'           => 1,                           // 0:alliance; 1:horde
-            // 'gender'            => 1,                           // 0:male, 1:female
-            // 'skincolor'         => 0,                           // playerbytes  % 256
-            // 'hairstyle'         => 0,                           // (playerbytes >> 16) % 256
-            // 'haircolor'         => 0,                           // (playerbytes >> 24) % 256
-            // 'facetype'          => 0,                           // (playerbytes >> 8) % 256                 [maybe features]
-            // 'features'          => 0,                           // playerBytes2 % 256                       [maybe facetype]
-            // 'source'            => 2,                           // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
-            // 'sourcename'        => 'SourceCharName',            //  >   if these three are false we get a 'genuine' profile [0 for genuine characters..?]
-            // 'user'              => 1,                           //  >   'genuine' is the parameter for _isArmoryProfile(allowCustoms)   ['' for genuine characters..?]
-            // 'username'          => 'TestUser',                  //  >   also, if 'source' <> 0, the char-icon is requestet via profile.php?avatar
-            // 'published'         => 1,                           // public / private
-            // 'pinned'            => 1,                           // usable for some utility funcs on site
-            // 'nomodel'           => 0x0,                         // unchecks DisplayOnCharacter by (1 << slotId - 1)
-            // 'title'             => 0,                           // titleId currently in use or null
-            // 'guild'             => 'GuildName',                 // only on chars; id or null
-            // 'description'       => 'this is a profile',         // only on custom profiles
-            // 'arenateams'        => [],                          // [size(2|3|5) => DisplayName]; DisplayName gets urlized to use as link
-            // 'playedtime'        => 0,                           // exact to the day
-            // 'lastupdated'       => 0,                           // timestamp in ms
-            // 'achievementpoints' => 0,                           // max you have
-            // 'talents'           => array(
-                // 'builds' => array(
-                    // ['talents' => '', 'glyphs' => ''],          // talents:string of 0-5 points; glyphs: itemIds.join(':')
-                // ),
-                // 'active'  => 1                                  // 1|2
-            // ),
-            // 'customs'           => [],                          // custom profiles created from this char; profileId => [name, ownerId, iconString(optional)]
-            // 'skills'            => [],                          // skillId => [curVal, maxVal]; can contain anything, should be limited to prim/sec professions
-            // 'inventory'         => [],                          // slotId => [itemId, subItemId, permEnchantId, tempEnchantId, gemItemId1, gemItemId2, gemItemId3, gemItemId4]
-            // 'auras'             => [],                          // custom list of buffs, debuffs [spellId]
-
-            // // completion lists: [subjectId => amount/timestamp/1]
-            // 'reputation'        => [],                          // factionId => amount
-            // 'titles'            => [],                          // titleId => 1
-            // 'spells'            => [],                          // spellId => 1; recipes, pets, mounts
-            // 'achievements'      => [],                          // achievementId => timestamp
-            // 'quests'            => [],                          // questId => 1
-
-            // // UNKNOWN
-            // 'bookmarks'         => [2],                         // UNK pinned or claimed userId => profileIds..?
-            // 'statistics'        => [],                          // UNK all statistics?      [achievementId => killCount]
-            // 'activity'          => [],                          // UNK recent achievements? [achievementId => killCount]
-            // 'glyphs'            => [],                          // not really used .. i guess..?
-            // 'pets'              => array(                       // UNK
-                // [],                                             // one array per pet, structure UNK
-            // ),
-        // );
-
         if ($this->error)
             return;
 
@@ -314,7 +256,7 @@ class ProfileList extends BaseType
             $x .= '<tr><td>&lt;'.$g.'&gt;</td></tr>';
         else if ($d = $this->getField('description'))
             $x .= '<tr><td>'.$d.'</td></tr>';
-        $x .= '<tr><td>'.Lang::game('level').' '.$this->getField('level').' '.Lang::game('ra', $this->curTpl['race']).' '.Lang::game('cl', $this->curTpl['classs']).'</td></tr>';
+        $x .= '<tr><td>'.Lang::game('level').' '.$this->getField('level').' '.Lang::game('ra', $this->getField('race')).' '.Lang::game('cl', $this->getField('classs')).'</td></tr>';
         $x .= '</table>';
 
         return $x;

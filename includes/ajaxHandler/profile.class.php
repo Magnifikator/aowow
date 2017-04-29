@@ -5,11 +5,34 @@ if (!defined('AOWOW_REVISION'))
 
 class AjaxProfile extends AjaxHandler
 {
-    protected $validParams = ['link', 'unlink', 'pin', 'unpin', 'public', 'private', 'avatar', 'resync', 'status', 'delete', 'purge', 'summary', 'load'];
+    protected $validParams = ['link', 'unlink', 'pin', 'unpin', 'public', 'private', 'avatar', 'resync', 'status', 'save', 'delete', 'purge', 'summary', 'load'];
     protected $_get        = array(
-        'id'     => [FILTER_CALLBACK,            ['options' => 'AjaxProfile::checkId']],
+        'id'     => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkIdList']],
         // 'items'  => [FILTER_CALLBACK,            ['options' => 'AjaxProfile::checkItems']],
         'size'   => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
+    );
+
+    protected $_post        = array(
+        'name'         => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
+        'level'        => [FILTER_SANITIZE_NUMBER_INT, null],
+        'class'        => [FILTER_SANITIZE_NUMBER_INT, null],
+        'race'         => [FILTER_SANITIZE_NUMBER_INT, null],
+        'gender'       => [FILTER_SANITIZE_NUMBER_INT, null],
+        'nomodel'      => [FILTER_SANITIZE_NUMBER_INT, null],
+        'talenttree1'  => [FILTER_SANITIZE_NUMBER_INT, null],
+        'talenttree1'  => [FILTER_SANITIZE_NUMBER_INT, null],
+        'talenttree3'  => [FILTER_SANITIZE_NUMBER_INT, null],
+        'activespec'   => [FILTER_SANITIZE_NUMBER_INT, null],
+        'talentbuild1' => [FILTER_SANITIZE_STRING, 0xC],
+        'glyphs1'      => [FILTER_SANITIZE_STRING, 0xC],
+        'talentbuild2' => [FILTER_SANITIZE_STRING, 0xC],
+        'glyphs2'      => [FILTER_SANITIZE_STRING, 0xC],
+        'icon'         => [FILTER_SANITIZE_STRING, 0xC],
+        'description'  => [FILTER_SANITIZE_STRING, 0xC],
+        'source'       => [FILTER_SANITIZE_NUMBER_INT, null],
+        'copy'         => [FILTER_SANITIZE_NUMBER_INT, null],
+        'public'       => [FILTER_SANITIZE_NUMBER_INT, null],
+        'inv'          => [FILTER_CALLBACK, ['options' => 'AjaxProfile::checkItems', 'flags' => FILTER_REQUIRE_ARRAY]],
     );
 
     public function __construct(array $params)
@@ -187,19 +210,69 @@ class AjaxProfile extends AjaxHandler
 
     protected function handleSave()                         // unKill a profile
     {
-        /*  params GET
-                id: <prId1,prId2,..,prIdN>
-            params POST
-                name, level, class, race, gender, nomodel, talenttree1, talenttree2, talenttree3, activespec, talentbuild1, glyphs1, talentbuild2, glyphs2, gearscore, icon, public     [always]
-                description, source, copy, inv { inventory: array containing itemLinks }                                                                                                [optional]
-                }
-            return
-                int > 0     [profileId, if we came from an armoryProfile create a new one]
-                int < 0     [onError]
-                str         [onError]
-        */
+        $cuProfile = array(
+            'user'        => User::$id,
+            'name'        => $this->_post['name'],
+            'level'       => $this->_post['level'],
+            'class'       => $this->_post['class'],
+            'race'        => $this->_post['race'],
+            'gender'      => $this->_post['gender'],
+            'nomodelMask' => $this->_post['nomodel'],
+         // 'talenttree1' => $this->_post['talenttree1'],
+         // 'talenttree2' => $this->_post['talenttree2'],
+         // 'talenttree3' => $this->_post['talenttree3'],
+            'activespec'  => $this->_post['activespec'],
+            'spec1'       => $this->_post['talentbuild1'].' '.$this->_post['glyphs1'],
+            'spec2'       => $this->_post['talentbuild2'].' '.$this->_post['glyphs2'],
+         // 'gearscore'   => $this->_post['gearscore'],
+            'icon'        => $this->_post['icon'],
+            'cuFlags'     => $this->_post['public'] ? PROFILE_CU_PUBLISHED : 0
+        );
 
-        return 'NYI';
+        if ($_ = $this->_post['description'])
+            $cuProfile['description'] = $_;
+
+        if ($_ = $this->_post['source'])
+            $cuProfile['sourceId'] = $_;
+
+        // if ($_ = $this->_post['copy'])   // what is a copy..?
+            // $cuProfile['copy'] = $_;
+
+        // update items
+        $charId = -1;                                       // -1: error
+        if ($id = $this->_get['id'][0])  // update
+        {
+            if (DB::Aowow()->query('UPDATE ?_profiler_profiles SET ?a WHERE id = ?d', $cuProfile, $id))
+                $charId = $id;
+        }
+        // new
+        else
+        {
+            $nProfiles = DB::Aowow()->selectCell('SELECT COUNT(*) FROM ?_profiler_profiles WHERE user = ?d AND realmGUID IS NULL', User::$id);
+            if ($nProfiles < 10 || User::isPremium())
+                if ($newId = DB::Aowow()->query('INSERT INTO ?_profiler_profiles (?#) VALUES (?a)', array_keys($cuProfile), array_values($cuProfile)))
+                    $charId = $newId;
+        }
+
+        // update items
+        if ($charId != -1)
+        {
+            // ok, 'funny' thing: wether an item has en extra prismatic sockel is determined contextual
+            // when it has an itemId in a socket slot where there shouldn't be one
+            $keys = ['id', 'slot', 'item', 'subitem', 'permEnchant', 'tempEnchant', 'gem1', 'gem2', 'gem3', 'gem4'];
+            foreach ($this->_post['inv'] as $slot => $itemData)
+            {
+                if ($slot + 1  == array_sum($itemData))     // only slot definition set => empty slot
+                    DB::Aowow()->query('DELETE FROM ?_profiler_items WHERE id = ?d AND slot = ?d', $charId, $itemData[0]);
+                else
+                {
+                    array_unshift($itemData, $charId);
+                    DB::Aowow()->query('REPLACE INTO ?_profiler_items (?#) VALUES (?a)', $keys, $itemData);
+                }
+            }
+        }
+
+        return $charId;
     }
 
     protected function handleDelete()                       // kill a profile
@@ -264,7 +337,7 @@ class AjaxProfile extends AjaxHandler
             'level'             => $pBase['level'],
             'classs'            => $pBase['class'],
             'race'              => $pBase['race'],
-            'faction'           => Game::sideByRaceMask(1 << ($pBase['race'] - 1), true),
+            'faction'           => Game::sideByRaceMask(1 << ($pBase['race'] - 1)) - 1,
             'gender'            => $pBase['gender'],
             'skincolor'         => $pBase['skincolor'],
             'hairstyle'         => $pBase['hairstyle'],
@@ -412,44 +485,17 @@ class AjaxProfile extends AjaxHandler
         // load available titles
         Util::loadStaticFile('p-titles-'.$pBase['gender'], $buff, true);
 
-        // excludes; structure UNK type => [maskBit => [typeIds]] ?
-        /*
-            g_user.excludes = [type:[typeIds]]
-            g_user.includes = [type:[typeIds]]
-            g_user.excludegroups = groupMask        // requires g_user.settings != null
-
-            maskBit are matched against fieldId from excludeGroups
-            id: 1, label: LANG.dialog_notavail
-            id: 2, label: LANG.dialog_tcg
-            id: 4, label: LANG.dialog_collector
-            id: 8, label: LANG.dialog_promo
-            id: 16, label: LANG.dialog_nonus
-            id: 96, label: LANG.dialog_faction
-            id: 896, label: LANG.dialog_profession
-            id: 1024, label: LANG.dialog_noexalted
-        */
-        // $buff .= "\n\ng_excludes = {};";
-
         // add profile to buffer
         $buff .= "\n\n\$WowheadProfiler.registerProfile(".Util::toJSON($profile, JSON_UNESCAPED_UNICODE).");"; // can't use JSON_NUMERIC_CHECK or the talent-string becomes a float
 
         return $buff."\n";
     }
 
-    protected function checkId($val)
-    {
-        // expecting id-list
-        if (preg_match('/\d+(,\d+)*/', $val))
-            return array_map('intVal', explode(',', $val));
-
-        return null;
-    }
-
     protected function checkItems($val)
     {
         // expecting item-list
-        if (preg_match('/\d+(:\d+)*/', $val))
-            return array_map('intVal', explode(': ', $val));
+        if (preg_match('/\d+(,\d+)*/', $val))
+            return array_map('intval', explode(',', $val));
 
         return null;
     }

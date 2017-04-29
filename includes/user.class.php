@@ -17,10 +17,11 @@ class User
     public static $dailyVotes   = 0;
     public static $ip           = null;
 
-    private static $reputation  = 0;
-    private static $dataKey     = '';
-    private static $expires     = false;
-    private static $passHash    = '';
+    private static $reputation    = 0;
+    private static $dataKey       = '';
+    private static $expires       = false;
+    private static $passHash      = '';
+    private static $excludeGroups = 1;
 
     public static function init()
     {
@@ -54,7 +55,7 @@ class User
             return false;
 
         $query = DB::Aowow()->SelectRow('
-            SELECT    a.id, a.passHash, a.displayName, a.locale, a.userGroups, a.userPerms, a.allowExpire, BIT_OR(ab.typeMask) AS bans, IFNULL(SUM(r.amount), 0) as reputation, a.avatar, a.dailyVotes
+            SELECT    a.id, a.passHash, a.displayName, a.locale, a.userGroups, a.userPerms, a.allowExpire, BIT_OR(ab.typeMask) AS bans, IFNULL(SUM(r.amount), 0) as reputation, a.avatar, a.dailyVotes, a.excludeGroups
             FROM      ?_account a
             LEFT JOIN ?_account_banned ab ON a.id = ab.userId AND ab.end > UNIX_TIMESTAMP()
             LEFT JOIN ?_account_reputation r ON a.id = r.userId
@@ -73,15 +74,16 @@ class User
             return false;
         }
 
-        self::$id          = intval($query['id']);
-        self::$displayName = $query['displayName'];
-        self::$passHash    = $query['passHash'];
-        self::$expires     = (bool)$query['allowExpire'];
-        self::$reputation  = $query['reputation'];
-        self::$banStatus   = $query['bans'];
-        self::$groups      = $query['bans'] & (ACC_BAN_TEMP | ACC_BAN_PERM) ? 0 : intval($query['userGroups']);
-        self::$perms       = $query['bans'] & (ACC_BAN_TEMP | ACC_BAN_PERM) ? 0 : intval($query['userPerms']);
-        self::$dailyVotes  = $query['dailyVotes'];
+        self::$id            = intval($query['id']);
+        self::$displayName   = $query['displayName'];
+        self::$passHash      = $query['passHash'];
+        self::$expires       = (bool)$query['allowExpire'];
+        self::$reputation    = $query['reputation'];
+        self::$banStatus     = $query['bans'];
+        self::$groups        = $query['bans'] & (ACC_BAN_TEMP | ACC_BAN_PERM) ? 0 : intval($query['userGroups']);
+        self::$perms         = $query['bans'] & (ACC_BAN_TEMP | ACC_BAN_PERM) ? 0 : intval($query['userPerms']);
+        self::$dailyVotes    = $query['dailyVotes'];
+        self::$excludeGroups = $query['excludeGroups'];
 
         if ($query['avatar'])
             self::$avatar = $query['avatar'];
@@ -553,6 +555,11 @@ class User
         $gUser['downvoteRep']       = CFG_REP_REQ_DOWNVOTE;
         $gUser['upvoteRep']         = CFG_REP_REQ_UPVOTE;
         $gUser['characters']        = self::getCharacters();
+        $gUser['excludegroups']     = self::$excludeGroups;
+        $gUser['settings']          = (new StdClass);       // profiler requires this to be set; has property premiumborder (NYI)
+
+        if ($_ = self::getProfilerExclusions())
+            $gUser = array_merge($gUser, $_);
 
         if ($_ = self::getProfiles())
             $gUser['profiles'] = $_;
@@ -577,6 +584,18 @@ class User
         $weights = DB::Aowow()->selectCol('SELECT id AS ARRAY_KEY, `field` AS ARRAY_KEY2, val FROM ?_account_weightscale_data WHERE id IN (?a)', array_keys($res));
         foreach ($weights as $id => $data)
             $result[] = array_merge(['name' => $res[$id], 'id' => $id], $data);
+
+        return $result;
+    }
+
+    public static function getProfilerExclusions()
+    {
+        $result = [];
+        $modes  = [1 => 'excludes', 2 => 'includes'];
+        foreach ($modes as $mode => $field)
+            if ($ex = DB::Aowow()->selectCol('SELECT `type` AS ARRAY_KEY, typeId AS ARRAY_KEY2, typeId FROM ?_account_excludes WHERE mode = ?d AND userId = ?d', $mode, self::$id))
+                foreach ($ex as $type => $ids)
+                    $result[$field][$type] = array_values($ids);
 
         return $result;
     }

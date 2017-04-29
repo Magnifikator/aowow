@@ -56,7 +56,7 @@ class AjaxHandler
     protected function checkLocale($val)
     {
         if (preg_match('/^'.implode('|', array_keys(array_filter(Util::$localeStrings))).'$/', $val))
-            return intVal($val);
+            return intval($val);
 
         return null;
     }
@@ -64,7 +64,15 @@ class AjaxHandler
     protected function checkInt($val)
     {
         if (preg_match('/^-?\d+$/', $val))
-            return intVal($val);
+            return intval($val);
+
+        return null;
+    }
+
+    protected function checkIdList($val)
+    {
+        if (preg_match('/^-?\d+(,-?\d+)*$/', $val))
+            return array_map('intval', explode(',', $val));
 
         return null;
     }

@@ -25,7 +25,7 @@ class ProfilePage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $params = explode('.', $pageParam);
+        $params = array_map(function ($x) { return Profiler::urlize(urldecode($x)); }, explode('.', $pageParam));
 
         parent::__construct($pageCall, $pageParam);
 
@@ -33,16 +33,17 @@ class ProfilePage extends GenericPage
         if ($this->mode == CACHE_TYPE_TOOLTIP && isset($_GET['domain']))
             Util::powerUseLocale($_GET['domain']);
 
-        if (count($params) == 1 && intVal($params[0]))
+        if (count($params) == 1 && intval($params[0]))
         {
             // todo: some query to validate existence of char
-            if ($foo = DB::Aowow()->selectCell('SELECT 2161862'))
-                $this->subjectGUID = $foo;
+            if ($id = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE id = ?d', intval($params[0])))
+                $this->subjectGUID = $id;
             else
                 $this->notFound();
 
+            // roll lover and check if we tried to access real char..?
             $this->isCustom  = true;
-            $this->profile = intVal($params[0]);
+            $this->profile = intval($params[0]);
         }
         else if (count($params) == 3)
         {
@@ -61,16 +62,32 @@ class ProfilePage extends GenericPage
                 if ($this->subject->error)
                     $this->notFound();
 
-                // $this->subjectGUID = $this->subject->getField('guid');
                 $this->profile = $params;
-
             }
             // 2) not yet synced but exists on realm
-            else if ($guid = DB::Characters($this->realmId)->selectCell('SELECT guid FROM characters WHERE name = ?', Util::ucFirst($this->subjectName)))
+            else if ($char = DB::Characters($this->realmId)->selectRow('SELECT c.guid AS realmGUID, c.name, c.race, c.class, c.level, c.gender, IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.name = ?', Util::ucFirst($this->subjectName)))
             {
-                $newId = Profiler::scheduleResync(TYPE_PROFILE, $this->realmId, $guid);
-                $this->doResync = ['profile', $newId];
-                $this->initialSync();
+                $char['realm'] = $this->realmId;
+
+                // create entry with basic stuff from realm
+                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES (?a)', array_keys($char), array_values($char));
+
+                // queue full fetch
+                $newId = Profiler::scheduleResync(TYPE_PROFILE, $this->realmId, $char['realmGUID']);
+
+                if ($this->mode == CACHE_TYPE_TOOLTIP)      // enable tooltip display with basic data we just added
+                {
+                    $this->subject = new ProfileList(array(['name', Util::ucFirst($this->subjectName)]), ['sv' => $params[1]]);
+                    if ($this->subject->error)
+                        $this->notFound();
+
+                    $this->profile = $params;
+                }
+                else                                        // display empty page and queue status
+                {
+                    $this->doResync = ['profile', $newId];
+                    $this->initialSync();
+                }
             }
             // 3) does not exist at all
             else

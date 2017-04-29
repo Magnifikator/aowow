@@ -60,7 +60,7 @@ class AjaxData extends AjaxHandler
                     // &partial: im not doing this right
                     // it expects a full quest dump on first lookup but will query subCats again if clicked..?
                     // for now omiting the detail clicks with empty results and just set catg update
-                    $catg = $this->_get['catg'] ?: 'null';
+                    $catg = isset($this->_get['catg']) ? $this->_get['catg'] : 'null';
                     if ($catg == 'null')
                         $result .= $this->loadProfilerData($set);
                     else if ($this->_get['callback'])
@@ -79,7 +79,7 @@ class AjaxData extends AjaxHandler
 
                     break;
                 // locale independant
-                case 'quick-excludes':                              // generated per character in profiler
+                case 'quick-excludes':
                 case 'zones':
                 case 'weight-presets':
                 case 'item-scaling':

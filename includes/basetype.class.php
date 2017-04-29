@@ -278,10 +278,6 @@ abstract class BaseType
         if (!$this->templates)
             return;
 
-        // assign query results to template
-        foreach ($rows as $k => $tpl)
-            $this->templates[$k] = $tpl;
-
         // push first element for instant use
         $this->reset();
 

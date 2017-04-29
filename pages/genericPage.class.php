@@ -93,6 +93,8 @@ trait TrProfiler
         // cat[2] is arena-team, guild or player
         $cat = explode('.', $str);
 
+        $cat = array_map('urldecode', $cat);
+
         if (count($cat) > 3)
             return;
 
@@ -118,7 +120,7 @@ trait TrProfiler
                     {
                         // profiler items can only contain spaces and letters
                         $cat[2] = str_replace('-', ' ', $cat[2]);
-                        $this->subjectName = urldecode($cat[2]);
+                        $this->subjectName = $cat[2];
                     }
 
                     break;
