@@ -9,6 +9,39 @@ class Profiler
     private static $realms  = [];
     private static $pidFile = 'config/pr-queue-pid';
 
+
+    private static function batchInsert(array $data)
+    {
+        $nRows  = 100;
+        $nItems = count($data[0]);
+        $result = [];
+        $buff   = [];
+
+        if (!count($data))
+            return [];
+
+        // DB::Aowow()->escape(wut);
+        foreach ($data as $d)
+        {
+            if (count($d) != $nItems)
+                return [];
+
+            $d = array_map(function ($x) { return DB::Aowow()->escape($x); }, $d);
+
+            $buff[] = implode(',', $d);
+
+            if (count($buff) >= $nRows)
+            {
+                $result[] = '('.implode('),(', $buff).')';
+                $buff = [];
+            }
+        }
+
+        $result[] = '('.implode('),(', $buff).')';
+
+        return $result;
+    }
+
     public static function getBuyoutForItem($itemId)
     {
         if (!$itemId)
@@ -30,7 +63,7 @@ class Profiler
         }
 
         // exec('screen -c config/screen.conf -dmS ao-pr-queue php prQueue > /dev/null 2>/dev/null &');
-        exec('php prQueue > /dev/null 2>/dev/null &');
+        exec('php prQueue --log=cache/profiling.log > /dev/null 2>/dev/null &');
         usleep(500000);
         if (self::queueStatus())
             return true;
@@ -298,27 +331,30 @@ class Profiler
 
 
         // hunter pets
-        $pets = DB::Characters($realmId)->select('SELECT id AS ARRAY_KEY, id, entry, modelId, name FROM character_pet WHERE owner = ?d', $charGuid);
-        foreach ($pets as $petGuid => $petData)
+        if ((1 << ($char['class'] - 1)) == CLASS_HUNTER)
         {
-            $morePet   = DB::Aowow()->selectRow('SELECT p.`type`, c.family FROM ?_pet p JOIN ?_creature c ON c.family = p.id WHERE c.id = ?d', $petData['entry']);
-            $petSpells = DB::Characters($realmId)->selectCol('SELECT spell FROM pet_spell WHERE guid = ?d', $petGuid);
+            $pets = DB::Characters($realmId)->select('SELECT id AS ARRAY_KEY, id, entry, modelId, name FROM character_pet WHERE owner = ?d', $charGuid);
+            foreach ($pets as $petGuid => $petData)
+            {
+                $morePet   = DB::Aowow()->selectRow('SELECT p.`type`, c.family FROM ?_pet p JOIN ?_creature c ON c.family = p.id WHERE c.id = ?d', $petData['entry']);
+                $petSpells = DB::Characters($realmId)->selectCol('SELECT spell FROM pet_spell WHERE guid = ?d', $petGuid);
 
-            $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell in (?a), rank, 0)) FROM ?_talents WHERE class = 0 AND petTypeMask = ?d GROUP BY id ORDER BY row, col ASC', $petSpells ?: [0], 1 << $morePet['type']);
-            $pet = array(
-                'id'        => $petGuid,
-                'owner'     => $profileId,
-                'name'      => $petData['name'],
-                'family'    => $morePet['family'],
-                'npc'       => $petData['entry'],
-                'displayId' => $petData['modelId'],
-                'talents'   => implode('', $_)
-            );
+                $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell in (?a), rank, 0)) FROM ?_talents WHERE class = 0 AND petTypeMask = ?d GROUP BY id ORDER BY row, col ASC', $petSpells ?: [0], 1 << $morePet['type']);
+                $pet = array(
+                    'id'        => $petGuid,
+                    'owner'     => $profileId,
+                    'name'      => $petData['name'],
+                    'family'    => $morePet['family'],
+                    'npc'       => $petData['entry'],
+                    'displayId' => $petData['modelId'],
+                    'talents'   => implode('', $_)
+                );
 
-            DB::Aowow()->query('REPLACE INTO ?_profiler_pets (?#) VALUES (?a)', array_keys($pet), array_values($pet));
+                DB::Aowow()->query('REPLACE INTO ?_profiler_pets (?#) VALUES (?a)', array_keys($pet), array_values($pet));
+            }
+
+            CLI::write(' ..hunter pets');
         }
-
-        CLI::write(' ..hunter pets');
 
 
         /*******************/
@@ -328,18 +364,18 @@ class Profiler
         // done quests
         $quests = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, quest AS typeId FROM character_queststatus_rewarded WHERE guid = ?d', $profileId, TYPE_QUEST, $char['guid']);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_QUEST, $profileId);
-        foreach ($quests as $q)
-            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($q), array_values($q));
+        foreach (self::batchInsert($quests) as $q)
+            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$q, array_keys($quests[0]));
 
         CLI::write(' ..quests');
 
 
         // known skills (professions only)
         $skAllowed = DB::Aowow()->selectCol('SELECT id FROM ?_skillline WHERE typeCat IN (9, 11) AND (cuFlags & ?d) = 0', CUSTOM_EXCLUDE_FOR_LISTVIEW);
-        $skills = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, skill AS typeId, `value` AS cur, max FROM character_skills WHERE guid = ?d AND skill IN (?a)', $profileId, TYPE_SKILL, $char['guid'], $skAllowed);
+        $skills    = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, skill AS typeId, `value` AS cur, max FROM character_skills WHERE guid = ?d AND skill IN (?a)', $profileId, TYPE_SKILL, $char['guid'], $skAllowed);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SKILL, $profileId);
-        foreach ($skills as $sk)
-            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($sk), array_values($sk));
+        foreach (self::batchInsert($skills) as $sk)
+            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$sk, array_keys($skills[0]));
 
         CLI::write(' ..professions');
 
@@ -347,8 +383,8 @@ class Profiler
         // reputation
         $reputation = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, faction AS typeId, standing AS cur FROM character_reputation WHERE guid = ?d AND (flags & 0xC) = 0', $profileId, TYPE_FACTION, $char['guid']);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_FACTION, $profileId);
-        foreach ($reputation as $rep)
-            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($rep), array_values($rep));
+        foreach (self::batchInsert($reputation) as $rep)
+            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$rep, array_keys($reputation[0]));
 
         CLI::write(' ..reputation');
 
@@ -371,8 +407,8 @@ class Profiler
         // achievements
         $achievements = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, achievement AS typeId, date AS cur FROM character_achievement WHERE guid = ?d', $profileId, TYPE_ACHIEVEMENT, $char['guid']);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_ACHIEVEMENT, $profileId);
-        foreach ($achievements as $a)
-            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($a), array_values($a));
+        foreach (self::batchInsert($achievements) as $a)
+            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$a, array_keys($achievements[0]));
 
         CLI::write(' ..achievements');
 
@@ -380,8 +416,8 @@ class Profiler
         // known spells
         $spells = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, spell AS typeId FROM character_spell WHERE guid = ?d AND disabled = 0', $profileId, TYPE_SPELL, $char['guid']);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SPELL, $profileId);
-        foreach ($spells as $s)
-            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES (?a)', array_keys($s), array_values($s));
+        foreach (self::batchInsert($spells) as $s)
+            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$s, array_keys($spells[0]));
 
         CLI::write(' ..known spells (vanity pets & mounts)');
 
@@ -389,8 +425,6 @@ class Profiler
         /****************/
         /* related data */
         /****************/
-
-        // pets (hunter)
 
         // guilds
 
