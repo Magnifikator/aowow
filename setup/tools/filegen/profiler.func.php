@@ -49,13 +49,6 @@ if (!CLI)
             // get quests for exclusion
             foreach ($questz->iterate() as $id => $__)
             {
-                // already handled auomagically for quests
-                // $side = Game::sideByRaceMask($questz->getField('reqRaceMask'));
-                // if ($side == SIDE_ALLIANCE)
-                    // $exAdd(TYPE_QUEST, $id, PR_EXCLUDE_GROUP_REQ_ALLIANCE);
-                // else if ($side == SIDE_HORDE)
-                    // $exAdd(TYPE_QUEST, $id, PR_EXCLUDE_GROUP_REQ_HORDE);
-
                 switch ($questz->getField('reqSkillId'))
                 {
                     case 356:
@@ -113,6 +106,11 @@ if (!CLI)
                 [['cuFlags', CUSTOM_EXCLUDE_FOR_LISTVIEW, '&'], 0],
             );
             $titlez = new TitleList($condition);
+
+            // get titles for exclusion
+            foreach ($titlez->iterate() as $id => $__)
+                if (empty($titlez->sources[$id][4]) || empty($titlez->sources[$id][12]))
+                    $exAdd(TYPE_TITLE, $id, PR_EXCLUDE_GROUP_UNAVAILABLE);
 
             foreach (CLISetup::$localeIds as $l)
             {
@@ -315,10 +313,6 @@ if (!CLI)
                 [['flags', 1, '&'], 0],                     // no statistics
             );
             $achievez = new AchievementList($condition);
-
-
-            // inherit exclusions from items
-
 
             foreach (CLISetup::$localeIds as $l)
             {

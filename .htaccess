@@ -10,7 +10,7 @@ Order Deny,Allow
     ForceType application/x-httpd-php
 </Files>
 
-<Files "psync">
+<Files "prQueue">
     ForceType application/x-httpd-php
 </Files>
 
