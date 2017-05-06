@@ -744,24 +744,7 @@ trait profilerHelper
 {
     public static $type      = 0;                           // arena teams dont actually have one
     public static $brickFile = 'profile';                   // profile is multipurpose
-
-    private function selectRealms($fi)
-    {
-        $this->dbNames = [];
-
-        foreach(Profiler::getRealms() as $idx => $r)
-        {
-            if (!empty($fi['sv']) && Profiler::urlize($r['name']) != Profiler::urlize($fi['sv']))
-                continue;
-
-            if (!empty($fi['rg']) && Profiler::urlize($r['region']) != Profiler::urlize($fi['rg']))
-                continue;
-
-            $this->dbNames[$idx] = 'Characters';
-        }
-
-        return !!$this->dbNames;
-    }
+    public static $dataTable = '';                          // doesn't have community content
 }
 
 /*

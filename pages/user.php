@@ -217,8 +217,20 @@ class UserPage extends GenericPage
 
         // forum -> latest replies [unused]
 
-        // Characters [todo]
-        $this->user['characterData'] = [];
+        $profiles = new LocalProfileList(array(['user', User::$id]));
+        if (!$profiles->error)
+        {
+            $this->addJS('?data=weight-presets&t='.$_SESSION['dataKey']);
+
+            // Characters
+            if ($chars = $profiles->getListviewData(PROFILEINFO_CHARACTER))
+                $this->user['characterData'] = $chars;
+
+            // Profiles
+            if ($prof = $profiles->getListviewData(PROFILEINFO_PROFILE))
+                $this->user['profileData'] = $prof;
+        }
+
         /*
             us_addCharactersTab([
                 {
@@ -248,8 +260,6 @@ class UserPage extends GenericPage
             ]);
         */
 
-        // Profiles [todo]
-        $this->user['profileData'] = [];
     }
 
     protected function generateTitle()

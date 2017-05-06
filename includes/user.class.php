@@ -22,6 +22,7 @@ class User
     private static $expires       = false;
     private static $passHash      = '';
     private static $excludeGroups = 1;
+    private static $profiles      = null;
 
     public static function init()
     {
@@ -84,6 +85,7 @@ class User
         self::$perms         = $query['bans'] & (ACC_BAN_TEMP | ACC_BAN_PERM) ? 0 : intval($query['userPerms']);
         self::$dailyVotes    = $query['dailyVotes'];
         self::$excludeGroups = $query['excludeGroups'];
+        self::$profiles      = (new LocalProfileList(array(['user', self::$id])));
 
         if ($query['avatar'])
             self::$avatar = $query['avatar'];
@@ -602,34 +604,18 @@ class User
 
     public static function getCharacters()
     {
-        // existing chars on realm(s)
-        $characters = array(
-            // array(
-                // 'id'        => 22,
-                // 'name'      => 'Example Char',
-                // 'realmname' => 'Example Realm',
-                // 'region'    => 'eu',
-                // 'realm'     => 'example-realm',
-                // 'race'      => 6,
-                // 'classs'    => 11,
-                // 'level'     => 80,
-                // 'gender'    => 1,
-                // 'pinned'    => 1
-            // )
-        );
+        if (!self::$profiles)
+            return [];
 
-        return $characters;
+        return self::$profiles->getJSGlobals(PROFILEINFO_CHARACTER);
     }
 
     public static function getProfiles()
     {
-        // chars build in profiler
-        $profiles = array(
-            // array('id' => 21, 'name' => 'Example Profile 1', 'race' => 4,  'classs' => 5, 'level' => 72, 'gender' => 1, 'icon' => 'inv_axe_04'),
-            // array('id' => 23, 'name' => 'Example Profile 2', 'race' => 11, 'classs' => 3, 'level' => 17, 'gender' => 0)
-        );
+        if (!self::$profiles)
+            return [];
 
-        return $profiles;
+        return self::$profiles->getJSGlobals(PROFILEINFO_PROFILE);
     }
 
     public static function getCookies()

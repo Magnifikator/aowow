@@ -44,10 +44,14 @@ spl_autoload_register(function ($class) {
     {
         require_once 'includes/basetype.class.php';
 
-        if (file_exists('includes/types/'.strtr($class, ['list' => '']).'.class.php'))
-            require_once 'includes/types/'.strtr($class, ['list' => '']).'.class.php';
+        $cl = strtr($class, ['list' => '']);
+        if ($cl == 'remoteprofile' || $cl == 'localprofile')
+            $cl = 'profile';
+
+        if (file_exists('includes/types/'.$cl.'.class.php'))
+            require_once 'includes/types/'.$cl.'.class.php';
         else
-            throw new Exception('could not register type class: '.$class);
+            throw new Exception('could not register type class: '.$cl);
 
         return;
     }

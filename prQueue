@@ -57,7 +57,7 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
         continue;
     }
     else
-        DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d WHERE realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_WORKING, $row['realm'], $row['type'], $row['typeId']);
+        DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d WHERE requestTime = ?d AND realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_WORKING, time(), $row['realm'], $row['type'], $row['typeId']);
 
     switch ($row['type'])
     {

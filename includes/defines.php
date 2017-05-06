@@ -208,15 +208,19 @@ define('NPCINFO_REP',                       0x4);
 
 define('ACHIEVEMENTINFO_PROFILE',           0x1);
 
-define('PROFILEINFO_GUILD',                 1);             // like &roster
-define('PROFILEINFO_ARENA_2S',              2);
-define('PROFILEINFO_ARENA_3S',              3);
-define('PROFILEINFO_ARENA_5S',              4);
+define('PROFILEINFO_PROFILE',               0x1);
+define('PROFILEINFO_CHARACTER',             0x2);
+
+// define('PROFILEINFO_GUILD',                 1);             // like &roster
+// define('PROFILEINFO_ARENA_2S',              2);
+// define('PROFILEINFO_ARENA_3S',              3);
+// define('PROFILEINFO_ARENA_5S',              4);
 
 define('SPAWNINFO_ZONES',                   1);             // not a mask, mutually exclusive
 define('SPAWNINFO_SHORT',                   2);
 define('SPAWNINFO_FULL',                    3);
 define('SPAWNINFO_QUEST',                   4);
+
 
 // Community Content
 define('CC_FLAG_STICKY',                    0x1);

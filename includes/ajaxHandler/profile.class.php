@@ -5,6 +5,8 @@ if (!defined('AOWOW_REVISION'))
 
 class AjaxProfile extends AjaxHandler
 {
+    private   $undo        = false;
+
     protected $validParams = ['link', 'unlink', 'pin', 'unpin', 'public', 'private', 'avatar', 'resync', 'status', 'save', 'delete', 'purge', 'summary', 'load'];
     protected $_get        = array(
         'id'     => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkIdList']],
@@ -20,7 +22,7 @@ class AjaxProfile extends AjaxHandler
         'gender'       => [FILTER_SANITIZE_NUMBER_INT, null],
         'nomodel'      => [FILTER_SANITIZE_NUMBER_INT, null],
         'talenttree1'  => [FILTER_SANITIZE_NUMBER_INT, null],
-        'talenttree1'  => [FILTER_SANITIZE_NUMBER_INT, null],
+        'talenttree2'  => [FILTER_SANITIZE_NUMBER_INT, null],
         'talenttree3'  => [FILTER_SANITIZE_NUMBER_INT, null],
         'activespec'   => [FILTER_SANITIZE_NUMBER_INT, null],
         'talentbuild1' => [FILTER_SANITIZE_STRING, 0xC],
@@ -44,24 +46,29 @@ class AjaxProfile extends AjaxHandler
 
         switch ($this->params[0])
         {
-            case 'link':
             case 'unlink':
+                $this->undo = true;
+            case 'link':
                 $this->handler = 'handleLink';              // always returns null
                 break;
-            case 'pin':
             case 'unpin':
+                $this->undo = true;
+            case 'pin':
                 $this->handler = 'handlePin';               // always returns null
                 break;
-            case 'public':
             case 'private':
+                $this->undo = true;
+            case 'public':
                 $this->handler = 'handlePrivacy';           // always returns null
                 break;
             case 'avatar':
                 $this->handler = 'handleAvatar';            // sets an image header
                 break;                                      // so it has to die here or another header will be set
             case 'resync':
+                $this->handler = 'handleResync';            // always returns "1"
+                break;
             case 'status':
-                $this->handler = 'handleResync';
+                $this->handler = 'handleStatus';            // returns status object
                 break;
             case 'save':
                 $this->handler = 'handleSave';
@@ -80,33 +87,79 @@ class AjaxProfile extends AjaxHandler
         }
     }
 
-    protected function handleLink($id, $mode)               // links char with account
+    /*  params
+            id: <prId1,prId2,..,prIdN>
+            user: <string> [optional]
+        return: null
+    */
+    protected function handleLink()                         // links char with account
     {
-        /*  params
-                id: <prId1,prId2,..,prIdN>
-                user: <string> [optional]
-            return: null
-        */
+        if (!User::$id || empty($this->_get['id']))
+            return;
+
+        $uid = User::$id;
+        if ($this->_get['user'] && User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+            $uid = DB::Aowow()->selectCell('SELECT id FROM ?_account WHERE user = ?', $this->_get['user']);
+        else if ($this->_get['user'])
+            return;
+
+        if ($this->undo)
+            DB::Aowow()->query('DELETE FROM ?_account_profiles WHERE accountId = ?d AMD  AND profileId IN (?a)', $uid, $this->_get['id']);
+        else
+            foreach ($this->_get['id'] as $prId)            // only link characters, not custom profiles
+                if ($prId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE id = ?d AND realm IS NOT NULL', $prId))
+                    DB::Aowow()->query('INSERT INTO ?_account_profiles VALUES (?d, ?d, 0)', $uid, $prId);
     }
 
-    protected function handlePin($id, $mode)                // (un)favorite
+    /*  params
+            id: <prId1,prId2,..,prIdN>
+            user: <string> [optional]
+        return: null
+    */
+    protected function handlePin()                          // (un)favorite
     {
-        /*  params
-                id: <prId1,prId2,..,prIdN>
-                user: <string> [optional]
-            return: null
-        */
+        if (!User::$id || empty($this->_get['id'][0]))
+            return;
+
+        $uid = User::$id;
+        if ($this->_get['user'] && User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+            $uid = DB::Aowow()->selectCell('SELECT id FROM ?_account WHERE user = ?', $this->_get['user']);
+        else if ($this->_get['user'])
+            return;
+
+        if ($this->undo)
+            DB::Aowow()->query('UPDATE ?_account_profiles SET extraFlags = extraFlags & ?d WHERE id IN (?a) AND user = ?d', ~PROFILE_CU_PINNED, $this->_get['id'], $uid);
+        else
+            DB::Aowow()->query('UPDATE ?_account_profiles SET extraFlags = extraFlags | ?d WHERE id IN (?a) AND user = ?d',  PROFILE_CU_PINNED, $this->_get['id'], $uid);
     }
 
-    protected function handlePrivacy($id, $mode)            // public visibility
+    /*  params
+            id: <prId1,prId2,..,prIdN>
+            user: <string> [optional]
+        return: null
+    */
+    protected function handlePrivacy()                      // public visibility
     {
-        /*  params
-                id: <prId1,prId2,..,prIdN>
-                user: <string> [optional]
-            return: null
-        */
+        if (!User::$id || empty($this->_get['id'][0]))
+            return;
+
+        $uid = User::$id;
+        if ($this->_get['user'] && User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+            $uid = DB::Aowow()->selectCell('SELECT id FROM ?_account WHERE user = ?', $this->_get['user']);
+        else if ($this->_get['user'])
+            return;
+
+        if ($this->undo)
+            DB::Aowow()->query('UPDATE ?_account_profiles SET extraFlags = extraFlags & ?d WHERE id IN (?a) AND user = ?d', ~PROFILE_CU_PUBLISHED, $this->_get['id'], $uid);
+        else
+            DB::Aowow()->query('UPDATE ?_account_profiles SET extraFlags = extraFlags | ?d WHERE id IN (?a) AND user = ?d',  PROFILE_CU_PUBLISHED, $this->_get['id'], $uid);
     }
 
+    /*  params
+            id: <prId>
+            size: <string> [optional]
+        return: image-header
+    */
     protected function handleAvatar()                       // image
     {
         // something happened in the last years: those textures do not include tiny icons
@@ -148,105 +201,119 @@ class AjaxProfile extends AjaxHandler
         return;
     }
 
-    protected function handleResync()                       // resync init and status requests
+    /*  params
+            id: <prId1,prId2,..,prIdN>
+            user: <string> [optional, not used]
+        return: 1
+    */
+    protected function handleResync()
     {
-        /*  params
-                id: <prId1,prId2,..,prIdN>
-                user: <string> [optional]
-            return
-                null            [onOK]
-                int or str      [onError]
-        */
+        if ($chars = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_profiles WHERE id IN (?a)', $this->_get['id']))
+            foreach ($chars as $c)
+                Profiler::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
 
-        if ($this->params[0] == 'resync')
-        {
-            if ($chars = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_profiles WHERE id IN (?a)', $this->_get['id']))
-                foreach ($chars as $c)
-                    Profiler::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
-
-            return '1';
-        }
-        else // $this->params[0] == 'status'
-        {
-            /*
-                not all fields are required, if zero they are omitted
-                statusCode:
-                    0: end the request
-                    1: waiting
-                    2: working...
-                    3: ready; click to view
-                    4: error / retry
-                errorCode:
-                    0: unk error
-                    1: char does not exist
-                    2: armory gone
-
-                [
-                    nQueueProcesses,
-                    [statusCode, timeToRefresh, curQueuePos, errorCode, nResyncTries],
-                    [<anotherStatus>]...
-                ]
-            */
-            $response = [(int)!!CFG_PROFILER_QUEUE];        // in theory you could have multiple queues but lets be frank .. you will NEVER be under THAT kind of load for it to be relevant
-            if (!$this->_get['id'])
-                $response[] = [PR_QUEUE_STATUS_ENDED, 0, 0, PR_QUEUE_ERROR_CHAR];
-            else
-            {
-                $charGUIDs  = $this->_get['id'];
-                $charStatus = DB::Aowow()->select('SELECT typeId AS ARRAY_KEY, status, realm FROM ?_profiler_sync WHERE `type` = ?d AND typeId IN (?a)', TYPE_PROFILE, $charGUIDs);
-                $queue      = DB::Aowow()->selectCol('SELECT typeId FROM ?_profiler_sync WHERE `type` = ?d AND status = ?d AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC', TYPE_PROFILE, PR_QUEUE_STATUS_WAITING);
-                foreach ($charGUIDs as $guid)
-                {
-                    if (empty($charStatus[$guid]))         // whelp, thats some error..
-                        $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, PR_QUEUE_ERROR_UNK];
-                    else if ($charStatus[$guid]['status'] == PR_QUEUE_STATUS_ERROR)
-                        $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, $charStatus[$guid]['errCode']];
-                    else
-                        $response[] = [$charStatus[$guid]['status'], CFG_PROFILER_RESYNC_PING, array_search($guid, $queue) + 1, 0, 1];
-                }
-            }
-            return Util::toJSON($response);        }
+        return '1';
     }
 
+    /*  params
+            id: <prId1,prId2,..,prIdN>
+        return
+            <status object>
+            [
+                nQueueProcesses,
+                [statusCode, timeToRefresh, curQueuePos, errorCode, nResyncTries],
+                [<anotherStatus>]
+                ...
+            ]
+
+            not all fields are required, if zero they are omitted
+            statusCode:
+                0: end the request
+                1: waiting
+                2: working...
+                3: ready; click to view
+                4: error / retry
+            errorCode:
+                0: unk error
+                1: char does not exist
+                2: armory gone
+    */
+    protected function handleStatus()
+    {
+        $response = [(int)!!CFG_PROFILER_QUEUE];        // in theory you could have multiple queues but lets be frank .. you will NEVER be under THAT kind of load for it to be relevant
+        if (!$this->_get['id'])
+            $response[] = [PR_QUEUE_STATUS_ENDED, 0, 0, PR_QUEUE_ERROR_CHAR];
+        else
+        {
+            // error out all profiles with status WORKING, older than 60sec
+            DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE status = ?d AND requestTime < ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_UNK, PR_QUEUE_STATUS_WORKING, time() - MINUTE);
+
+            $charGUIDs  = $this->_get['id'];
+            $charStatus = DB::Aowow()->select('SELECT typeId AS ARRAY_KEY, status, realm FROM ?_profiler_sync WHERE `type` = ?d AND typeId IN (?a)', TYPE_PROFILE, $charGUIDs);
+            $queue      = DB::Aowow()->selectCol('SELECT typeId FROM ?_profiler_sync WHERE `type` = ?d AND status = ?d AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC', TYPE_PROFILE, PR_QUEUE_STATUS_WAITING);
+            foreach ($charGUIDs as $guid)
+            {
+                if (empty($charStatus[$guid]))         // whelp, thats some error..
+                    $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, PR_QUEUE_ERROR_UNK];
+                else if ($charStatus[$guid]['status'] == PR_QUEUE_STATUS_ERROR)
+                    $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, $charStatus[$guid]['errCode']];
+                else
+                    $response[] = [$charStatus[$guid]['status'], CFG_PROFILER_RESYNC_PING, array_search($guid, $queue) + 1, 0, 1];
+            }
+        }
+
+        return Util::toJSON($response);
+    }
+
+    /*  params (get))
+            id: <prId1,0> [0: new profile]
+        params (post)
+            <various char data> [see below]
+        return:
+            proileId [onSuccess]
+            -1       [onError]
+    */
     protected function handleSave()                         // unKill a profile
     {
+        // todo (med): detail check this post-data
         $cuProfile = array(
-            'user'        => User::$id,
-            'name'        => $this->_post['name'],
-            'level'       => $this->_post['level'],
-            'class'       => $this->_post['class'],
-            'race'        => $this->_post['race'],
-            'gender'      => $this->_post['gender'],
-            'nomodelMask' => $this->_post['nomodel'],
-         // 'talenttree1' => $this->_post['talenttree1'],
-         // 'talenttree2' => $this->_post['talenttree2'],
-         // 'talenttree3' => $this->_post['talenttree3'],
-            'activespec'  => $this->_post['activespec'],
-            'spec1'       => $this->_post['talentbuild1'].' '.$this->_post['glyphs1'],
-            'spec2'       => $this->_post['talentbuild2'].' '.$this->_post['glyphs2'],
-         // 'gearscore'   => $this->_post['gearscore'],
-            'icon'        => $this->_post['icon'],
-            'cuFlags'     => $this->_post['public'] ? PROFILE_CU_PUBLISHED : 0
+            'user'         => User::$id,
+            // 'userName'     => User::$displayName,
+            'name'         => $this->_post['name'],
+            'level'        => $this->_post['level'],
+            'class'        => $this->_post['class'],
+            'race'         => $this->_post['race'],
+            'gender'       => $this->_post['gender'],
+            'nomodelMask'  => $this->_post['nomodel'],
+            'talenttree1'  => $this->_post['talenttree1'],
+            'talenttree2'  => $this->_post['talenttree2'],
+            'talenttree3'  => $this->_post['talenttree3'],
+            'talentbuild1' => $this->_post['talentbuild1'],
+            'talentbuild1' => $this->_post['talentbuild2'],
+            'activespec'   => $this->_post['activespec'],
+            'glyphs1'      => $this->_post['glyphs1'],
+            'glyphs2'      => $this->_post['glyphs2'],
+            // 'gearscore'    => 0,                            // $this->_post['gearscore'],
+            'icon'         => $this->_post['icon'],
+            'cuFlags'      => $this->_post['public'] ? PROFILE_CU_PUBLISHED : 0
         );
 
         if ($_ = $this->_post['description'])
             $cuProfile['description'] = $_;
 
-        if ($_ = $this->_post['source'])
+        if ($_ = $this->_post['source'])                    // should i also set sourcename?
             $cuProfile['sourceId'] = $_;
 
-        // if ($_ = $this->_post['copy'])   // what is a copy..?
-            // $cuProfile['copy'] = $_;
+        if ($_ = $this->_post['copy'])                      // gets set to source profileId when "save as" is clicked. Whats the difference to 'source' though?
+            $cuProfile['copy'] = $_;
 
-        // update items
-        $charId = -1;                                       // -1: error
-        if ($id = $this->_get['id'][0])  // update
+        $charId = -1;
+        if ($id = $this->_get['id'][0])                     // update
         {
             if (DB::Aowow()->query('UPDATE ?_profiler_profiles SET ?a WHERE id = ?d', $cuProfile, $id))
                 $charId = $id;
         }
-        // new
-        else
+        else                                                // new
         {
             $nProfiles = DB::Aowow()->selectCell('SELECT COUNT(*) FROM ?_profiler_profiles WHERE user = ?d AND realmGUID IS NULL', User::$id);
             if ($nProfiles < 10 || User::isPremium())
@@ -259,13 +326,58 @@ class AjaxProfile extends AjaxHandler
         {
             // ok, 'funny' thing: wether an item has en extra prismatic sockel is determined contextual
             // when it has an itemId in a socket slot where there shouldn't be one
-            $keys = ['id', 'slot', 'item', 'subitem', 'permEnchant', 'tempEnchant', 'gem1', 'gem2', 'gem3', 'gem4'];
-            foreach ($this->_post['inv'] as $slot => $itemData)
+            $keys  = ['id', 'slot', 'item', 'subitem', 'permEnchant', 'tempEnchant', 'gem1', 'gem2', 'gem3', 'gem4'];
+
+            // validate Enchantments
+            $enchIds = array_merge(
+                array_column($this->_post['inv'], 4),       // perm enchantments
+                array_column($this->_post['inv'], 5)        // temp enchantments (not used..?)
+            );
+            $enchs = new EnchantmentList(array(['id', $enchIds]));
+
+            // validate items
+            $itemIds = array_merge(
+                array_column($this->_post['inv'], 2),       // base item
+                array_column($this->_post['inv'], 6),       // gem slot 1
+                array_column($this->_post['inv'], 7),       // gem slot 2
+                array_column($this->_post['inv'], 8),       // gem slot 3
+                array_column($this->_post['inv'], 9)        // gem slot 4
+            );
+
+            $items = new ItemList(array(['id', $itemIds]));
+            if (!$items->error)
             {
-                if ($slot + 1  == array_sum($itemData))     // only slot definition set => empty slot
-                    DB::Aowow()->query('DELETE FROM ?_profiler_items WHERE id = ?d AND slot = ?d', $charId, $itemData[0]);
-                else
+                foreach ($this->_post['inv'] as $slot => $itemData)
                 {
+                    if ($slot + 1 == array_sum($itemData))  // only slot definition set => empty slot
+                    {
+                        DB::Aowow()->query('DELETE FROM ?_profiler_items WHERE id = ?d AND slot = ?d', $charId, $itemData[0]);
+                        continue;
+                    }
+
+                    // item does not exist
+                    if (!$items->getEntry($itemData[3]))
+                        continue;
+
+                    // sub-item check
+                    if (!$items->getRandEnchantForItem($itemData[3]))
+                        $itemData[3] = 0;
+
+                    // item sockets are fubar
+                    $nSockets = $items->json[$itemData[2]]['nsockets'];
+                    $nSockets += in_array($slot, [SLOT_WAIST, SLOT_WRISTS, SLOT_HANDS]) ? 1 : 0;
+                    for ($i = 6; $i < 10; $i++)
+                        if ($itemData[$i] && (!$items->getEntry($itemData[$i]) || $i >= (6 + $nSockets)))
+                            $itemData[$i] = 0;
+
+                    // item enchantments are borked
+                    if ($itemData[4] && !$ench->getEntry($itemData[4]))
+                        $itemData[4] = 0;
+
+                    if ($itemData[5] && !$ench->getEntry($itemData[5]))
+                        $itemData[5] = 0;
+
+                    // looks good
                     array_unshift($itemData, $charId);
                     DB::Aowow()->query('REPLACE INTO ?_profiler_items (?#) VALUES (?a)', $keys, $itemData);
                 }
@@ -286,16 +398,15 @@ class AjaxProfile extends AjaxHandler
         return 'NYI';
     }
 
-    protected function handlePurge()                        // removes certain saved information but not the entire character
+    /*  params
+            id: <prId>
+            data: <mode>                [string, tabName?]
+        return
+            null
+    */
+    protected function handlePurge()                        // removes completion data (as this is a wowhead client feature, just fail silently if someone triggers this manually)
     {
-        /*  params
-                id: <prId1,prId2,..,prIdN>
-                data: <mode>                [string, tabName?]
-            return
-                null
-        */
-
-        return 'NYI';
+        return;
     }
 
     protected function handleLoad()
@@ -315,25 +426,20 @@ class AjaxProfile extends AjaxHandler
         if (!$this->_get['id'])
             return;
 
-        $pBase = DB::Aowow()->selectRow('SELECT *, UNIX_TIMESTAMP(lastupdated) AS lastupdated FROM ?_profiler_profiles WHERE id = ?d', $this->_get['id'][0]);
+        $pBase = DB::Aowow()->selectRow('SELECT * FROM ?_profiler_profiles WHERE id = ?d', $this->_get['id'][0]);
         if (!$pBase)
-            return 'alert("whoops!");';
+        {
+            trigger_error('Profiler::handleLoad() - called with invalid profileId #'.$this->_get['id'][0], E_USER_WARNING);
+            return;
+        }
 
         $rData = [];
         foreach (Profiler::getRealms() as $rId => $rData)
             if ($rId == $pBase['realm'])
                 break;
 
-        $spec1 = explode(' ', $pBase['spec1']);
-        $spec2 = explode(' ', $pBase['spec2']);
-
         $profile = array(
-            'source'            => $pBase['id'],            // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
-            'id'                => $pBase['id'],
-            'name'              => $pBase['name'],
-            'region'            => [$rData['region'], Lang::profiler('regions', $rData['region'])],
-            'battlegroup'       => [Profiler::urlize(CFG_BATTLEGROUP), CFG_BATTLEGROUP],
-            'realm'             => [Profiler::urlize($rData['name']), $rData['name']],
+            // profile display data
             'level'             => $pBase['level'],
             'classs'            => $pBase['class'],
             'race'              => $pBase['race'],
@@ -344,20 +450,30 @@ class AjaxProfile extends AjaxHandler
             'haircolor'         => $pBase['haircolor'],
             'facetype'          => $pBase['facetype'],
             'features'          => $pBase['features'],
+            'title'             => $pBase['title'],
+            'name'              => $pBase['name'],
+            'guild'             => $pBase['guild'],
+            // profile origin
+            'id'                => $pBase['id'],
+            'source'            => $pBase['id'],
+            'region'            => [$rData['region'], Lang::profiler('regions', $rData['region'])],
+            'battlegroup'       => [Profiler::urlize(CFG_BATTLEGROUP), CFG_BATTLEGROUP],
+            'realm'             => [Profiler::urlize($rData['name']), $rData['name']],
+
             'published'         => !!($pBase['cuFlags'] & PROFILE_CU_PUBLISHED),
             'pinned'            => !!($pBase['cuFlags'] & PROFILE_CU_PINNED),
-            'inventory'         => [],
             'nomodel'           => $pBase['nomodelMask'],
-            'title'             => $pBase['title'],
             'playedtime'        => $pBase['playedtime'],
             'lastupdated'       => $pBase['lastupdated'] * 1000,
             'talents'           => array(
                 'builds' => array(
-                    ['talents' => array_shift($spec1) . array_shift($spec1) . array_shift($spec1), 'glyphs' => implode(':', $spec1)],
-                    ['talents' => array_shift($spec2) . array_shift($spec2) . array_shift($spec2), 'glyphs' => implode(':', $spec2)]
+                    ['talents' => $pBase['talentbuild1'], 'glyphs' => $pBase['glyphs1']],
+                    ['talents' => $pBase['talentbuild2'], 'glyphs' => $pBase['glyphs2']]
                 ),
                 'active' => $pBase['activespec']
             ),
+            'inventory'         => [],
+            'bookmarks'         => [],                      // list of userIds who claimed this profile (claiming and owning are two different things)
 
             // completion lists: [subjectId => amount/timestamp/1]
             'skills'            => [],                      // skillId => [curVal, maxVal]
@@ -371,8 +487,29 @@ class AjaxProfile extends AjaxHandler
             // UNKNOWN
             'statistics'        => [],                      // UNK all statistics?      [achievementId => killCount]
             'activity'          => [],                      // UNK recent achievements? [achievementId => killCount]
-            'bookmarks'         => [2],                     // UNK pinned or claimed userId => profileIds..?
         );
+
+        // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
+        // _profile.genuine = (!_profile.sourcename && !_profile.user && !_profile.username);
+        // _isArmoryProfile(allowCustoms) => genuine is passed as allowCustoms ... how does this make sense?!
+        /*
+            return (
+                _profile.region && _profile.region[0] &&
+                _profile.battlegroup && _profile.battlegroup[0] &&
+                _profile.realm && _profile.realm[0] &&
+                (allowCustoms || !_profile.user)
+            );
+        */
+
+        if ($pBase['sourceId'])
+        {
+            $profile['source']     = $pBase['sourceId'];
+            $profile['sourcename'] = $pBase['sourceName'];
+        }
+
+        // bookmarks
+        if ($_ = DB::Aowow()->selectCol('SELECT accountId FROM ?_account_profiles WHERE profileId = ?d', $pBase['id']))
+            $profile['bookmarks'] = $_;
 
         /* $profile[]
             'source'            => 2,                       // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
@@ -389,6 +526,8 @@ class AjaxProfile extends AjaxHandler
             // UNKNOWN
             'glyphs'            => [],                      // not really used .. i guess..?
         */
+
+
 
         // pets if hunter fields: [name:name, family:petFamily, npc:npcId, displayId:modelId, talents:talentString]
         if ($pets = DB::Aowow()->select('SELECT name, family, npc, displayId, talents FROM ?_profiler_pets WHERE owner = ?d', $pBase['id']))

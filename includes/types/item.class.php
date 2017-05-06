@@ -1108,7 +1108,7 @@ class ItemList extends BaseType
         return $x;
     }
 
-    private function getRandEnchantForItem($randId)
+    public function getRandEnchantForItem($randId)
     {
         // is it available for this item? .. does it even exist?!
         if (empty($this->enhanceR))

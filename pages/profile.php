@@ -58,7 +58,13 @@ class ProfilePage extends GenericPage
             // 1) already synced to aowow
             if ($this->subjectGUID = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND name = ?', $this->realmId, Util::ucFirst($this->subjectName)))
             {
-                $this->subject = new ProfileList(array(['name', Util::ucFirst($this->subjectName)]), ['sv' => $params[1]]);
+                $realms = Profiler::getRealms();
+                $realm  = 0;
+                foreach ($realms as $rId => $r)
+                    if (Profiler::urlize($r['name']) == $params[1])
+                        $realm = $rId;
+
+                $this->subject = new LocalProfileList(array(['name', Util::ucFirst($this->subjectName)], ['realm', $realm]));
                 if ($this->subject->error)
                     $this->notFound();
 
@@ -121,7 +127,7 @@ class ProfilePage extends GenericPage
 
         $name       = $this->subject->getField('name');
         $guild      = $this->subject->getField('guild');
-        $gRankName  = $this->subject->getField('guildrank');
+        $guildRank  = $this->subject->getField('guildrank');
         $lvl        = $this->subject->getField('level');
         $ra         = $this->subject->getField('race');
         $cl         = $this->subject->getField('class');

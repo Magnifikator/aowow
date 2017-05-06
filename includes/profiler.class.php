@@ -180,8 +180,9 @@ class Profiler
         switch ($type)
         {
             case TYPE_PROFILE:
-                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (realm, realmGUID) VALUES (?d, ?d)', $realmId, $guid);
                 $newId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $guid);
+                if (!$newId)
+                    $newId = DB::Aowow()->query('INSERT INTO ?_profiler_profiles (realm, realmGUID) VALUES (?d, ?d)', $realmId, $guid);
 
                 if ($rData = DB::Aowow()->selectRow('SELECT requestTime AS time, status FROM ?_profiler_sync WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d AND status <> ?d', $realmId, $guid, $type, $newId, PR_QUEUE_STATUS_WORKING))
                 {
@@ -216,7 +217,7 @@ class Profiler
     {
         $tDiffs = [];
 
-        $char = DB::Characters($realmId)->selectRow('SELECT * FROM characters WHERE guid = ?d', $charGuid);
+        $char = DB::Characters($realmId)->selectRow('SELECT IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank, c.* FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.guid = ?d', $charGuid);
         if (!$char)
             return false;
 
@@ -228,24 +229,31 @@ class Profiler
         /**************/
 
         $data = array(
-            'realm'       =>  $realmId,
-            'realmGUID'   =>  $char['guid'],
-            'name'        =>  $char['name'],
-            'race'        =>  $char['race'],
-            'class'       =>  $char['class'],
-            'level'       =>  $char['level'],
-            'gender'      =>  $char['gender'],
-            'skincolor'   =>  $char['playerBytes']        & 0xFF,
-            'facetype'    => ($char['playerBytes'] >>  8) & 0xFF, // maybe features
-            'hairstyle'   => ($char['playerBytes'] >> 16) & 0xFF,
-            'haircolor'   => ($char['playerBytes'] >> 24) & 0xFF,
-            'features'    =>  $char['playerBytes2']       & 0xFF, // maybe facetype
-            'title'       =>  $char['chosenTitle'] ? DB::Aowow()->selectCell('SELECT id FROM ?_titles WHERE bitIdx = ?d', $char['chosenTitle']) : 0,
-            'playedtime'  =>  $char['totaltime'],
-            'nomodelMask' => ($char['playerFlags'] & 0x400 ? (1 << SLOT_HEAD) : 0) | ($char['playerFlags'] & 0x800 ? (1 << SLOT_BACK) : 0),
-            'spec1'       => [],                    // space separated - tree1 tree2 tree3 glyph1 glyph2 glyph3 glyph4 glyph5 glyph6
-            'spec2'       => [],
-            'activespec'  =>  $char['activespec'],
+            'realm'        =>  $realmId,
+            'realmGUID'    =>  $charGuid,
+            'name'         =>  $char['name'],
+            'race'         =>  $char['race'],
+            'class'        =>  $char['class'],
+            'level'        =>  $char['level'],
+            'gender'       =>  $char['gender'],
+            'skincolor'    =>  $char['playerBytes']        & 0xFF,
+            'facetype'     => ($char['playerBytes'] >>  8) & 0xFF, // maybe features
+            'hairstyle'    => ($char['playerBytes'] >> 16) & 0xFF,
+            'haircolor'    => ($char['playerBytes'] >> 24) & 0xFF,
+            'features'     =>  $char['playerBytes2']       & 0xFF, // maybe facetype
+            'title'        =>  $char['chosenTitle'] ? DB::Aowow()->selectCell('SELECT id FROM ?_titles WHERE bitIdx = ?d', $char['chosenTitle']) : 0,
+            'playedtime'   =>  $char['totaltime'],
+            'nomodelMask'  => ($char['playerFlags'] & 0x400 ? (1 << SLOT_HEAD) : 0) | ($char['playerFlags'] & 0x800 ? (1 << SLOT_BACK) : 0),
+            'talenttree1'  => 0,
+            'talenttree2'  => 0,
+            'talenttree3'  => 0,
+            'talentbuild1' => '',
+            'talentbuild2' => '',
+            'glyphs1'      => '',
+            'glyphs2'      => '',
+            'activespec'   => $char['activespec'],
+            'guild'        => $char['guild'],
+            'guildRank'    => $char['guildRank']
         );
 
         // talents + glyphs
@@ -257,7 +265,9 @@ class Profiler
             for ($j = 0; $j < 3; $j++)
             {
                 $_ = DB::Aowow()->selectCol('SELECT spell AS ARRAY_KEY, MAX(IF(spell in (?a), rank, 0)) FROM ?_talents WHERE class = ?d AND tab = ?d GROUP BY id ORDER BY row, col ASC', !empty($t[$i]) ? $t[$i] : [0], $char['class'], $j);
-                $data['spec'.($i + 1)][$j] = implode('', $_);
+                $data['talentbuild'.($i + 1)] .= implode('', $_);
+                if ($char['activespec'] == $i)
+                    $data['talenttree'.($j + 1)] = array_sum($_);
             }
 
             // glyphs
@@ -269,19 +279,14 @@ class Profiler
                         $gProps[$j] = $g[$i]['g'.$j];
 
                 if ($gProps)
-                    $gItems = DB::Aowow()->selectCol('SELECT i.id, gp.id AS ARRAY_KEY FROM ?_glyphproperties gp JOIN ?_spell s ON s.effect1MiscValue = gp.id AND s.effect1Id = 74 JOIN ?_items i ON i.class = 16 AND i.spellId1 = s.id WHERE gp.id IN (?a)', $gProps);
-
-                for ($j = 1; $j <= 6; $j++)
-                    $data['spec'.($i + 1)][$j + 2] = !empty($gProps[$j]) && !empty($gItems[$gProps[$j]]) ? $gItems[$gProps[$j]] : 0;
-
+                    if ($gItems = DB::Aowow()->selectCol('SELECT i.id FROM ?_glyphproperties gp JOIN ?_spell s ON s.effect1MiscValue = gp.id AND s.effect1Id = 74 JOIN ?_items i ON i.class = 16 AND i.spellId1 = s.id WHERE gp.id IN (?a)', $gProps))
+                        $data['glyphs'.($i + 1)] = implode(':', $gItems);
             }
-            else
-                array_push($data['spec'.($i + 1)], 0, 0, 0, 0, 0, 0);
-
-            $data['spec'.($i + 1)] = implode(' ', $data['spec'.($i + 1)]);
         }
 
-        DB::Aowow()->query('INSERT INTO ?_profiler_profiles (?#) VALUES (?a) ON DUPLICATE KEY UPDATE ?a', array_keys($data), array_values($data), $data);
+        $data['lastupdated'] = time();
+
+        DB::Aowow()->query('UPDATE ?_profiler_profiles SET ?a WHERE realm = ?d AND realmGUID = ?d', $data, $realmId, $charGuid);
         $profileId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $char['guid']);
 
         CLI::write(' ..basic info');
