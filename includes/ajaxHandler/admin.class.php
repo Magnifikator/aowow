@@ -289,8 +289,8 @@ class AjaxAdmin extends AjaxHandler
 
     protected function confAdd()
     {
-        $key = $this->_get['key'];
-        $val = $this->_get['val'];
+        $key = trim($this->_get['key']);
+        $val = trim(urldecode($this->_get['val']));
 
         if ($key === null)
             return 'empty option name given';
@@ -322,7 +322,7 @@ class AjaxAdmin extends AjaxHandler
     protected function confUpdate()
     {
         $key = trim($this->_get['key']);
-        $val = trim($this->_get['val']);
+        $val = trim(urldecode($this->_get['val']));
 
         if (!strlen($key))
             return 'empty option name given';
