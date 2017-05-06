@@ -91,7 +91,7 @@ trait TrProfiler
         // cat[0] is always region
         // cat[1] is realm or bGroup (must be realm if cat[2] is set)
         // cat[2] is arena-team, guild or player
-        $cat = explode('.', $str);
+        $cat = explode('.', $str, 3);
 
         $cat = array_map('urldecode', $cat);
 
@@ -99,9 +99,6 @@ trait TrProfiler
             return;
 
         if ($cat[0] !== 'eu' && $cat[0] !== 'us')
-            return;
-
-        if (isset($cat[2]) && mb_strlen($cat[2]) < 3)
             return;
 
         $this->region = $cat[0];
@@ -116,12 +113,8 @@ trait TrProfiler
                 {
                     $this->realm   = $r['name'];
                     $this->realmId = $rId;
-                    if (isset($cat[2]))
-                    {
-                        // profiler items can only contain spaces and letters
-                        $cat[2] = str_replace('-', ' ', $cat[2]);
-                        $this->subjectName = $cat[2];
-                    }
+                    if (isset($cat[2]) && mb_strlen($cat[2]) < 3)
+                        $this->subjectName = $cat[2];       // cannot reconstruct original name from urlized form; match against special name field
 
                     break;
                 }

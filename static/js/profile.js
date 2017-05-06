@@ -245,6 +245,7 @@ function pr_updateStatus(page, div, id, request, tryAgain)
                     if (status == 4) {
                         $('a', div).click(tryAgain);
                     }
+
                     else if (refresh && !action) {
                         setTimeout(pr_updateStatus.bind(null, page, div, id, request, tryAgain), refresh);
                         working = true;
@@ -262,7 +263,8 @@ function pr_updateStatus(page, div, id, request, tryAgain)
             }
 
             if (a.length > 2) { // Multiple status returned
-                div.innerHTML = LANG.pr_queue_resyncreq + (!processes ? ' ' + LANG.pr_queue_noprocess : '') + '<br />' + $WH.sprintf(LANG['pr_queue_batch'], statusTotal[1], statusTotal[2], statusTotal[3], statusTotal[4]);
+                div.innerHTML  = '<a id="close-profiler-notification" class="announcement-close" href="javascript:;" onclick="$(\'.profiler-message\').hide(); return false;">';
+                div.innerHTML += LANG.pr_queue_resyncreq + (!processes ? ' ' + LANG.pr_queue_noprocess : '') + '<br />' + $WH.sprintf(LANG['pr_queue_batch'], statusTotal[1], statusTotal[2], statusTotal[3], statusTotal[4]);
             }
         }
     });
@@ -302,12 +304,23 @@ function pr_initRosterListview() {
         this.mode = 1;
         this.createCbControls = function (c, b) {
             if (!b && this.data.length < 15) {
-                return
+                return;
             }
-            var btn = $WH.ce('input');
-            btn.type    = 'button';
-            btn.value   = LANG.button_resync;
-            btn.onclick = (function () {
+
+            var
+                iSelectAll = $WH.ce('input'),
+                iDeselect  = $WH.ce('input'),
+                iResync    = $WH.ce('input');
+
+            iSelectAll.type = iDeselect.type = iResync.type = 'button';
+
+            iSelectAll.value = LANG.button_selectall;
+            iDeselect.value  = LANG.button_deselect;
+            iResync.value    = LANG.button_resync;
+
+            iSelectAll.onclick = Listview.cbSelect.bind(this, true);
+            iDeselect.onclick  = Listview.cbSelect.bind(this, false);
+            iResync.onclick    = (function () {
                 var rows = this.getCheckedRows();
                 if (!rows.length) {
                     alert(LANG.message_nocharacterselected);
@@ -328,7 +341,9 @@ function pr_initRosterListview() {
                 }
             }).bind(this);
 
-            $WH.ae(c, btn);
+            $WH.ae(c, iSelectAll);
+            $WH.ae(c, iDeselect);
+            $WH.ae(c, iResync);
         }
     }
 }
@@ -632,7 +647,8 @@ function pr_onBreadcrumbUpdate() // Add character lookup textbox to the breadcru
 
 function pr_DirectLookup(form, browse)
 {
-    var    region  = $('*[name="rg"]', form),
+    var
+        region  = $('*[name="rg"]', form),
         server  = $('*[name="sv"]', form),
         name    = $('*[name="na"]', form),
         usePath;
@@ -643,7 +659,7 @@ function pr_DirectLookup(form, browse)
     if(browse)
     {
         if(region.val() || server.val() || name.val())
-            location.href = '?profiles' + (region.val() ? '=' + region.val() + (server.val() ? '.' + g_urlize(server.val(), false, true) : '') : '') + (name.val() ? '?filter=na=' + name.val() + ';ex=on' : '');
+            location.href = '?profiles' + (region.val() ? '=' + region.val() + (server.val() ? '.' + g_urlize(server.val(), false, true) : '') : '') + (name.val() ? '&filter=na=' + name.val() + ';ex=on' : '');
         return false;
     }
 

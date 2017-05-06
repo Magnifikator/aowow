@@ -885,7 +885,9 @@ function Profiler() {
     }
 
     function _updateDefaultIcon() {
-        var icon = $WH.g_getProfileIcon(_profile.race, _profile.classs, _profile.gender, _profile.level, _profile.source, 'large');
+        var icon = $WH.g_getProfileIcon(_profile.race, _profile.classs, _profile.gender, _profile.level, 0, 'large');
+        // aowow - and another bugged icon request
+        // var icon = $WH.g_getProfileIcon(_profile.race, _profile.classs, _profile.gender, _profile.level, _profile.source, 'large');
 
         if (!_profile.icon) {
             _profile.icon = icon;

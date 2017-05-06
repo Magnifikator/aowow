@@ -173,7 +173,8 @@ $lang = array(
         'atCaptain'     => "Капитан команды арены",
 
         'firstUseTitle' => "%s",                                    // yes, thats correct. No nonsense, just the name
-        'notFound'      => "Такая гильдия не существует, или еще не добавлена в базу данных." // guild prefixed (remove it)
+        'notFound'      => "Этот персонаж не существует, либо еще не добавлен в базу данных.",
+        // 'notFound'      => "Такая гильдия не существует, или еще не добавлена в базу данных." // guild not found
     ),
     'screenshot' => array(
         'submission'    => "Добавление изображения",

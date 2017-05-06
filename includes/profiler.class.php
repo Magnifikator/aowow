@@ -9,6 +9,27 @@ class Profiler
     private static $realms  = [];
     private static $pidFile = 'config/pr-queue-pid';
 
+    public static $slot2InvType = array(
+        1  => [INVTYPE_HEAD],                               // head
+        2  => [INVTYPE_NECK],                               // neck
+        3  => [INVTYPE_SHOULDERS],                          // shoulder
+        4  => [INVTYPE_BODY],                               // shirt
+        5  => [INVTYPE_CHEST, INVTYPE_ROBE],                // chest
+        6  => [INVTYPE_WAIST],                              // waist
+        7  => [INVTYPE_LEGS],                               // legs
+        8  => [INVTYPE_FEET],                               // feet
+        9  => [INVTYPE_WRISTS],                             // wrists
+        10 => [INVTYPE_HANDS],                              // hands
+        11 => [INVTYPE_FINGER],                             // finger1
+        12 => [INVTYPE_FINGER],                             // finger2
+        13 => [INVTYPE_TRINKET],                            // trinket1
+        14 => [INVTYPE_TRINKET],                            // trinket2
+        15 => [INVTYPE_CLOAK],                              // chest
+        16 => [INVTYPE_WEAPONMAINHAND, INVTYPE_WEAPON, INVTYPE_2HWEAPON],                   // mainhand
+        17 => [INVTYPE_WEAPONOFFHAND, INVTYPE_WEAPON, INVTYPE_HOLDABLE, INVTYPE_SHIELD],    // offhand
+        18 => [INVTYPE_RANGED, INVTYPE_THROWN, INVTYPE_RELIC],                              // ranged + relic
+        19 => [INVTYPE_TABARD],                             // tabard
+    );
 
     private static function batchInsert(array $data)
     {
@@ -120,8 +141,8 @@ class Profiler
 
     public static function urlize($str)
     {
-        $search  = ['<', '>', ' / ', "'", '(', ')'];
-        $replace = ['&lt;', '&gt;', '-', '', '', ''];
+        $search  = ['<',    '>',    '/', "'", '(', ')'];
+        $replace = ['&lt;', '&gt;', '-', '',  '',  '' ];
         $str = str_replace($search, $replace, $str);
 
         $accents = array(
@@ -139,7 +160,7 @@ class Profiler
             "Ñ" => "N",
             "Ò" => "O", "Ó" => "O", "Ö" => "O", "Ô" => "O",
             "Ú" => "U", "Ü" => "U", "Û" => "U", "Ù" => "U",
-            "œ" => "Oe"
+            "Œ" => "Oe"
         );
         $str = strtr($str, $accents);
         $str = trim($str);

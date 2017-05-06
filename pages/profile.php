@@ -77,7 +77,7 @@ class ProfilePage extends GenericPage
                 $this->profile = $params;
             }
             // 2) not yet synced but exists on realm
-            else if ($char = DB::Characters($this->realmId)->selectRow('SELECT c.guid AS realmGUID, c.name, c.race, c.class, c.level, c.gender, IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.name = ?', Util::ucFirst($this->subjectName)))
+            else if ($char = DB::Characters($this->realmId)->selectRow('SELECT c.guid AS realmGUID, c.name, c.race, c.class, c.level, c.gender, IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.name = ? AND level <= ?d', Util::ucFirst($this->subjectName), MAX_LEVEL))
             {
                 $char['realm'] = $this->realmId;
 
@@ -170,7 +170,7 @@ class ProfilePage extends GenericPage
     public function notFound($title = '', $msg = '')
     {
         if ($this->mode != CACHE_TYPE_TOOLTIP)
-            return parent::notFound($title ?: Util::ucFirst(Lang::game('profile')), $msg ?: '[NNF]profile or char doesn\'t exist');
+            return parent::notFound($title ?: Util::ucFirst(Lang::profiler('profiler')), $msg ?: Lang::profiler('notFound'));
 
         header('Content-type: application/x-javascript; charset=utf-8');
         echo $this->generateTooltip(true);

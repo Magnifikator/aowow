@@ -165,7 +165,7 @@ $lang = array(
         'atCaptain'     => "Teamkapitän",
 
         'firstUseTitle' => "%s von %s",
-        'notFound'      => "[not found and stuff.]"
+        'notFound'      => "Dieser Charakter existiert nicht oder wurde noch nicht in die Datenbank übernommen."
     ),
     'screenshot' => array(
         'submission'    => "Screenshot-Einsendung",

@@ -170,7 +170,7 @@ $lang = array(
         'atCaptain'     => "Arena Team Captain",
 
         'firstUseTitle' => "%s of %s",
-        'notFound'      => "[not found and stuff.]"
+        'notFound'      => "This character doesn't exist or is not yet in the database."
     ),
     'screenshot' => array(
         'submission'    => "Screenshot Submission",

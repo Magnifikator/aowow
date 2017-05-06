@@ -88,17 +88,13 @@ class User
 
         $conditions = array(
             [['cuFlags', PROFILER_CU_DELETED, '&'], 0],
-            [
-                'OR',
-                ['user', self::$id],
-                ['ap.accountId', self::$id]
-            ]
+            ['OR', ['user', self::$id], ['ap.accountId', self::$id]]
         );
 
         if (self::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
             array_shift($conditions);
 
-        self::$profiles      = (new LocalProfileList($conditions));
+        self::$profiles = (new LocalProfileList($conditions));
 
         if ($query['avatar'])
             self::$avatar = $query['avatar'];

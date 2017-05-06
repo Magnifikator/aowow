@@ -218,14 +218,14 @@ class UserPage extends GenericPage
         // forum -> latest replies [unused]
 
         $conditions = array(
+            ['OR', ['cuFlags', PROFILER_CU_PUBLISHED, '&'], ['ap.extraFlags', PROFILER_CU_PUBLISHED, '&']],
             [['cuFlags', PROFILER_CU_DELETED, '&'], 0],
-            [
-                'OR',
-                ['user', User::$id],
-                ['ap.accountId', User::$id]
-            ]
+            ['OR', ['user', $this->user['id']], ['ap.accountId', $this->user['id']]]
         );
+
         if (User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+            $conditions = array_slice($conditions, 2);
+        else if (User::$id == $this->user['id'])
             array_shift($conditions);
 
         $profiles = new LocalProfileList($conditions);

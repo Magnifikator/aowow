@@ -129,7 +129,8 @@ class ProfilesPage extends GenericPage
         $this->addJS('?data=weight-presets.realms&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
 
         $conditions = array(
-            ['deleteInfos_Name', null]
+            ['deleteInfos_Name', null],
+            ['level', MAX_LEVEL, '<=']
         );
 
         // if (!User::isInGroup(U_GROUP_EMPLOYEE))

@@ -10,7 +10,7 @@ class AjaxProfile extends AjaxHandler
     protected $validParams = ['link', 'unlink', 'pin', 'unpin', 'public', 'private', 'avatar', 'resync', 'status', 'save', 'delete', 'purge', 'summary', 'load'];
     protected $_get        = array(
         'id'     => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkIdList']],
-        // 'items'  => [FILTER_CALLBACK,            ['options' => 'AjaxProfile::checkItems']],
+        'items'  => [FILTER_CALLBACK,            ['options' => 'AjaxProfile::checkItemList']],
         'size'   => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
     );
 
@@ -34,7 +34,7 @@ class AjaxProfile extends AjaxHandler
         'source'       => [FILTER_SANITIZE_NUMBER_INT, null],
         'copy'         => [FILTER_SANITIZE_NUMBER_INT, null],
         'public'       => [FILTER_SANITIZE_NUMBER_INT, null],
-        'inv'          => [FILTER_CALLBACK, ['options' => 'AjaxProfile::checkItems', 'flags' => FILTER_REQUIRE_ARRAY]],
+        'inv'          => [FILTER_CALLBACK, ['options' => 'AjaxProfile::checkItemString', 'flags' => FILTER_REQUIRE_ARRAY]],
     );
 
     public function __construct(array $params)
@@ -127,10 +127,11 @@ class AjaxProfile extends AjaxHandler
         else if ($this->_get['user'])
             return;
 
-        if ($this->undo)
-            DB::Aowow()->query('UPDATE ?_account_profiles  SET extraFlags = extraFlags & ?d WHERE profileId IN (?a) AND accountId = ?d', ~PROFILER_CU_PINNED, $this->_get['id'], $uid);
-        else
-            DB::Aowow()->query('UPDATE ?_account_profiles  SET extraFlags = extraFlags | ?d WHERE profileId IN (?a) AND accountId = ?d',  PROFILER_CU_PINNED, $this->_get['id'], $uid);
+        // since only one character can be pinned at a time we can reset everything
+        DB::Aowow()->query('UPDATE ?_account_profiles  SET extraFlags = extraFlags & ?d WHERE accountId = ?d', ~PROFILER_CU_PINNED, $uid);
+        // and set a single char if nesecary
+        if (!$this->undo)
+            DB::Aowow()->query('UPDATE ?_account_profiles  SET extraFlags = extraFlags | ?d WHERE profileId = ?d AND accountId = ?d',  PROFILER_CU_PINNED, $this->_get['id'][0], $uid);
     }
 
     /*  params
@@ -264,7 +265,13 @@ class AjaxProfile extends AjaxHandler
                 else if ($charStatus[$guid]['status'] == PR_QUEUE_STATUS_ERROR)
                     $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, $charStatus[$guid]['errCode']];
                 else
-                    $response[] = [$charStatus[$guid]['status'], CFG_PROFILER_RESYNC_PING, array_search($guid, $queue) + 1, 0, 1];
+                    $response[] = array(
+                        $charStatus[$guid]['status'],
+                        $charStatus[$guid]['status'] != PR_QUEUE_STATUS_READY ? CFG_PROFILER_RESYNC_PING : 0,
+                        array_search($guid, $queue) + 1,
+                        0,
+                        1                                   // unsure about this one
+                    );
             }
         }
 
@@ -495,8 +502,8 @@ class AjaxProfile extends AjaxHandler
             'achievementpoints' => 0,                       // max you have
 
             // UNKNOWN
-            'statistics'        => [],                      // UNK all statistics?      [achievementId => killCount]
-            'activity'          => [],                      // UNK recent achievements? [achievementId => killCount]
+            'statistics'        => [574 => 1],                      // UNK all statistics?      [achievementId => killCount]
+            'activity'          => [574 => 1],                      // UNK recent achievements? [achievementId => killCount]
         );
 
         // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
@@ -546,12 +553,8 @@ class AjaxProfile extends AjaxHandler
             }
         }
 
-        /* $profile[]
-            'source'            => 2,                       // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
-            'sourcename'        => 'SourceCharName',        //  >   if these three are false we get a 'genuine' profile [0 for genuine characters..?]
-            'user'              => 1,                       //  >   'genuine' is the parameter for _isArmoryProfile(allowCustoms)   ['' for genuine characters..?]
-            'username'          => 'TestUser',              //  >   also, if 'source' <> 0, the char-icon is requestet via profile.php?avatar
 
+        /* $profile[]
             // ToDo
             'arenateams'        => [],                      // [size(2|3|5) => DisplayName]; DisplayName gets urlized to use as link
 
@@ -609,20 +612,54 @@ class AjaxProfile extends AjaxHandler
 
         $buff = '';
 
+        $usedSlots = [];
+        if ($this->_get['items'])
+        {
+            $phItems = new ItemList(array(['id', $this->_get['items']], ['slot', INVTYPE_NON_EQUIP, '!']));
+            if (!$phItems->error)
+            {
+                $data  = $phItems->getListviewData(ITEMINFO_JSON | ITEMINFO_SUBITEMS);
+                foreach ($phItems->iterate() as $iId => $__)
+                {
+                    $sl = $phItems->getField('slot');
+                    foreach (Profiler::$slot2InvType as $slot => $invTypes)
+                    {
+                        if (in_array($sl, $invTypes) && !in_array($slot, $usedSlots))
+                        {
+                            // get and apply inventory
+                            $buff .= 'g_items.add('.$iId.', {name_'.User::$localeString.":'".Util::jsEscape($phItems->getField('name', true))."', quality:".$phItems->getField('quality').", icon:'".$phItems->getField('iconString')."', jsonequip:".Util::toJSON($data[$iId])."});\n";
+                            $profile['inventory'][$slot] = [$iId, 0, 0, 0, 0, 0, 0, 0];
+
+                            $usedSlots[] = $slot;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         if ($items = DB::Aowow()->select('SELECT * FROM ?_profiler_items WHERE id = ?d', $pBase['id']))
         {
             $itemz = new ItemList(array(['id', array_column($items, 'item')], CFG_SQL_LIMIT_NONE));
-            $data  = $itemz->getListviewData(ITEMINFO_JSON | ITEMINFO_SUBITEMS);
+            if (!$itemz->error)
+            {
+                $data  = $itemz->getListviewData(ITEMINFO_JSON | ITEMINFO_SUBITEMS);
 
-            foreach ($items as $i)
-                $profile['inventory'][$i['slot']] = [$i['item'], $i['subItem'], $i['permEnchant'], $i['tempEnchant'], $i['gem1'], $i['gem2'], $i['gem3'], $i['gem4']];
-
-            // get and apply inventory
-            foreach ($itemz->iterate() as $iId => $__)
-                $buff .= 'g_items.add('.$iId.', {name_'.User::$localeString.":'".Util::jsEscape($itemz->getField('name', true))."', quality:".$itemz->getField('quality').", icon:'".$itemz->getField('iconString')."', jsonequip:".Util::toJSON($data[$iId])."});\n";
-
-            $buff .= "\n";
+                foreach ($items as $i)
+                {
+                    if ($itemz->getEntry($i['item']) && !in_array($i['slot'], $usedSlots))
+                    {
+                        // get and apply inventory
+                        $buff .= 'g_items.add('.$i['item'].', {name_'.User::$localeString.":'".Util::jsEscape($itemz->getField('name', true))."', quality:".$itemz->getField('quality').", icon:'".$itemz->getField('iconString')."', jsonequip:".Util::toJSON($data[$i['item']])."});\n";
+                        $profile['inventory'][$i['slot']] = [$i['item'], $i['subItem'], $i['permEnchant'], $i['tempEnchant'], $i['gem1'], $i['gem2'], $i['gem3'], $i['gem4']];
+                    }
+                }
+            }
         }
+
+        if ($buff)
+            $buff .= "\n";
+
 
         // if ($au = $char->getField('auras'))
         // {
@@ -672,7 +709,16 @@ class AjaxProfile extends AjaxHandler
     */
     protected function handlePurge() { }                    // removes completion data (as uploaded by the wowhead client) Just fail silently if someone triggers this manually
 
-    protected function checkItems($val)
+    protected function checkItemList($val)
+    {
+        // expecting item-list
+        if (preg_match('/\d+(:\d+)*/', $val))
+            return array_map('intval', explode(':', $val));
+
+        return null;
+    }
+
+    protected function checkItemString($val)
     {
         // expecting item-list
         if (preg_match('/\d+(,\d+)*/', $val))

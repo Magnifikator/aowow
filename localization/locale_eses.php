@@ -158,7 +158,7 @@ $lang = array(
         'realm'         => "Reino",
         'region'        => "Región",
         'viewCharacter' => "View Character",
-        'profiler'      => "Perfiles de Personaje",
+        'profiler'      => "Gestor de Perfiles", // Perfiles de Personaje? (character profiler)
         '_cpHint'       => "l <b>Gestor de perfiles</b> te permite editar tu personaje, encontrar mejoras de equipo, comprobar tu gearscore, ¡y más!",
         '_cpHelp'       => "Para comenzar, sigue los pasos abajo indicados. Si quieres más información, revisa nuestra amplia <a href=\"?help=profiler\">página de ayuda</a>.",
         '_cpFooter'     => "Si quieres una búsqueda más refinada, prueba con nuestras opciones de <a href=\"?profiles\">búsqueda avanzada</a>. También puedes crear un <a href=\"?profile&amp;new\">perfil nuevo personalizado</a>.",
@@ -172,7 +172,7 @@ $lang = array(
         'atCaptain'     => "Capitán de equipo de arena",
 
         'firstUseTitle' => "%s de %s",
-        'notFound'      => "[not found and stuff.]"
+        'notFound'      => "Este personaje no existe o no está aun en la base de datos." // profile
     ),
     'screenshot' => array(
         'submission'    => "Enviar una captura de pantalla",
