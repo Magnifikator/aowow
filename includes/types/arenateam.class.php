@@ -5,7 +5,7 @@ if (!defined('AOWOW_REVISION'))
 
 
 
-class ArenaTeamList extends BaseType
+class ArenaTeamList extends RemoteProfileList
 {
     use listviewHelper, profilerHelper;
 
@@ -24,6 +24,11 @@ class ArenaTeamList extends BaseType
 
     public function __construct($conditions = [], $miscData = null)
     {
+        /********************/
+        /* TODO - IMPLEMENT */
+        /********************/
+        return;
+
         // select DB by realm
         if (!$this->selectRealms($miscData))
         {

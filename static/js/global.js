@@ -586,7 +586,8 @@ var PageTemplate = new function()
             var menuItem = [character.id, character.name, g_getProfileUrl(character), null,
             {
                 className: (character.pinned ? 'icon-star-right ' : '') + 'c' + character.classs,
-                // tinyIcon: $WH.g_getProfileIcon(character.race, character.classs, character.gender, character.level, character.id, 'tiny') // sarjuuk: char-Id should not be nessecary here
+             // tinyIcon: $WH.g_getProfileIcon(character.race, character.classs, character.gender, character.level, character.id, 'tiny')
+             // aowow: profileId should not be nessecary here
                 tinyIcon: $WH.g_getProfileIcon(character.race, character.classs, character.gender, character.level, 0, 'tiny')
             }];
 
@@ -15446,7 +15447,8 @@ Listview.templates = {
                         i.style.padding = '0';
                         i.style.borderRight = 'none';
 
-                     // $WH.ae(i, Icon.create($WH.g_getProfileIcon(profile.race, profile.classs, profile.gender, profile.level, profile.icon ? profile.icon : profile.id, 'medium'), 1, null, this.getItemLink(profile))); // aowow . i dont know .. i dont know... char icon requests are strange
+                     // $WH.ae(i, Icon.create($WH.g_getProfileIcon(profile.race, profile.classs, profile.gender, profile.level, profile.icon ? profile.icon : profile.id, 'medium'), 1, null, this.getItemLink(profile)));
+                     // aowow . i dont know .. i dont know... char icon requests are strange
                         $WH.ae(i, Icon.create($WH.g_getProfileIcon(profile.race, profile.classs, profile.gender, profile.level, profile.icon ? profile.icon : 0, 'medium'), 1, null, this.getItemLink(profile)));
                         $WH.ae(tr, i);
 

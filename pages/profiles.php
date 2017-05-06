@@ -63,7 +63,7 @@ class ProfilesPage extends GenericPage
         $this->filterObj = new ProfileListFilter();
 
         // clean search if possible
-        $form = $this->filterObj->getForm('form');
+        $form = $this->filterObj->getForm();
         if (!empty($form['rg']))
         {
             $url = '?profiles='.$form['rg'];
@@ -173,7 +173,7 @@ class ProfilesPage extends GenericPage
         if ($this->region)
             $miscParams['rg'] = $this->region;
 
-        $profiles = new ProfileList($conditions, $miscParams);
+        $profiles = new RemoteProfileList($conditions, $miscParams);
         if (!$profiles->error)
         {
             $tabData['data'] = array_values($profiles->getListviewData());

@@ -17,13 +17,13 @@ class ProfileList extends BaseType
         $data = [];
         foreach ($this->iterate() as $__)
         {
-            if ($this->getField('user') && User::$id != $this->getField('user') && !($this->getField('cuFlags') & PROFILE_CU_PUBLISHED))
+            if ($this->getField('user') && User::$id != $this->getField('user') && !($this->getField('cuFlags') & PROFILER_CU_PUBLISHED))
                 continue;
 
-            if ($addInfo & PROFILEINFO_PROFILE && $this->getField('realm'))
+            if (($addInfo & PROFILEINFO_PROFILE) && !($this->getField('cuFlags') & PROFILER_CU_PROFILE))
                 continue;
 
-            if ($addInfo & PROFILEINFO_CHARACTER && !$this->getField('realm'))
+            if (($addInfo & PROFILEINFO_CHARACTER) && ($this->getField('cuFlags') & PROFILER_CU_PROFILE))
                 continue;
 
             $data[$this->id] = array(
@@ -45,8 +45,12 @@ class ProfileList extends BaseType
                 'realmname'         => $this->getField('realmName'),
              // 'battlegroup'       => Profiler::urlize($this->getField('battlegroup')),  // was renamed to subregion somewhere around cata release
              // 'battlegroupname'   => $this->getField('battlegroup'),
-                'region'            => Profiler::urlize($this->getField('region'))
+                'published'         => (int)!!($this->getField('cuFlags') & PROFILER_CU_PUBLISHED)
             );
+
+            // for the lv this determins if the link is profile=<id> or profile=<region>.<realm>.<name>
+            if (!($this->getField('cuFlags') & PROFILER_CU_PROFILE))
+                $data[$this->id]['region'] = Profiler::urlize($this->getField('region'));
 
             // if ($addInfo == PROFILEINFO_ARENA_2S)
                 // $data[$this->id]['rating'] = $this->getField('arenateams')[2]['rating'];
@@ -65,13 +69,10 @@ class ProfileList extends BaseType
                 if ($_ = $this->getField('icon'))
                     $data[$this->id]['icon'] = $_;
 
-            if ($this->getField('cuFlags') & PROFILE_CU_PUBLISHED)
-                $data[$this->id]['published'] = 1;
-
-            if ($this->getField('cuFlags') & PROFILE_CU_PINNED)
+            if ($this->getField('cuFlags') & PROFILER_CU_PINNED)
                 $data[$this->id]['pinned'] = 1;
 
-            if ($this->getField('cuFlags') & PROFILE_CU_DELETED)
+            if ($this->getField('cuFlags') & PROFILER_CU_DELETED)
                 $data[$this->id]['deleted'] = 1;
         }
 
@@ -88,7 +89,7 @@ class ProfileList extends BaseType
         if ($_ = $this->getField('chosenTitle'))
             $title = (new TitleList(array(['bitIdx', $_])))->getField($this->getField('gender') ? 'female' : 'male', true);
 
-        if ($this->isCustom)
+        if ($this->isCustom())
             $name .= ' (Custom Profile)';
         else if ($title)
             $name = sprintf($title, $name);
@@ -99,7 +100,7 @@ class ProfileList extends BaseType
             $x .= '<tr><td>&lt;'.$g.'&gt;</td></tr>';
         else if ($d = $this->getField('description'))
             $x .= '<tr><td>'.$d.'</td></tr>';
-        $x .= '<tr><td>'.Lang::game('level').' '.$this->getField('level').' '.Lang::game('ra', $this->getField('race')).' '.Lang::game('cl', $this->getField('classs')).'</td></tr>';
+        $x .= '<tr><td>'.Lang::game('level').' '.$this->getField('level').' '.Lang::game('ra', $this->getField('race')).' '.Lang::game('cl', $this->getField('class')).'</td></tr>';
         $x .= '</table>';
 
         return $x;
@@ -112,7 +113,7 @@ class ProfileList extends BaseType
 
         foreach ($this->iterate() as $id => $__)
         {
-            if ($addMask & PROFILEINFO_PROFILE && !$this->getField('realmGUID'))
+            if (($addMask & PROFILEINFO_PROFILE) && ($this->getField('cuFlags') & PROFILER_CU_PROFILE))
             {
                 $profile = array(
                     'id'     => $this->getField('id'),
@@ -131,7 +132,7 @@ class ProfileList extends BaseType
                 continue;
             }
 
-            if ($addMask & PROFILEINFO_CHARACTER && $this->getField('realmGUID'))
+            if ($addMask & PROFILEINFO_CHARACTER && !($this->getField('cuFlags') & PROFILER_CU_PROFILE))
             {
                 if (!isset($realms[$this->getField('realm')]))
                     continue;
@@ -146,12 +147,17 @@ class ProfileList extends BaseType
                     'classs'    => $this->getField('class'),
                     'level'     => $this->getField('level'),
                     'gender'    => $this->getField('gender'),
-                    'pinned'    => $this->getField('cuFlags') & PROFILE_CU_PINNED ? 1 : 0
+                    'pinned'    => $this->getField('cuFlags') & PROFILER_CU_PINNED ? 1 : 0
                 );
             }
         }
 
         return $data;
+    }
+
+    public function isCustom()
+    {
+        return $this->getField('cuFlags') & PROFILER_CU_PROFILE;
     }
 }
 
@@ -355,8 +361,9 @@ class RemoteProfileList extends ProfileList
                 $r = explode(':', $guid)[0];
                 if (!empty($realms[$r]))
                 {
-                    $curTpl['realm']  = $realms[$r]['name'];
-                    $curTpl['region'] = $realms[$r]['region'];
+                    $curTpl['realm']     = $r;
+                    $curTpl['realmName'] = $realms[$r]['name'];
+                    $curTpl['region']    = $realms[$r]['region'];
                 }
                 else
                 {
@@ -367,8 +374,9 @@ class RemoteProfileList extends ProfileList
             }
             else if (count($this->dbNames) == 1)
             {
-                $curTpl['realm']  = $realms[$realmId]['name'];
-                $curTpl['region'] = $realms[$realmId]['region'];
+                $curTpl['realm']     = $realmId;
+                $curTpl['realmName'] = $realms[$realmId]['name'];
+                $curTpl['region']    = $realms[$realmId]['region'];
             }
 
             // achievement points pre
@@ -395,6 +403,8 @@ class RemoteProfileList extends ProfileList
                 $distrib[$curTpl['realm']] = 1;
             else
                 $distrib[$curTpl['realm']]++;
+
+            $curTpl['cuFlags'] = 0;
         }
 
         $limit = CFG_SQL_LIMIT_DEFAULT;
@@ -434,9 +444,12 @@ class RemoteProfileList extends ProfileList
             $curTpl['achievementpoints'] = array_sum(array_intersect_key($acvCache, array_combine($a, $a)));
 
             // talent points post
-            $curTpl['talents'] = [0, 0, 0];
+            $trees = [0, 0, 0];
             if ($t)
-                Util::arraySumByKey($curTpl['talents'], DB::Aowow()->selectCol('SELECT tab AS ARRAY_KEY, SUM(rank) FROM ?_talents WHERE spell IN (?a) AND `class` = ?d GROUP BY tab', $t, $curTpl['class']));
+                Util::arraySumByKey($trees, DB::Aowow()->selectCol('SELECT tab AS ARRAY_KEY, SUM(rank) FROM ?_talents WHERE spell IN (?a) AND `class` = ?d GROUP BY tab', $t, $curTpl['class']));
+            foreach ($trees as $i => $t)
+                $curTpl['talenttree'.($i + 1)] = $t;
+
 
             // arenateams
             $curTpl['arenateams'] = [];
@@ -454,7 +467,7 @@ class RemoteProfileList extends ProfileList
         }
     }
 
-    private function selectRealms($fi)
+    public function selectRealms($fi)
     {
         $this->dbNames = [];
 
@@ -478,7 +491,8 @@ class LocalProfileList extends ProfileList
 {
     protected       $queryBase = 'SELECT p.*, p.id AS ARRAY_KEY FROM ?_profiler_profiles p';
     protected       $queryOpts = array(
-                        // 'p'   => [['pa', 'pg']],
+                        // 'p'  => [['ap']],
+                        'ap' => ['j' => ['?_account_profiles ap ON ap.profileId = p.id', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
                         // 'pam' => [['?_profiles_arenateam_member pam ON pam.memberId = p.id', true], 's' => ', pam.status'],
                         // 'pa'  => ['?_profiles_arenateam pa ON pa.id = pam.teamId', 's' => ', pa.mode, pa.name'],
                         // 'pgm' => [['?_profiles_guid_member pgm ON pgm.memberId = p.Id', true], 's' => ', pgm.rankId'],

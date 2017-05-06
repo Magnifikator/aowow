@@ -35,15 +35,21 @@ class ProfilePage extends GenericPage
 
         if (count($params) == 1 && intval($params[0]))
         {
-            // todo: some query to validate existence of char
-            if ($id = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE id = ?d', intval($params[0])))
-                $this->subjectGUID = $id;
-            else
+            $this->subject = new LocalProfileList(array(['id', intval($params[0])]));
+            if ($this->subject->error)
                 $this->notFound();
 
-            // roll lover and check if we tried to access real char..?
-            $this->isCustom  = true;
-            $this->profile = intval($params[0]);
+            if ($this->subject->isCustom())
+                $this->isCustom  = true;
+            else
+            {
+                // region realm name
+                header('Location: ?profile=', 302, true);
+            }
+
+            // redundancy much?
+            $this->subjectGUID = $this->subject->getField('id');
+            $this->profile     = $this->subject->getField('id');
         }
         else if (count($params) == 3)
         {
@@ -83,7 +89,7 @@ class ProfilePage extends GenericPage
 
                 if ($this->mode == CACHE_TYPE_TOOLTIP)      // enable tooltip display with basic data we just added
                 {
-                    $this->subject = new ProfileList(array(['name', Util::ucFirst($this->subjectName)]), ['sv' => $params[1]]);
+                    $this->subject = new LocalProfileList(array(['name', Util::ucFirst($this->subjectName)]), ['sv' => $params[1]]);
                     if ($this->subject->error)
                         $this->notFound();
 

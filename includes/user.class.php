@@ -85,7 +85,20 @@ class User
         self::$perms         = $query['bans'] & (ACC_BAN_TEMP | ACC_BAN_PERM) ? 0 : intval($query['userPerms']);
         self::$dailyVotes    = $query['dailyVotes'];
         self::$excludeGroups = $query['excludeGroups'];
-        self::$profiles      = (new LocalProfileList(array(['user', self::$id])));
+
+        $conditions = array(
+            [['cuFlags', PROFILER_CU_DELETED, '&'], 0],
+            [
+                'OR',
+                ['user', self::$id],
+                ['ap.accountId', self::$id]
+            ]
+        );
+
+        if (self::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+            array_shift($conditions);
+
+        self::$profiles      = (new LocalProfileList($conditions));
 
         if ($query['avatar'])
             self::$avatar = $query['avatar'];

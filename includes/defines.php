@@ -295,8 +295,10 @@ define('QUEST_CU_SKIP_LOG',                 0x10);
 define('QUEST_CU_AUTO_ACCEPT',              0x20);
 define('QUEST_CU_PVP_ENABLED',              0x40);
 
-define('PROFILE_CU_PUBLISHED',              0x01);
-define('PROFILE_CU_PINNED',                 0x02);
+define('PROFILER_CU_PUBLISHED',             0x01);
+define('PROFILER_CU_PINNED',                0x02);
+define('PROFILER_CU_DELETED',               0x04);
+define('PROFILER_CU_PROFILE',               0x08);
 
 define('MAX_LEVEL',                         80);
 define('WOW_BUILD',                         12340);

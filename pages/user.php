@@ -217,7 +217,18 @@ class UserPage extends GenericPage
 
         // forum -> latest replies [unused]
 
-        $profiles = new LocalProfileList(array(['user', User::$id]));
+        $conditions = array(
+            [['cuFlags', PROFILER_CU_DELETED, '&'], 0],
+            [
+                'OR',
+                ['user', User::$id],
+                ['ap.accountId', User::$id]
+            ]
+        );
+        if (User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+            array_shift($conditions);
+
+        $profiles = new LocalProfileList($conditions);
         if (!$profiles->error)
         {
             $this->addJS('?data=weight-presets&t='.$_SESSION['dataKey']);
