@@ -14,18 +14,7 @@ if (!CLI)
 function siteconfig()
 {
     $reqKeys    = ['site_host', 'static_host'];
-    $postChange = array(
-        'profiler_queue' => function($x) {
-            if (!$x)
-                return true;
-
-            $ok = Profiler::queueStart($msg);
-            if ($msg)
-                CLI::write($msg, CLI::LOG_ERROR);
-
-            return $ok;
-        }
-    );
+    $updScripts = [];
 
     if (!DB::isConnected(DB_AOWOW))
     {
@@ -33,6 +22,43 @@ function siteconfig()
         CLI::write("database not yet set up!\n        Please use --dbconfig for setup", CLI::LOG_WARN);
         return;
     }
+
+    $onChange = function($key, $val) use (&$updScripts)
+    {
+        $fn = null;
+
+        switch ($key)
+        {
+            case 'battlegroup':
+                array_push($updScripts, 'realms', 'realmMenu');
+                break;
+            case 'name_short':
+                array_push($updScripts, 'searchboxBody', 'demo', 'searchplugin');
+                break;
+            case 'site_host':
+                array_push($updScripts, 'searchplugin', 'demo', 'power', 'searchboxBody');
+                break;
+            case 'static_host':
+                array_push($updScripts, 'searchplugin', 'power', 'searchboxBody', 'searchboxScript');
+                break;
+            case 'profiler_queue':
+                $fn = function($x) {
+                    if (!$x)
+                        return true;
+
+                    $ok = Profiler::queueStart($msg);
+                    if ($msg)
+                        CLI::write($msg, CLISetup::LOG_ERROR);
+
+                    return $ok;
+                };
+                break;
+            default:                                        // nothing to do, everything is fine
+                return true;
+        }
+
+        return $fn ? $fn($val) : true;
+    };
 
     while (true)
     {
@@ -175,11 +201,12 @@ function siteconfig()
             {
                 $conf = $cfgList[$inp['idx']];
                 $info = explode(' - ', $conf['comment']);
+                $key  = strtolower($conf['key']);
                 $buff = '';
 
                 CLI::write();
                 $buff .= $conf['flags'] & CON_FLAG_PHP ? "  PHP: " : "AOWOW: ";
-                $buff .= $conf['flags'] & CON_FLAG_PHP ? strtolower($conf['key']) : strtoupper('cfg_'.$conf['key']);
+                $buff .= $conf['flags'] & CON_FLAG_PHP ? $key : strtoupper('cfg_'.$conf['key']);
 
                 if (!empty($info[1]))
                     $buff .= " - ".$info[1];
@@ -293,18 +320,17 @@ function siteconfig()
                                         }
                                         else
                                         {
-                                            DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $use['idx'], strtolower($conf['key']));
-                                            if (isset($postChange[strtolower($conf['key'])]))
+                                            $oldVal = DB::Aowow()->selectCell('SELECT `value` FROM ?_config WHERE `key` = ?', $key);
+                                            DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $use['idx'], $key);
+
+                                            // postChange returned false => reset value
+                                            if (!$onChange($key, $use['idx']))
                                             {
-                                                $f = $postChange[strtolower($conf['key'])];
-                                                if (!$f($use['idx']))
-                                                {
-                                                    // disable again
-                                                    DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', 0, strtolower($conf['key']));
-                                                    sleep(1);
-                                                    break;
-                                                }
+                                                DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $oldVal, $key);
+                                                sleep(1);
+                                                break;
                                             }
+
                                             CLI::write("setting updated", CLI::LOG_OK);
                                             sleep(1);
                                             break 3;
@@ -327,9 +353,10 @@ function siteconfig()
                                 $val = trim(explode('default:', $info[0])[1]);
                                 if (!($conf['flags'] & CON_FLAG_TYPE_STRING))
                                     $val = @eval('return ('.$val.');');
-                                if (DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $val, strtolower($conf['key'])))
+                                if (DB::Aowow()->query('UPDATE ?_config SET `value` = ? WHERE `key` = ?', $val, $key))
                                 {
                                     CLI::write("default value restored", CLI::LOG_OK);
+                                    $onChange($key, $val);
                                     sleep(1);
                                 }
                                 break 2;
@@ -337,7 +364,7 @@ function siteconfig()
                                 if ($conf['flags'] & CON_FLAG_PERSISTENT)
                                     continue 2;
 
-                                if (DB::Aowow()->query('DELETE FROM ?_config WHERE `key` = ? AND (`flags` & ?d) = 0', strtolower($conf['key']), CON_FLAG_PERSISTENT))
+                                if (DB::Aowow()->query('DELETE FROM ?_config WHERE `key` = ? AND (`flags` & ?d) = 0', $key, CON_FLAG_PERSISTENT))
                                 {
                                     CLI::write("php setting deleted ['".$conf['key']."': '".$conf['value']."']", CLI::LOG_OK);
                                     sleep(1);
@@ -348,7 +375,7 @@ function siteconfig()
                     else
                     {
                         CLI::write();
-                        CLI::write("edit canceled! returning to list...", CLI::LOG_INFO);
+                        CLI::write('edit canceled! returning to list...', CLI::LOG_INFO);
                         sleep(1);
                         break;
                     }
@@ -357,15 +384,34 @@ function siteconfig()
             else
             {
                 CLI::write();
-                CLI::write("invalid selection", CLI::LOG_ERROR);
+                CLI::write('invalid selection', CLI::LOG_ERROR);
                 sleep(1);
             }
         }
         else
         {
             CLI::write();
-            CLI::write("site configuration aborted", CLI::LOG_INFO);
+            CLI::write('site configuration aborted', CLI::LOG_INFO);
             break;
+        }
+
+        // propagate changes to static files
+        if ($updScripts && (!class_exists('FileGen') || FileGen::getMode() != FileGen::MODE_FIRSTRUN))
+        {
+            require_once 'setup/tools/clisetup/build.func.php';
+            CLI::write();
+            CLI::write('regenerating affected static content', CLI::LOG_INFO);
+            CLI::write();
+            sleep(1);
+
+            if ($_ = array_diff($updScripts, build($updScripts)))
+            {
+                CLI::write(' - the following updates returned with errors, please recheck those - '.implode(', ', $_), CLI::LOG_ERROR);
+                sleep(1);
+            }
+
+            sleep(1);
+            $updScripts = [];
         }
     }
 }
