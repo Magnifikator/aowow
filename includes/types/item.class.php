@@ -2529,7 +2529,7 @@ class ItemListFilter extends Filter
             return in_array($v, $sl);
 
         // consumables - any; perm / temp item enhancements
-        else if ($c[0] == 0 && (!isset($c[1]) || in_array($c[1], [3, -6])))
+        else if ($c[0] == 0 && (!isset($c[1]) || in_array($c[1], [-3, 6])))
             return in_array($v, $sl);
 
         // weapons - always

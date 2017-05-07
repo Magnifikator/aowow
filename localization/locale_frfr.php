@@ -172,7 +172,10 @@ $lang = array(
         'atCaptain'     => "Capitaine d'équipe",
 
         'firstUseTitle' => "%s de %s",
-        'notFound'      => "[not found and stuff.]"
+        'notFound'      => "[This character doesn't exist or is not yet in the database.]",
+        'dummyNPCs'     => array(
+            100001 => "Bataille des canonnières", 200001 => "Bêtes du Norfendre", 200002 => "Champions de faction", 200003 => "Les jumelles val'kyrs"
+        ),
     ),
     'screenshot' => array(
         'submission'    => "Envoi d'une capture d'écran",

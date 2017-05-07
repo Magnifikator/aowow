@@ -356,7 +356,7 @@ class SpellList extends BaseType
                 switch ($this->curTpl['effect'.$i.'AuraId'])
                 {
                     case 101:
-                        $data[$id][] = ['armor' => [$pts / 100, 'percentOf', 'armor']];
+                        $data[$id]['armor'] = [$pts / 100, 'percentOf', 'armor'];
                         break;
                     case 13:                                // damage done flat
                         // per magic school, omit physical
@@ -364,7 +364,12 @@ class SpellList extends BaseType
                     case 30:                                // mod skill
                         // diff between character skills and trade skills
                         break;
-                    case 36:                                // shapeshift
+                    case 137:                               // mod stat percent
+                        $mask = $mv == -1 ? 0x1F : (1 << $mv);
+                        for ($j = 0; $j < 5; $j++)
+                            if ($mask & (1 << $j))
+                                $data[$id][Game::$itemMods[$j + 3]] = [$pts / 100, 'percentOf', Game::$itemMods[$j + 3]];
+
                 }
             }
         }

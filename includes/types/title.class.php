@@ -55,7 +55,6 @@ class TitleList extends BaseType
     {
         $data = [];
         $this->createSource();
-
         foreach ($this->iterate() as $__)
         {
             $data[$this->id] = array(

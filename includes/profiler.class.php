@@ -31,37 +31,22 @@ class Profiler
         19 => [INVTYPE_TABARD],                             // tabard
     );
 
-    private static function batchInsert(array $data)
-    {
-        $nRows  = 100;
-        $nItems = count($data[0]);
-        $result = [];
-        $buff   = [];
-
-        if (!count($data))
-            return [];
-
-        // DB::Aowow()->escape(wut);
-        foreach ($data as $d)
-        {
-            if (count($d) != $nItems)
-                return [];
-
-            $d = array_map(function ($x) { return DB::Aowow()->escape($x); }, $d);
-
-            $buff[] = implode(',', $d);
-
-            if (count($buff) >= $nRows)
-            {
-                $result[] = '('.implode('),(', $buff).')';
-                $buff = [];
-            }
-        }
-
-        $result[] = '('.implode('),(', $buff).')';
-
-        return $result;
-    }
+    public static $raidProgression = array( // statisticAchievement => relevantCriterium
+        1098 => 3271,   // Onyxia's Lair 10
+        1756 => 13345,  // Onyxia's Lair 25
+        4031 => 12230, 4034 => 12234, 4038 => 12238, 4042 => 12242, 4046 => 12246, // Trial of the Crusader 25 nh
+        4029 => 12231, 4035 => 12235, 4039 => 12239, 4043 => 12243, 4047 => 12247, // Trial of the Crusader 25 hc
+        4030 => 12229, 4033 => 12233, 4037 => 12237, 4041 => 12241, 4045 => 12245, // Trial of the Crusader 10 hc
+        4028 => 12228, 4032 => 12232, 4036 => 12236, 4040 => 12240, 4044 => 12244, // Trial of the Crusader 10 nh
+        4642 => 13091, 4656 => 13106, 4661 => 13111, 4664 => 13114, 4667 => 13117, 4670 => 13120, 4673 => 13123, 4676 => 13126, 4679 => 13129, 4682 => 13132, 4685 => 13135, 4688 => 13138, // Icecrown Citadel 25 hc
+        4641 => 13092, 4655 => 13105, 4660 => 13109, 4663 => 13112, 4666 => 13115, 4669 => 13118, 4672 => 13121, 4675 => 13124, 4678 => 13127, 4681 => 13130, 4683 => 13133, 4687 => 13136, // Icecrown Citadel 25 nh
+        4640 => 13090, 4654 => 13104, 4659 => 13110, 4662 => 13113, 4665 => 13116, 4668 => 13119, 4671 => 13122, 4674 => 13125, 4677 => 13128, 4680 => 13131, 4684 => 13134, 4686 => 13137, // Icecrown Citadel 10 hc
+        4639 => 13089, 4643 => 13093, 4644 => 13094, 4645 => 13095, 4646 => 13096, 4647 => 13097, 4648 => 13098, 4649 => 13099, 4650 => 13100, 4651 => 13101, 4652 => 13102, 4653 => 13103, // Icecrown Citadel 10 nh
+    //  4823 => 13467, // Ruby Sanctum 25 hc
+    //  4820 => 13465, // Ruby Sanctum 25 nh
+    //  4822 => 13468, // Ruby Sanctum 10 hc
+    //  4821 => 13466, // Ruby Sanctum 10 nh
+    );
 
     public static function getBuyoutForItem($itemId)
     {
@@ -203,7 +188,10 @@ class Profiler
             case TYPE_PROFILE:
                 $newId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $guid);
                 if (!$newId)
-                    $newId = DB::Aowow()->query('INSERT INTO ?_profiler_profiles (realm, realmGUID) VALUES (?d, ?d)', $realmId, $guid);
+                {
+                    trigger_error('rofiler::scheduleResync() - tried to resync character without preload data', E_USER_ERROR);
+                    break;
+                }
 
                 if ($rData = DB::Aowow()->selectRow('SELECT requestTime AS time, status FROM ?_profiler_sync WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d AND status <> ?d', $realmId, $guid, $type, $newId, PR_QUEUE_STATUS_WORKING))
                 {
@@ -238,7 +226,7 @@ class Profiler
     {
         $tDiffs = [];
 
-        $char = DB::Characters($realmId)->selectRow('SELECT IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank, c.* FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.guid = ?d', $charGuid);
+        $char = DB::Characters($realmId)->selectRow('SELECT IFNULL(g.name, "") AS guild, gm.rank AS guildRank, c.* FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.guid = ?d', $charGuid);
         if (!$char)
             return false;
 
@@ -390,7 +378,7 @@ class Profiler
         // done quests
         $quests = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, quest AS typeId FROM character_queststatus_rewarded WHERE guid = ?d', $profileId, TYPE_QUEST, $char['guid']);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_QUEST, $profileId);
-        foreach (self::batchInsert($quests) as $q)
+        foreach (Util::createSqlBatchInsert($quests) as $q)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$q, array_keys($quests[0]));
 
         CLI::write(' ..quests');
@@ -400,7 +388,7 @@ class Profiler
         $skAllowed = DB::Aowow()->selectCol('SELECT id FROM ?_skillline WHERE typeCat IN (9, 11) AND (cuFlags & ?d) = 0', CUSTOM_EXCLUDE_FOR_LISTVIEW);
         $skills    = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, skill AS typeId, `value` AS cur, max FROM character_skills WHERE guid = ?d AND skill IN (?a)', $profileId, TYPE_SKILL, $char['guid'], $skAllowed);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SKILL, $profileId);
-        foreach (self::batchInsert($skills) as $sk)
+        foreach (Util::createSqlBatchInsert($skills) as $sk)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$sk, array_keys($skills[0]));
 
         CLI::write(' ..professions');
@@ -409,7 +397,7 @@ class Profiler
         // reputation
         $reputation = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, faction AS typeId, standing AS cur FROM character_reputation WHERE guid = ?d AND (flags & 0xC) = 0', $profileId, TYPE_FACTION, $char['guid']);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_FACTION, $profileId);
-        foreach (self::batchInsert($reputation) as $rep)
+        foreach (Util::createSqlBatchInsert($reputation) as $rep)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$rep, array_keys($reputation[0]));
 
         CLI::write(' ..reputation');
@@ -432,17 +420,26 @@ class Profiler
 
         // achievements
         $achievements = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, achievement AS typeId, date AS cur FROM character_achievement WHERE guid = ?d', $profileId, TYPE_ACHIEVEMENT, $char['guid']);
-        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_ACHIEVEMENT, $profileId);
-        foreach (self::batchInsert($achievements) as $a)
+        DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_ACHIEVEMENT, $profileId); // also deleted raid progression (which is fine)
+        foreach (Util::createSqlBatchInsert($achievements) as $a)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$a, array_keys($achievements[0]));
 
         CLI::write(' ..achievements');
 
 
+        // raid progression
+        $progress = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, criteria AS typeId, date AS cur, counter AS `max` FROM character_achievement_progress WHERE guid = ?d AND criteria IN (?a)', $profileId, TYPE_ACHIEVEMENT, $char['guid'], self::$raidProgression);
+        array_walk($progress, function (&$val) { $val['typeId'] = array_search($val['typeId'], self::$raidProgression); });
+        foreach (Util::createSqlBatchInsert($progress) as $p)
+            DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$p, array_keys($progress[0]));
+
+        CLI::write(' ..raid progression');
+
+
         // known spells
         $spells = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, spell AS typeId FROM character_spell WHERE guid = ?d AND disabled = 0', $profileId, TYPE_SPELL, $char['guid']);
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SPELL, $profileId);
-        foreach (self::batchInsert($spells) as $s)
+        foreach (Util::createSqlBatchInsert($spells) as $s)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$s, array_keys($spells[0]));
 
         CLI::write(' ..known spells (vanity pets & mounts)');
@@ -455,6 +452,9 @@ class Profiler
         // guilds
 
         // arena teams
+
+        // mark char as done
+        DB::Aowow()->query('UPDATE ?_profiler_profiles SET cuFlags = cuFlags & ?d WHERE id = ?d', ~PROFILER_CU_NEEDS_RESYC, $profileId);
 
         return true;
     }

@@ -170,7 +170,10 @@ $lang = array(
         'atCaptain'     => "Arena Team Captain",
 
         'firstUseTitle' => "%s of %s",
-        'notFound'      => "This character doesn't exist or is not yet in the database."
+        'notFound'      => "This character doesn't exist or is not yet in the database.",
+        'dummyNPCs'     => array(
+            100001 => "Gunship Battle", 200001 => "Northrend Beasts", 200002 => "Faction Champions  ", 200003 => "Val'kyr Twins"
+        ),
     ),
     'screenshot' => array(
         'submission'    => "Screenshot Submission",

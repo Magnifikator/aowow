@@ -109,7 +109,7 @@ if (!CLI)
 
             // get titles for exclusion
             foreach ($titlez->iterate() as $id => $__)
-                if (empty($titlez->sources[$id][4]) || empty($titlez->sources[$id][12]))
+                if (empty($titlez->sources[$id][4]) && empty($titlez->sources[$id][12]))
                     $exAdd(TYPE_TITLE, $id, PR_EXCLUDE_GROUP_UNAVAILABLE);
 
             foreach (CLISetup::$localeIds as $l)
@@ -349,6 +349,7 @@ if (!CLI)
             $s = count($exclusions);
             $i = $n = 0;
             CLI::write('applying '.$s.' baseline exclusions');
+            DB::Aowow()->query('DELETE FROM ?_profiler_excludes WHERE comment = ""');
             foreach ($exclusions as $ex)
             {
                 DB::Aowow()->query('REPLACE INTO ?_profiler_excludes (?#) VALUES (?a)', array_keys($ex), array_values($ex));

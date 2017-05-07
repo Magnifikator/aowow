@@ -165,7 +165,10 @@ $lang = array(
         'atCaptain'     => "Teamkapitän",
 
         'firstUseTitle' => "%s von %s",
-        'notFound'      => "Dieser Charakter existiert nicht oder wurde noch nicht in die Datenbank übernommen."
+        'notFound'      => "Dieser Charakter existiert nicht oder wurde noch nicht in die Datenbank übernommen.",
+        'dummyNPCs'     => array(
+            100001 => "Luftschiffkampf", 200001 => "Bestien von Nordend", 200002 => "Fraktionschampions", 200003 => "Zwillingsval'kyr"
+        ),
     ),
     'screenshot' => array(
         'submission'    => "Screenshot-Einsendung",

@@ -45,7 +45,6 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
         Profiler::queueFree();
         exit();
     }
-
     // scheduled for future date
     if ($row['requestTime'] > time())
         continue;

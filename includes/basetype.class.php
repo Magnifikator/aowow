@@ -222,8 +222,8 @@ abstract class BaseType
             if (!in_array($k, $prefixes))
                 unset($this->queryOpts[$k]);
 
-        // prepare usage of guids if using multiple DBs
-        if (count($this->dbNames) > 1)
+        // prepare usage of guids if using multiple realms (which have non-zoro indizes)
+        if (key($this->dbNames) != 0)
             $this->queryBase = preg_replace('/\s([^\s]+)\sAS\sARRAY_KEY/i', ' CONCAT("DB_IDX", ":", \1) AS ARRAY_KEY', $this->queryBase);
 
         // insert additional selected fields

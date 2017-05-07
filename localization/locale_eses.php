@@ -172,7 +172,10 @@ $lang = array(
         'atCaptain'     => "Capitán de equipo de arena",
 
         'firstUseTitle' => "%s de %s",
-        'notFound'      => "Este personaje no existe o no está aun en la base de datos." // profile
+        'notFound'      => "Este personaje no existe o no está aun en la base de datos.", // profile
+        'dummyNPCs'     => array(
+            100001 => "Batalla de naves de guerra", 200001 => "Bestias de Rasganorte", 200002 => "Campeones de facciones", 200003 => "Gemelas Val'kyr"
+        ),
     ),
     'screenshot' => array(
         'submission'    => "Enviar una captura de pantalla",

@@ -130,14 +130,9 @@ class ProfilesPage extends GenericPage
 
         $conditions = array(
             ['deleteInfos_Name', null],
-            ['level', MAX_LEVEL, '<=']
+            ['level', MAX_LEVEL, '<='],                     // prevents JS errors
+            [['extra_flags', 0x7D, '&'], 0]                 // not a staff char
         );
-
-        // if (!User::isInGroup(U_GROUP_EMPLOYEE))
-            // $conditions[] = [['cuFlags', CUSTOM_EXCLUDE_FOR_LISTVIEW, '&'], 0];
-
-        // if ($this->category)
-            // $conditions[] = ['typeCat', (int)$this->category[0]];
 
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
@@ -159,13 +154,14 @@ class ProfilesPage extends GenericPage
             'onBeforeCreate' => '$pr_initRosterListview'        // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
         );
 
-        if ($_ = $this->filterObj->getExtraCols())
+        $skillCols = $this->filterObj->getExtraCols();
+        if ($skillCols)
         {
             $xc = [];
-            foreach ($_ as $skId)
-                $xc[] = "Listview.funcBox.createSimpleCol('Skill + ".$skId."', g_spell_skills[".$skId."], '7%', 'skill + ".$skId."')";
+            foreach ($skillCols as $skill => $__)
+                $xc[] = "\$Listview.funcBox.createSimpleCol('Skill' + ".$skill.", g_spell_skills[".$skill."], '7%', 'skill' + ".$skill.")";
 
-            $tabData['extraCols'] = '$['.implode(', ', $xc).']';
+            $tabData['extraCols'] = $xc;
         }
 
         $miscParams = [];
@@ -173,11 +169,17 @@ class ProfilesPage extends GenericPage
             $miscParams['sv'] = $this->realm;
         if ($this->region)
             $miscParams['rg'] = $this->region;
+        if ($_ = $this->filterObj->extraOpts)
+            $miscParams['extraOpts'] = $_;
 
         $profiles = new RemoteProfileList($conditions, $miscParams);
         if (!$profiles->error)
         {
-            $tabData['data'] = array_values($profiles->getListviewData());
+            // init these chars on our side and get local ids
+            $profiles->initializeLocalEntries();
+
+
+            $tabData['data'] = array_values($profiles->getListviewData(null, $skillCols));
 
             // create note if search limit was exceeded
             if (0 /* filter were applied */)
@@ -196,22 +198,6 @@ class ProfilesPage extends GenericPage
 
         Lang::sort('game', 'cl');
         Lang::sort('game', 'ra');
-    }
-
-    private function getTalentDistribution($tString)
-    {
-        $classMask = 1 << ($this->character['classs'] - 1);
-        $distrib   = DB::Aowow()->selectCol('SELECT COUNT(t.id) FROM dbc_talent t JOIN dbc_talenttab tt ON t.tabId = tt.id WHERE tt.classMask & ?d GROUP BY tt.id ORDER BY tt.tabNumber ASC', $classMask);
-        $result    = [0, 0, 0];
-
-        $start = 0;
-        foreach ($distrib as $idx => $len)
-        {
-            $result[$idx] = array_sum(str_split(substr($tString, $start, $len)));
-            $start += $len;
-        }
-
-        return $result;
     }
 }
 

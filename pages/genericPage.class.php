@@ -113,7 +113,7 @@ trait TrProfiler
                 {
                     $this->realm   = $r['name'];
                     $this->realmId = $rId;
-                    if (isset($cat[2]) && mb_strlen($cat[2]) < 3)
+                    if (isset($cat[2]) && mb_strlen($cat[2]) >= 3)
                         $this->subjectName = $cat[2];       // cannot reconstruct original name from urlized form; match against special name field
 
                     break;

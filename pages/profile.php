@@ -42,10 +42,7 @@ class ProfilePage extends GenericPage
             if ($this->subject->isCustom())
                 $this->isCustom  = true;
             else
-            {
-                // region realm name
-                header('Location: ?profile=', 302, true);
-            }
+                header('Location: '.$this->subject->getProfileUrl(), true, 302);
 
             // redundancy much?
             $this->subjectGUID = $this->subject->getField('id');
@@ -53,7 +50,6 @@ class ProfilePage extends GenericPage
         }
         else if (count($params) == 3)
         {
-
             $this->getSubjectFromUrl($pageParam);
             if (!$this->subjectName)
                 $this->notFound();
@@ -62,8 +58,15 @@ class ProfilePage extends GenericPage
 
             // 3 possibilities
             // 1) already synced to aowow
-            if ($this->subjectGUID = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND name = ?', $this->realmId, Util::ucFirst($this->subjectName)))
+            if ($subject = DB::Aowow()->selectRow('SELECT id, realmGUID, cuFlags FROM ?_profiler_profiles WHERE realm = ?d AND name = ?', $this->realmId, Util::ucFirst($this->subjectName)))
             {
+                if ($subject['cuFlags'] & PROFILER_CU_NEEDS_RESYC)
+                {
+                    $this->handleIncompleteData($params, $subject['realmGUID']);
+                    return;
+                }
+
+                $this->subjectGUID = $subject['id'];
                 $realms = Profiler::getRealms();
                 $realm  = 0;
                 foreach ($realms as $rId => $r)
@@ -76,30 +79,16 @@ class ProfilePage extends GenericPage
 
                 $this->profile = $params;
             }
-            // 2) not yet synced but exists on realm
-            else if ($char = DB::Characters($this->realmId)->selectRow('SELECT c.guid AS realmGUID, c.name, c.race, c.class, c.level, c.gender, IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.name = ? AND level <= ?d', Util::ucFirst($this->subjectName), MAX_LEVEL))
+            // 2) not yet synced but exists on realm (and not a gm character)
+            else if ($char = DB::Characters($this->realmId)->selectRow('SELECT c.guid AS realmGUID, c.name, c.race, c.class, c.level, c.gender, IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.name = ? AND level <= ?d AND (extra_flags & ?d) = 0', Util::ucFirst($this->subjectName), MAX_LEVEL, 0x7D))
             {
-                $char['realm'] = $this->realmId;
+                $char['realm']   = $this->realmId;
+                $char['cuFlags'] = PROFILER_CU_NEEDS_RESYC;
 
-                // create entry with basic stuff from realm
+                // create entry from realm with enough basic info to disply tooltips
                 DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES (?a)', array_keys($char), array_values($char));
 
-                // queue full fetch
-                $newId = Profiler::scheduleResync(TYPE_PROFILE, $this->realmId, $char['realmGUID']);
-
-                if ($this->mode == CACHE_TYPE_TOOLTIP)      // enable tooltip display with basic data we just added
-                {
-                    $this->subject = new LocalProfileList(array(['name', Util::ucFirst($this->subjectName)]), ['sv' => $params[1]]);
-                    if ($this->subject->error)
-                        $this->notFound();
-
-                    $this->profile = $params;
-                }
-                else                                        // display empty page and queue status
-                {
-                    $this->doResync = ['profile', $newId];
-                    $this->initialSync();
-                }
+                $this->handleIncompleteData($params, $char['realmGUID']);
             }
             // 3) does not exist at all
             else
@@ -113,6 +102,28 @@ class ProfilePage extends GenericPage
     {
         // + .titles ?
         $this->addJS('?data=enchants.gems.glyphs.itemsets.pets.pet-talents.quick-excludes.realms.statistics.weight-presets.achievements&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
+
+        // as demanded by the raid activity tracker
+        $bossIds = array(
+/*          Halion                                                                                                                */
+/* ruby */  39863,
+/*          Valanar, Lana'thel, Saurfang, Festergut, Deathwisper, Marrowgar, Putricide, Rotface, Sindragosa, Valithria, Lich King */
+/* icc  */  37970,   37955,     37813,    36626,     36855,       36612,     36678,     36627,   36853,      36789,     36597,
+/*          Jaraxxus, Anub'arak                                                                             */
+/* toc  */  34780,    34564,
+/*          Onyxia                                                                                                                */
+/* ony  */  10184
+        );
+        // some events have no singular creature to point to .. create dummy entries
+        $dummyNPCs = [TYPE_NPC => array(
+            100001 => ['name_'.User::$localeString => Lang::profiler('dummyNPCs', 100001)],
+            200001 => ['name_'.User::$localeString => Lang::profiler('dummyNPCs', 200001)],
+            200002 => ['name_'.User::$localeString => Lang::profiler('dummyNPCs', 200002)],
+            200003 => ['name_'.User::$localeString => Lang::profiler('dummyNPCs', 200003)]
+        )];
+
+        $this->extendGlobalIds(TYPE_NPC, $bossIds);
+        $this->extendGlobalData($dummyNPCs);
     }
 
     protected function generatePath()
@@ -175,6 +186,26 @@ class ProfilePage extends GenericPage
         header('Content-type: application/x-javascript; charset=utf-8');
         echo $this->generateTooltip(true);
         exit();
+    }
+
+    private function handleIncompleteData($params, $guid)
+    {
+        if ($this->mode == CACHE_TYPE_TOOLTIP)      // enable tooltip display with basic data we just added
+        {
+            $this->subject = new LocalProfileList(array(['name', Util::ucFirst($this->subjectName)]), ['sv' => $params[1]]);
+            if ($this->subject->error)
+                $this->notFound();
+
+            $this->profile = $params;
+        }
+        else                                        // display empty page and queue status
+        {
+            // queue full fetch
+            $newId = Profiler::scheduleResync(TYPE_PROFILE, $this->realmId, $guid);
+
+            $this->doResync = ['profile', $newId];
+            $this->initialSync();
+        }
     }
 }
 

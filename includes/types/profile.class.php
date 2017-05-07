@@ -12,7 +12,7 @@ class ProfileList extends BaseType
 {
     use profilerHelper;
 
-    public function getListviewData($addInfo = 0)
+    public function getListviewData($addInfo = 0, array $reqCols = [])
     {
         $data = [];
         foreach ($this->iterate() as $__)
@@ -39,7 +39,7 @@ class ProfileList extends BaseType
                 'talenttree3'       => $this->getField('talenttree3'),
                 'talentspec'        => $this->getField('activespec') + 1,             // 0 => 1; 1 => 2
                 'achievementpoints' => $this->getField('achievementpoints'),
-                'guild'             => $this->getField('guild'),                      // 0 if none
+                'guild'             => '$"'.$this->getField('guild').'"',       // force this so be a string
                 'guildrank'         => $this->getField('guildRank'),
                 'realm'             => Profiler::urlize($this->getField('realmName')),
                 'realmname'         => $this->getField('realmName'),
@@ -60,6 +60,10 @@ class ProfileList extends BaseType
                 // $data[$this->id]['rating'] = $this->getField('arenateams')[5]['rating'];
             // else
                 // $data[$this->id]['arenateams'] = $this->getField('arenateams');
+
+            // Filter asked for skills - add them
+            foreach ($reqCols as $col)
+                $data[$this->id][$col] = $this->getField($col);
 
             if ($addInfo & PROFILEINFO_PROFILE)
                 if ($_ = $this->getField('description'))
@@ -171,7 +175,7 @@ class ProfileListFilter extends Filter
             15 => 3,
             18 => 5
         ),
-        -2 => array(                                        // professions (by setting key #24, he next elements are increments of it)
+        -2 => array(                                        // professions (by setting key #24, the next elements are increments of it)
             24 => null, 171, 164, 333, 202, 182, 773, 755, 165, 186, 393, 197
         ),
     );
@@ -184,15 +188,15 @@ class ProfileListFilter extends Filter
         // { id: 5,   name: 'talenttree1',         type: 'num' },
         // { id: 6,   name: 'talenttree2',         type: 'num' },
         // { id: 7,   name: 'talenttree3',         type: 'num' },
-         9 => [FILTER_CR_STRING,    'g.name',            ], // guildname
-        10 => [FILTER_CR_NUMERIC,   'gm.rank'            ], // guildrank
+         9 => [FILTER_CR_STRING,    'g.name',                ], // guildname
+        10 => [FILTER_CR_NUMERIC,   'gm.rank',  NUM_CAST_INT ], // guildrank
     );
 
     // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'     => [FILTER_V_LIST,  [9, 10],                                        true ], // criteria ids
+        'cr'     => [FILTER_V_RANGE,  [1, 36],                                       true ], // criteria ids
         'crs'    => [FILTER_V_LIST,  [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 5000]], true ], // criteria operators
-        'crv'    => [FILTER_V_RANGE, [0, 99999],                                     true ], // criteria values - only numeric input values expected
+        'crv'    => [FILTER_V_REGEX, '/[\p{C};]/ui',                                 true ], // criteria values - only numeric input values expected
         'na'     => [FILTER_V_REGEX, '/[\p{C};]/ui',                                 false], // name - only printable chars, no delimiter
         'ma'     => [FILTER_V_EQUAL, 1,                                              false], // match any / all filter
         'ex'     => [FILTER_V_EQUAL, 'on',                                           false], // only match exact
@@ -201,7 +205,6 @@ class ProfileListFilter extends Filter
         'cl'     => [FILTER_V_LIST, [[1, 9], 11],                                    true ], // class
         'minle'  => [FILTER_V_RANGE, [1, MAX_LEVEL],                                 false], // min level
         'maxle'  => [FILTER_V_RANGE, [1, MAX_LEVEL],                                 false]  // max level
-
     );
 
     protected function createSQLForCriterium(&$cr)
@@ -248,12 +251,12 @@ class ProfileListFilter extends Filter
             case 33:                                        // mining [num]
             case 34:                                        // skinning [num]
             case 35:                                        // tailoring [num]
-                if (!$this->isSaneNumeric($cr[2]) || !$this->int2Op($cr[1]))
+                if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]) || empty($this->enums[-2][$cr[0]]))
                     break;
-
-                $this->extraOpts['sk']['s'][] = ', sk.value AS skill'.$this->enums[-2][$cr[0]];
-                $this->formData['extraCols'][] = $this->enums[-2][$cr[0]];
-                return ['AND', ['sk.skill', $this->enums[-2][$cr[0]]], ['sk.value', $cr[2], $cr[1]]];
+                $skill = $this->enums[-2][$cr[0]];
+                $this->extraOpts['sk']['s'][] = ', sk.value AS skill'.$skill;
+                $this->formData['extraCols'][$skill] = 'skill'.$skill;
+                return ['AND', ['sk.skill', $skill], ['sk.value', $cr[2], $cr[1]]];
         }
 
         unset($cr);
@@ -317,7 +320,7 @@ class RemoteProfileList extends ProfileList
                     'ct'  => ['j' => ['character_talent ct ON ct.guid = c.guid AND ct.spec = c.activespec', true], 's' => ', GROUP_CONCAT(DISTINCT ct.spell SEPARATOR " ") AS _talents'],
                     'atm' => ['j' => ['arena_team_member atm ON atm.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT CONCAT(atm.arenaTeamId, ":", atm.personalRating) SEPARATOR " ") AS _teamData'],
                     'at'  => ['j' => 'arena_team at ON atm.arenaTeamId = at.arenaTeamId'],
-                    'sk'  => ['j' => 'character_skills sk ON sk.guid = c.guid', 's' => ', sk.value AS skillValue']
+                    'sk'  => ['j' => 'character_skills sk ON sk.guid = c.guid'/*, 's' => ', sk.value AS skillValue'*/]
                 );
 
     public function __construct($conditions = [], $miscData = null)
@@ -341,43 +344,31 @@ class RemoteProfileList extends ProfileList
         $talentCache = [];
         $atCache     = [];
         $distrib     = [];
+        $talentData  = [];
 
         // post processing
         foreach ($this->iterate() as $guid => &$curTpl)
         {
-            // guild / +rank
-            if (!$curTpl['guild'])
-                $curTpl['guild'] = 0;
+            // realm
+            $r = explode(':', $guid)[0];
+            if (!empty($realms[$r]))
+            {
+                $curTpl['realm']     = $r;
+                $curTpl['realmName'] = $realms[$r]['name'];
+                $curTpl['region']    = $realms[$r]['region'];
+            }
+            else
+            {
+                trigger_error('character "'.$curTpl['name'].'" belongs to nonexistant realm #'.$r, E_USER_WARNING);
+                unset($this->templates[$guid]);
+                continue;
+            }
 
-            if (!$curTpl['guildRank'])
-                $curTpl['guildRank'] = -1;
+            // temp id
+            $curTpl['id'] = 0;
 
             // battlegroup
             $curTpl['battlegroup'] = CFG_BATTLEGROUP;
-
-            // realm
-            if (strpos($guid, ':'))
-            {
-                $r = explode(':', $guid)[0];
-                if (!empty($realms[$r]))
-                {
-                    $curTpl['realm']     = $r;
-                    $curTpl['realmName'] = $realms[$r]['name'];
-                    $curTpl['region']    = $realms[$r]['region'];
-                }
-                else
-                {
-                    trigger_error('character "'.$curTpl['name'].'" belongs to nonexistant realm #'.$r, E_USER_WARNING);
-                    unset($this->templates[$guid]);
-                    continue;
-                }
-            }
-            else if (count($this->dbNames) == 1)
-            {
-                $curTpl['realm']     = $realmId;
-                $curTpl['realmName'] = $realms[$realmId]['name'];
-                $curTpl['region']    = $realms[$realmId]['region'];
-            }
 
             // achievement points pre
             if ($acvs = explode(' ', $curTpl['_acvs']))
@@ -406,6 +397,9 @@ class RemoteProfileList extends ProfileList
 
             $curTpl['cuFlags'] = 0;
         }
+
+        if ($talentCache)
+            $talentData = DB::Aowow()->select('SELECT spell AS ARRAY_KEY, tab, rank FROM ?_talents WHERE spell IN (?a)', $talentCache);
 
         $limit = CFG_SQL_LIMIT_DEFAULT;
         foreach ($conditions as $c)
@@ -444,12 +438,12 @@ class RemoteProfileList extends ProfileList
             $curTpl['achievementpoints'] = array_sum(array_intersect_key($acvCache, array_combine($a, $a)));
 
             // talent points post
-            $trees = [0, 0, 0];
-            if ($t)
-                Util::arraySumByKey($trees, DB::Aowow()->selectCol('SELECT tab AS ARRAY_KEY, SUM(rank) FROM ?_talents WHERE spell IN (?a) AND `class` = ?d GROUP BY tab', $t, $curTpl['class']));
-            foreach ($trees as $i => $t)
-                $curTpl['talenttree'.($i + 1)] = $t;
-
+            $curTpl['talenttree1'] = 0;
+            $curTpl['talenttree2'] = 0;
+            $curTpl['talenttree3'] = 0;
+            foreach ($talentData as $spell => $data)
+                if (in_array($spell, $t))
+                    $curTpl['talenttree'.($data['tab'] + 1)] += $data['rank'];
 
             // arenateams
             $curTpl['arenateams'] = [];
@@ -465,6 +459,51 @@ class RemoteProfileList extends ProfileList
                 }
             }
         }
+    }
+
+    public function getListviewData($addInfoMask = 0, array $reqCols = [])
+    {
+        $data = parent::getListviewData($addInfoMask, $reqCols);
+
+        // not wanted on eserver list
+        foreach ($data as &$d)
+            unset($d['published']);
+
+        return $data;
+    }
+
+    public function initializeLocalEntries()
+    {
+        // absolute basic data (enough for tooltips)
+        $data = [];
+        foreach ($this->iterate() as $guid => $__)
+            $data[$guid] = array(
+                'realm'     => $this->getField('realm'),
+                'realmGUID' => $this->getField('guid'),
+                'name'      => $this->getField('name'),
+                'race'      => $this->getField('race'),
+                'class'     => $this->getField('class'),
+                'level'     => $this->getField('level'),
+                'gender'    => $this->getField('gender'),
+                'guild'     => $this->getField('guild'),
+                'guildrank' => $this->getField('guild') ? $this->getField('guildRank') : null,
+                'cuFlags'   => PROFILER_CU_NEEDS_RESYC
+            );
+
+        foreach (Util::createSqlBatchInsert($data) as $ins)
+            DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES '.$ins, array_keys(reset($data)));
+
+        // merge back local ids
+        $localIds = DB::Aowow()->selectCol(
+            'SELECT CONCAT(realm, ":", realmGUID) AS ARRAY_KEY, id FROM ?_profiler_profiles WHERE (cuFlags & ?d) = 0 AND realm IN (?a) AND realmGUID IN (?a)',
+            PROFILER_CU_PROFILE,
+            array_column($data, 'realm'),
+            array_column($data, 'realmGUID')
+        );
+
+        foreach ($this->iterate() as $guid => &$_curTpl)
+            if (isset($localIds[$guid]))
+                $_curTpl['id'] = $localIds[$guid];
     }
 
     public function selectRealms($fi)
@@ -527,6 +566,20 @@ class LocalProfileList extends ProfileList
 
             $curTpl['achievementpoints'] = isset($acvPoints[$id]) ? $acvPoints[$id] : 0;
         }
+    }
+
+    public function getProfileUrl()
+    {
+        $url = '?profile=';
+
+        if ($this->isCustom())
+            return $url.$this->getField('id');
+
+        return $url.implode('.', array(
+            Profiler::urlize($this->getField('region')),
+            Profiler::urlize($this->getField('realmName')),
+            Profiler::urlize($this->getField('name'))
+        ));
     }
 }
 

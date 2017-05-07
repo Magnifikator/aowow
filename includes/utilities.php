@@ -1114,6 +1114,42 @@ class Util
         return $json;
     }
 
+    public static function createSqlBatchInsert(array $data)
+    {
+        $nRows  = 100;
+        $nItems = count(reset($data));
+        $result = [];
+        $buff   = [];
+
+        if (!count($data))
+            return [];
+
+        foreach ($data as $d)
+        {
+            if (count($d) != $nItems)
+                return [];
+
+            $d = array_map(function ($x) {
+                if ($x === null)
+                    return 'NULL';
+
+                return DB::Aowow()->escape($x);
+            }, $d);
+
+            $buff[] = implode(',', $d);
+
+            if (count($buff) >= $nRows)
+            {
+                $result[] = '('.implode('),(', $buff).')';
+                $buff = [];
+            }
+        }
+
+        if ($buff)
+            $result[] = '('.implode('),(', $buff).')';
+
+        return $result;
+    }
 
     /*****************/
     /* file handling */

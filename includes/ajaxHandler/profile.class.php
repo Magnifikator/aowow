@@ -247,7 +247,7 @@ class AjaxProfile extends AjaxHandler
     */
     protected function handleStatus()
     {
-        $response = [(int)!!CFG_PROFILER_QUEUE];        // in theory you could have multiple queues but lets be frank .. you will NEVER be under THAT kind of load for it to be relevant
+        $response = [CFG_PROFILER_QUEUE ? 2 : 0];        // in theory you could have multiple queues; used as devisor for: (15 / x) + 2
         if (!$this->_get['id'])
             $response[] = [PR_QUEUE_STATUS_ENDED, 0, 0, PR_QUEUE_ERROR_CHAR];
         else
@@ -500,10 +500,8 @@ class AjaxProfile extends AjaxHandler
             'achievements'      => [],                      // achievementId => timestamp
             'quests'            => [],                      // questId => 1
             'achievementpoints' => 0,                       // max you have
-
-            // UNKNOWN
-            'statistics'        => [574 => 1],                      // UNK all statistics?      [achievementId => killCount]
-            'activity'          => [574 => 1],                      // UNK recent achievements? [achievementId => killCount]
+            'statistics'        => [],                      // all raid activity    [achievementId => killCount]
+            'activity'          => [],                      // recent raid activity [achievementId => 1] (is a subset of statistics)
         );
 
         // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
@@ -598,8 +596,22 @@ class AjaxProfile extends AjaxHandler
                     $profile['spells'] = $data;
                     break;
                 case TYPE_ACHIEVEMENT:
-                    $profile['achievements']      = array_combine(array_keys($data), array_column($data, 'cur'));
-                    $profile['achievementpoints'] = DB::Aowow()->selectCell('SELECT SUM(points) FROM ?_achievement WHERE id IN (?a)', array_keys($data));
+                    $achievements = array_filter($data, function ($x) { return $x['max'] === null; });
+                    $statistics   = array_filter($data, function ($x) { return $x['max'] !== null; });
+
+                    // achievements
+                    $profile['achievements']      = array_combine(array_keys($achievements), array_column($achievements, 'cur'));
+                    $profile['achievementpoints'] = DB::Aowow()->selectCell('SELECT SUM(points) FROM ?_achievement WHERE id IN (?a)', array_keys($achievements));
+
+                    // raid progression
+                    $activity = array_filter($statistics, function ($x) { return $x['cur'] > (time() - MONTH); });
+                    foreach ($activity as &$r)
+                        $r = 1;
+
+                    // ony .. subtract 10-man from 25-man
+
+                    $profile['statistics'] = array_combine(array_keys($statistics), array_column($statistics, 'max'));
+                    $profile['activity']   = $activity;
                     break;
                 case TYPE_SKILL:
                     foreach ($data as &$d)
