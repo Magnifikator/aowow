@@ -198,7 +198,7 @@ class Profiler
                     // not on already scheduled - recalc time and set status to PR_QUEUE_STATUS_WAITING
                     if ($rData['status'] != PR_QUEUE_STATUS_WAITING)
                     {
-                        $newTime = max($rData['time'] + CFG_PROFILER_RESYNC_DELAY, time());
+                        $newTime = time(); // max($rData['time'] + CFG_PROFILER_RESYNC_DELAY, time());
                         DB::Aowow()->query('UPDATE ?_profiler_sync SET requestTime = ?d, status = ?d, errorCode = 0 WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d', $newTime, PR_QUEUE_STATUS_WAITING, $realmId, $guid, $type, $newId);
                     }
                 }

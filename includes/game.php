@@ -97,6 +97,7 @@ class Game
         'meta',                         'red',                          'yellow',                       'blue'
     );
 
+    // 'replicates' $WH.g_statToJson
     public static $itemMods                 = array(        // zero-indexed; "mastrtng": unused mastery; _[a-z] => taken mods..
         'dmg',              'mana',             'health',           'agi',              'str',              'int',              'spi',
         'sta',              'energy',           'rage',             'focus',            'runicpwr',         'defrtng',          'dodgertng',

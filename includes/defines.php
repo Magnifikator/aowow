@@ -408,6 +408,7 @@ define('SPELL_SCHOOL_NATURE',               3);
 define('SPELL_SCHOOL_FROST',                4);
 define('SPELL_SCHOOL_SHADOW',               5);
 define('SPELL_SCHOOL_ARCANE',               6);
+define('SPELL_MAGIC_SCHOOLS',               0x7E);
 define('SPELL_ALL_SCHOOLS',                 0x7F);
 
 // CharacterSlot

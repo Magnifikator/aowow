@@ -2770,7 +2770,8 @@ function ProfilerStatistics(_parent) {
             manargn: {
                 addModifiers: function () {
                     return {
-                        oocmanargn: [1, 'percentOf', 'manargn']
+                        oocmanargn: [1, 'percentOf', 'manargn'],
+                        icmanargn: [1, 'percentOf', 'manargn']
                     };
                 }
             },
@@ -2785,9 +2786,12 @@ function ProfilerStatistics(_parent) {
 
             oocmanargn: {
                 tooltipCompute: function (total) {
-                    return [total, _statistics.manargn.total];
+                    // return [total, _statistics.manargn.total]; // aowow -- everything with icmanargn is custom. was apparently not handled before
+                    return [total, _statistics.icmanargn.total];
                 }
             },
+
+            icmanargn: {},
 
             // ********* Defenses ********
             armor: {
@@ -3385,7 +3389,7 @@ function ProfilerStatistics(_parent) {
                 health:    levelData[5],
                 mleatkpwr: [classData[0][3], 'percentOf', 'level'],
                 rgdatkpwr: [classData[1][3], 'percentOf', 'level'],
-                dodgepct:  classData[4] + levelData[9] * ((raceData ? raceData[1] : 0) + levelData[1]), // may need to add http://www.wowhead.com/spell=13789 here (there are also 2 druid talents but they require bear/cat form so that's not a problem
+                dodgepct:  classData[4] + levelData[9] * ((raceData ? raceData[1] : 0) + levelData[1]),
                 parrypct:  classData[6],
                 blockpct:  classData[8],
                 def:       _profile.level * 5

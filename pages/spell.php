@@ -1537,6 +1537,7 @@ class SpellPage extends GenericPage
 
             $effId   = (int)$this->subject->getField('effect'.$i.'Id');
             $effMV   = (int)$this->subject->getField('effect'.$i.'MiscValue');
+            $effMVB  = (int)$this->subject->getField('effect'.$i.'MiscValueB');
             $effBP   = (int)$this->subject->getField('effect'.$i.'BasePoints');
             $effDS   = (int)$this->subject->getField('effect'.$i.'DieSides');
             $effRPPL =      $this->subject->getField('effect'.$i.'RealPointsPerLevel');
@@ -1640,7 +1641,7 @@ class SpellPage extends GenericPage
                 case 137:                                   // Energize Pct
                     $_ = Lang::spell('powerTypes', $effMV);
                     if ($_ && User::isInGroup(U_GROUP_EMPLOYEE))
-                        $_ = sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_);
+                        $_ = sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_);
                     else if (!$_)
                         $_ = $effMV;
 
@@ -1670,7 +1671,7 @@ class SpellPage extends GenericPage
                 case 33:                                    // Open Lock
                     $_ = $effMV ? Lang::spell('lockType', $effMV) : $effMV;
                     if ($_ && User::isInGroup(U_GROUP_EMPLOYEE))
-                        $_ = sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_);
+                        $_ = sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_);
                     else if (!$_)
                         $_ = $effMV;
 
@@ -1689,7 +1690,7 @@ class SpellPage extends GenericPage
                 case 126:                                   // Steal Aura
                     $_ = Lang::game('dt', $effMV);
                     if ($_ && User::isInGroup(U_GROUP_EMPLOYEE))
-                        $_ = sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_);
+                        $_ = sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_);
                     else if (!$_)
                         $_ = $effMV;
 
@@ -1698,7 +1699,7 @@ class SpellPage extends GenericPage
                 case 39:                                    // Learn Language
                     $_ = Lang::game('languages', $effMV);
                     if ($_ && User::isInGroup(U_GROUP_EMPLOYEE))
-                        $_ = sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_);
+                        $_ = sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_);
                     else if (!$_)
                         $_ = $effMV;
 
@@ -1741,7 +1742,7 @@ class SpellPage extends GenericPage
                         default; $_ = '';
                     }
                     if (User::isInGroup(U_GROUP_EMPLOYEE))
-                        $_ = sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_);
+                        $_ = sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_);
                     else
                         $_ = $effMV;
 
@@ -1750,7 +1751,7 @@ class SpellPage extends GenericPage
                 case 108:                                   // Dispel Mechanic
                     $_ = Lang::game('me', $effMV);
                     if ($_ && User::isInGroup(U_GROUP_EMPLOYEE))
-                        $_ = sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_);
+                        $_ = sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_);
                     else if (!$_)
                         $_ = $effMV;
 
@@ -1765,7 +1766,7 @@ class SpellPage extends GenericPage
                 case 146:                                   // Activate Rune
                     $_ = Lang::spell('powerRunes', $effMV);
                     if ($_ && User::isInGroup(U_GROUP_EMPLOYEE))
-                        $_ = sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_);
+                        $_ = sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_);
                     else if (!$_)
                         $_ = $effMV;
 
@@ -1814,12 +1815,12 @@ class SpellPage extends GenericPage
                         {
                             case 17:                        // Mod Stealth Detection
                                 if ($_ = Lang::spell('stealthType', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 19:                        // Mod Invisibility Detection
                                 if ($_ = Lang::spell('invisibilityType', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 24:                        // Periodic Energize
@@ -1828,7 +1829,7 @@ class SpellPage extends GenericPage
                             case 85:                        // Mod Power Regeneration
                             case 110:                       // Mod Power Regeneration Pct
                                 if ($_ = Lang::spell('powerTypes', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 29:                        // Mod Stat
@@ -1845,7 +1846,7 @@ class SpellPage extends GenericPage
                                         $_[] = Lang::game('stats', $j);
 
                                 if ($_ = implode(', ', $_));
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 36:                        // Shapeshift
@@ -1860,39 +1861,39 @@ class SpellPage extends GenericPage
                                         $infobox[] = Lang::game('type').Lang::main('colon').Lang::game('ct', $st['creatureType']);
 
                                     if ($_ = $st['displayName'])
-                                        $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                        $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
                                 }
                                 break;
                             case 37:                        // Effect immunity
                                 if ($_ = Lang::spell('effects', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 38:                        // Aura immunity
                                 if ($_ = Lang::spell('auras', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 41:                        // Dispel Immunity
                             case 178:                       // Mod Debuff Resistance
                             case 245:                       // Mod Aura Duration By Dispel
                                 if ($_ = Lang::game('dt', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 44:                        // Track Creature
                                 if ($_ = Lang::game('ct', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 45:                        // Track Resource
                                 if ($_ = Lang::spell('lockType', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 75:                        // Language
                                 if ($_ = Lang::game('languages', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 77:                        // Mechanic Immunity
@@ -1902,7 +1903,7 @@ class SpellPage extends GenericPage
                             case 255:                       // Mod Mechanic Damage Taken Pct
                             case 276:                       // Mod Mechanic Damage Done Percent
                                 if ($_ = Lang::game('me', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').Util::asHex($effMV), $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').Util::asHex($effMV), $_) : $_;
 
                                 break;
                             case 147:                       // Mechanic Immunity Mask
@@ -1912,7 +1913,7 @@ class SpellPage extends GenericPage
                                         $_[] = $str;
 
                                 if ($_ = implode(', ', $_))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').Util::asHex($effMV), $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').Util::asHex($effMV), $_) : $_;
 
                                 break;
                             case 10:                        // Mod Threat
@@ -1953,7 +1954,7 @@ class SpellPage extends GenericPage
                             case 271:                       // Mod Damage Percent Taken Form Caster
                             case 310:                       // Mod Creature AoE Damage Avoidance
                                 if ($_ = Lang::getMagicSchools($effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').Util::asHex($effMV), $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').Util::asHex($effMV), $_) : $_;
 
                                 break;
                             case 30:                        // Mod Skill
@@ -1967,7 +1968,7 @@ class SpellPage extends GenericPage
                             case 107:                       // Flat Modifier
                             case 108:                       // Pct Modifier
                                 if ($_ = Lang::spell('spellModOp', $effMV))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$effMV, $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;
                             case 189:                       // Mod Rating
@@ -1978,7 +1979,7 @@ class SpellPage extends GenericPage
                                         $_[] = $str;
 
                                 if ($_ = implode(', ', $_))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').Util::asHex($effMV), $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').Util::asHex($effMV), $_) : $_;
 
                                 break;
                             case 168:                       // Mod Damage Done Versus
@@ -1992,13 +1993,12 @@ class SpellPage extends GenericPage
                                         $_[] = $str;
 
                                 if ($_ = implode(', ', $_))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').Util::asHex($effMV), $_) : $_;
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').Util::asHex($effMV), $_) : $_;
 
                                 break;
                             case 249:                       // Convert Rune
-                                $x = $this->subject->getField('effect'.$i.'MiscValueB');
-                                if ($_ = Lang::spell('powerRunes', $x))
-                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, Lang::spell('_value').Lang::main('colon').$x, $_) : $_;
+                                if ($_ = Lang::spell('powerRunes', $effMVB))
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValueB'.Lang::main('colon').$effMVB, $_) : $_;
 
                                 break;
                             case 78:                        // Mounted
@@ -2038,9 +2038,9 @@ class SpellPage extends GenericPage
                         $foo['name'] .= strstr($bar, 'href') || strstr($bar, '#') ? $bar : ($bar ? ' ('.$bar.')' : null);
 
                         if (in_array($effAura, [174, 220, 182]))
-                            $foo['name'] .= ' ['.sprintf(Util::$dfnString, Lang::game('stats', $this->subject->getField('effect'.$i.'MiscValueB')), $this->subject->getField('effect'.$i.'MiscValueB')).']';
-                        else if ($this->subject->getField('effect'.$i.'MiscValueB') > 0)
-                            $foo['name'] .= ' ['.$this->subject->getField('effect'.$i.'MiscValueB').']';
+                            $foo['name'] .= ' ['.sprintf(Util::$dfnString, 'MiscValueB'.Lang::main('colon').$effMVB, Lang::game('stats', $effMVB)).']';
+                        else if ($effMVB > 0)
+                            $foo['name'] .= ' ['.$effMVB.']';
 
                     }
                     else if ($effAura > 0)

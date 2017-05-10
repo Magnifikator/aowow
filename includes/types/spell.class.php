@@ -211,7 +211,7 @@ class SpellList extends BaseType
                         }
 
                         // full magic mask, also counts towards healing
-                        if ($mv == 0x7E)
+                        if ($mv == SPELL_MAGIC_SCHOOLS)
                         {
                             Util::arraySumByKey($stats, [ITEM_MOD_SPELL_POWER       => $pts]);
                             Util::arraySumByKey($stats, [ITEM_MOD_SPELL_DAMAGE_DONE => $pts]);
@@ -339,37 +339,151 @@ class SpellList extends BaseType
     public function getProfilerMods()
     {
         $data = $this->getStatGain();                       // flat gains
+        foreach ($data as &$spellData)
+            foreach ($spellData as $modId => $val)
+            {
+                if (!isset(Game::$itemMods[$modId]))
+                    continue;
+
+                if ($modId == ITEM_MOD_EXPERTISE_RATING)    // not a rating .. pure expertise
+                    $spellData['exp'] = $val;
+                else
+                    $spellData[Game::$itemMods[$modId]] = $val;
+
+                unset($spellData[$modId]);
+            }
+
+        // 4 possible modifiers found
+        // <statistic> => [0.15, 'functionOf', <funcName:int>]
+        // <statistic> => [0.33, 'percentOf', <statistic>]
+        // <statistic> => [123, 'add']
+        // <statistic> => <value>  ...  as from getStatGain()
+
+        $modXByStat = function (&$arr, $stat, $pts) use ($mv)
+        {
+            if ($mv == STAT_STRENGTH)
+                $arr[$stat ?: 'str'] = [$pts / 100, 'percentOf', 'str'];
+            else if ($mv == STAT_AGILITY)
+                $arr[$stat ?: 'agi'] = [$pts / 100, 'percentOf', 'agi'];
+            else if ($mv == STAT_STAMINA)
+                $arr[$stat ?: 'sta'] = [$pts / 100, 'percentOf', 'sta'];
+            else if ($mv == STAT_INTELLECT)
+                $arr[$stat ?: 'int'] = [$pts / 100, 'percentOf', 'int'];
+            else if ($mv == STAT_SPIRIT)
+                $arr[$stat ?: 'spi'] = [$pts / 100, 'percentOf', 'spi'];
+        };
+
+        $modXBySchool = function (&$arr, $stat, $val, $mask = null) use ($mv)
+        {
+            if (($mask ?: $mv) & (1 << SPELL_SCHOOL_FIRE))
+                $data[$id]['fir'.$stat] = is_array($val) ? $val : [$val / 100, 'percentOf', 'fir'.$stat];
+            if (($mask ?: $mv) & (1 << SPELL_SCHOOL_NATURE))
+                $data[$id]['nat'.$stat] = is_array($val) ? $val : [$val / 100, 'percentOf', 'nat'.$stat];
+            if (($mask ?: $mv) & (1 << SPELL_SCHOOL_FROST))
+                $data[$id]['fro'.$stat] = is_array($val) ? $val : [$val / 100, 'percentOf', 'fro'.$stat];
+            if (($mask ?: $mv) & (1 << SPELL_SCHOOL_SHADOW))
+                $data[$id]['sha'.$stat] = is_array($val) ? $val : [$val / 100, 'percentOf', 'sha'.$stat];
+            if (($mask ?: $mv) & (1 << SPELL_SCHOOL_ARCANE))
+                $data[$id]['arc'.$stat] = is_array($val) ? $val : [$val / 100, 'percentOf', 'arc'.$stat];
+        };
+
+        $jsonStat = function ($stat)
+        {
+            if ($stat == STAT_STRENGTH)
+                return 'str';
+            if ($mv == STAT_AGILITY)
+                return 'agi';
+            if ($mv == STAT_STAMINA)
+                return 'sta';
+            if ($mv == STAT_INTELLECT)
+                return 'int';
+            if ($mv == STAT_SPIRIT)
+                return 'spi';
+        };
 
         foreach ($this->iterate() as $id => $__)
         {
             for ($i = 1; $i < 4; $i++)
             {
-                $pts = $this->calculateAmountForCurrent($i)[1];
-                $mv  = $this->curTpl['effect'.$i.'MiscValue'];
-                $au  = $this->curTpl['effect'.$i.'AuraId'];
+                $pts      = $this->calculateAmountForCurrent($i)[1];
+                $mv       = $this->getField('effect'.$i.'MiscValue');
+                $mvB      = $this->getField('effect'.$i.'MiscValueB');
+                $au       = $this->getField('effect'.$i.'AuraId');
+                $class    = $this->getField('equippedItemClass');
+                $subClass = $this->getField('equippedItemSubClassMask');
 
                 /*  ISSUE!
                     mods formated like ['<statName>' => [<points>, 'percentOf', '<statName>']] are applied as multiplier and not
                     as a flat value (that is equal to the percentage, like they should be). So the stats-table won't show the actual deficit
                 */
 
-                switch ($this->curTpl['effect'.$i.'AuraId'])
+                switch ($au)
                 {
-                    case 101:
-                        $data[$id]['armor'] = [$pts / 100, 'percentOf', 'armor'];
-                        break;
                     case 13:                                // damage done flat
                         // per magic school, omit physical
                         break;
                     case 30:                                // mod skill
                         // diff between character skills and trade skills
                         break;
+                    case 101:                               // Mod Resistance Percent
+                    case 142:                               // Mod Base Resistance Percent
+                        if ($mv == 1)                       // Armor only if explicitly specified only affects armor from equippment
+                            $data[$id]['armor'] = [$pts / 100, 'percentOf', ['armor', 0]];  // todo(high): .. get rid of agi-based armor
+                        else if ($mv)
+                            $modXBySchool($data[$id], 'res', $pts);
+                        break;
+                    case 182:                               // Mod Resistance Of Stat Percent
+                        if ($mv == 1)                       // Armor only if explicitly specified
+                            $data[$id]['armor'] = [$pts / 100, 'percentOf', $jsonStat($mvB)];
+                        else if ($mv)
+                            $modXBySchool($data[$id], 'res', [$pts / 100, 'percentOf', $jsonStat($mvB)]);
+                        break;
                     case 137:                               // mod stat percent
-                        $mask = $mv == -1 ? 0x1F : (1 << $mv);
-                        for ($j = 0; $j < 5; $j++)
-                            if ($mask & (1 << $j))
-                                $data[$id][Game::$itemMods[$j + 3]] = [$pts / 100, 'percentOf', Game::$itemMods[$j + 3]];
-
+                        if ($mv > 0)                        // one stat
+                            $modXByStat($data[$id], null, $pts);
+                        else if ($mv < 0)                   // all stats
+                            for ($iMod = ITEM_MOD_AGILITY; $iMod <= ITEM_MOD_STAMINA; $iMod++)
+                                $data[$id][Game::$itemMods[$iMod]] = [$pts / 100, 'percentOf', Game::$itemMods[$iMod]];
+                        break;
+                    case 174:                               // Mod Spell Damage Of Stat Percent
+                        $mv = $mv ?: SPELL_MAGIC_SCHOOLS;
+                        $modXBySchool($data[$id], 'spldmg', [$pts / 100, 'percentOf', $jsonStat($mvB)]);
+                        break;
+                    case 212:                               // Mod Ranged Attack Power Of Stat Percent
+                        $modXByStat($data[$id], 'rgdatkpwr', $pts);
+                        break;
+                    case 268:                               // Mod Attack Power Of Stat Percent
+                        $modXByStat($data[$id], 'mleatkpwr', $pts);
+                        break;
+                    case 175:                               // Mod Spell Healing Of Stat Percent
+                        $modXByStat($data[$id], 'splheal', $pts);
+                        break;
+                    case 219:                               // Mod Mana Regeneration from Stat
+                        $modXByStat($data[$id], 'manargn', $pts);
+                        break;
+                    case 134:                               // Mod Mana Regeneration Interrupt
+                        $data[$id]['icmanargn'] = [$pts / 100, 'percentOf', 'oocmanargn'];
+                        break;
+                    case 57:                                // Mod Spell Crit Chance
+                        $mv = $mv ?: SPELL_MAGIC_SCHOOLS;
+                        $modXBySchool($data[$id], 'splcritstrkpct', [$pts, 'add']);
+                        break;
+                    case 285:                               // Mod Attack Power Of Armor
+                        $data[$id]['mleatkpwr'] = [1 / $pts, 'percentOf', 'armor'];
+                        $data[$id]['rgdatkpwr'] = [1 / $pts, 'percentOf', 'armor'];
+                        break;
+                    case 52:                                // Mod Physical Crit Percent
+                        if ($class < 1 || ($class == ITEM_CLASS_WEAPON && ($subClass & 0x5000C)))
+                            $data[$id]['rgdcritstrkpct'] = [$pts, 'add'];
+                        if ($class < 1 || ($class == ITEM_CLASS_WEAPON && ($subClass & 0xA5F3)))
+                            $data[$id]['mlecritstrkpct'] = [$pts, 'add'];
+                        break;
+                    case 49:                                // Mod Dodge Percent
+                        $data[$id]['dodgepct'] = [$pts, 'add'];
+                        break;
+                    case 133:                               // Mod Increase Health Percent
+                        $data[$id]['health'] = [$pts / 100, 'percentOf', 'health'];
+                        break;
                 }
             }
         }
@@ -630,24 +744,25 @@ class SpellList extends BaseType
         $add     = $ref->getField('effect'.$effIdx.'DieSides');
         $maxLvl  = $ref->getField('maxLevel');
         $baseLvl = $ref->getField('baseLevel');
-        $scaling = $this->curTpl['attributes1'] & 0x200;    // never a referenced spell, ALWAYS $this; SPELL_ATTR1_MELEE_COMBAT_SPELL: 0x200
 
-        if ($scaling)
+        if ($rppl)
         {
             if ($level > $maxLvl && $maxLvl > 0)
                 $level = $maxLvl;
             else if ($level < $baseLvl)
                 $level = $baseLvl;
 
-            $level -= $ref->getField('spellLevel');
+            if (!$ref->getField('atributes0') & 0x40)           // SPELL_ATTR0_PASSIVE
+                $level -= $ref->getField('spellLevel');
+
             $base  += (int)($level * $rppl);
         }
 
         return [
             $add ? $base + 1 : $base,
             $base + $add,
-            $scaling ? '<!--ppl'.$baseLvl.':'.$maxLvl.':'.($base + max(1, $add)).':'.$rppl.'-->' : null,
-            $scaling ? '<!--ppl'.$baseLvl.':'.$maxLvl.':'.($base + $add).':'.$rppl.'-->' : null
+            $rppl ? '<!--ppl'.$baseLvl.':'.$maxLvl.':'.($base + max(1, $add)).':'.$rppl.'-->' : null,
+            $rppl ? '<!--ppl'.$baseLvl.':'.$maxLvl.':'.($base + $add).':'.$rppl.'-->' : null
         ];
     }
 
