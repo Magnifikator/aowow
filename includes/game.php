@@ -120,8 +120,11 @@ class Game
         if (($mask & 0x1C000) == 0x1C000)                   // special case resilience
             return ITEM_MOD_RESILIENCE_RATING;
 
-        if (($mask & 0x00E0) == 0x00E0)                     // special case hit rating
+        if (($mask & 0x00E0) == 0x00E0)                     // hit rating - all subcats (mle, rgd, spl)
             return ITEM_MOD_HIT_RATING;
+
+        if (($mask & 0x0700) == 0x0700)                     // crit rating - all subcats (mle, rgd, spl)
+            return ITEM_MOD_CRIT_RATING;
 
         for ($j = 0; $j < count(self::$combatRatingToItemMod); $j++)
         {

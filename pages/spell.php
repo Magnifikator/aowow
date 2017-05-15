@@ -1953,6 +1953,8 @@ class SpellPage extends GenericPage
                             case 229:                       // Mod AoE Damage Avoidance
                             case 271:                       // Mod Damage Percent Taken Form Caster
                             case 310:                       // Mod Creature AoE Damage Avoidance
+                            case 237:                       // Mod Spell Damage Of Attack Power
+                            case 238:                       // Mod Spell Healing Of Attack Power
                                 if ($_ = Lang::getMagicSchools($effMV))
                                     $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').Util::asHex($effMV), $_) : $_;
 
@@ -1968,6 +1970,11 @@ class SpellPage extends GenericPage
                             case 107:                       // Flat Modifier
                             case 108:                       // Pct Modifier
                                 if ($_ = Lang::spell('spellModOp', $effMV))
+                                    $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
+
+                                break;
+                            case 132:                       // Mod Increase Energy Percent
+                                if ($_ = Lang::spell('powerTypes', $effMV))
                                     $bar = User::isInGroup(U_GROUP_EMPLOYEE) ? sprintf(Util::$dfnString, 'MiscValue'.Lang::main('colon').$effMV, $_) : $_;
 
                                 break;

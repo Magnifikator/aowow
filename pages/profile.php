@@ -39,6 +39,9 @@ class ProfilePage extends GenericPage
             if ($this->subject->error)
                 $this->notFound();
 
+            if (($this->subject->getField('cuFlags') & PROFILER_CU_DELETED) && !User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+                $this->notFound();
+
             if ($this->subject->isCustom())
                 $this->isCustom  = true;
             else

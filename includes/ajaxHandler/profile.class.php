@@ -455,6 +455,10 @@ class AjaxProfile extends AjaxHandler
             return;
         }
 
+        if (($pBase['cuFlags'] & PROFILER_CU_DELETED) && !User::isInGroup(U_GROUP_ADMIN | U_GROUP_BUREAU))
+            return;
+
+
         $rData = [];
         foreach (Profiler::getRealms() as $rId => $rData)
             if ($rId == $pBase['realm'])

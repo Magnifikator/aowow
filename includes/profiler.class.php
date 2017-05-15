@@ -311,6 +311,7 @@ class Profiler
          * 18: extraSocket [only check existance]
          * 21 - 30: randomProp enchantments
          */
+        DB::Aowow()->query('DELETE FROM ?_profiler_items WHERE id = ?d', $profileId);
         $items = DB::Characters($realmId)->select('SELECT ci.slot AS ARRAY_KEY, ii.itemEntry, ii.enchantments, ii.randomPropertyId FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = ?d AND bag = 0 AND slot BETWEEN 0 AND 18', $char['guid']);
         foreach ($items as $slot => $item)
         {
@@ -338,7 +339,7 @@ class Profiler
                 'gem4'        => 0                  // not used, items can have a max of 3 sockets (including extraSockets) but is expected by js
             );
 
-            DB::Aowow()->query('REPLACE INTO ?_profiler_items (?#) VALUES (?a)', array_keys($data), array_values($data));
+            DB::Aowow()->query('INSERT INTO ?_profiler_items (?#) VALUES (?a)', array_keys($data), array_values($data));
         }
 
         CLI::write(' ..inventory');
@@ -387,6 +388,33 @@ class Profiler
         // known skills (professions only)
         $skAllowed = DB::Aowow()->selectCol('SELECT id FROM ?_skillline WHERE typeCat IN (9, 11) AND (cuFlags & ?d) = 0', CUSTOM_EXCLUDE_FOR_LISTVIEW);
         $skills    = DB::Characters($realmId)->select('SELECT ?d AS id, ?d AS `type`, skill AS typeId, `value` AS cur, max FROM character_skills WHERE guid = ?d AND skill IN (?a)', $profileId, TYPE_SKILL, $char['guid'], $skAllowed);
+
+        // manually apply racial profession bonuses
+        foreach ($skills as &$sk)
+        {
+            // Blood Elves - Arcane Affinity
+            if ($sk['typeId'] == 333 && $char['race'] == 10)
+            {
+                $sk['cur'] += 10;
+                $sk['max'] += 10;
+            }
+            // Draenei - Gemcutting
+            if ($sk['typeId'] == 755 && $char['race'] == 11)
+            {
+                $sk['cur'] += 5;
+                $sk['max'] += 5;
+            }
+            // Tauren - Cultivation
+            // Gnomes - Engineering Specialization
+            if (($sk['typeId'] == 182 && $char['race'] == 6) ||
+                ($sk['typeId'] == 202 && $char['race'] == 7))
+            {
+                $sk['cur'] += 15;
+                $sk['max'] += 15;
+            }
+        }
+
+
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SKILL, $profileId);
         foreach (Util::createSqlBatchInsert($skills) as $sk)
             DB::Aowow()->query('INSERT INTO ?_profiler_completion (?#) VALUES '.$sk, array_keys($skills[0]));

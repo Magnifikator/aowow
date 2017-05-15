@@ -2548,7 +2548,8 @@ function ProfilerStatistics(_parent) {
             },
 
             agi: {
-                tooltipModifiers: ['mleatkpwr', 'mlecritstrkpct', 'armor'],
+                // tooltipModifiers: ['mleatkpwr', 'mlecritstrkpct', 'armor'], - aowow replacement
+                tooltipModifiers: ['mleatkpwr', 'mlecritstrkpct', 'fullarmor'],
                 addModifiers: function () {
                     var
                         raceData  = g_statistics.race[_profile.race],
@@ -2560,7 +2561,8 @@ function ProfilerStatistics(_parent) {
                         rgdatkpwr: [classData[1][2], 'percentOf', ['agi', (classData[1][2] ? (classData[1][0] / (classData[1][1] ? 2 : 1)) : 0)]],
                         mlecritstrkpct: [levelData[7], 'percentOf', ['agi', classData[2][0]]],
                         rgdcritstrkpct: [levelData[7], 'percentOf', ['agi', classData[2][0]]],
-                        armor: [2, 'percentOf', 'agi'],
+                        // armor: [2, 'percentOf', 'agi'], - aowow replacement
+                        fullarmor: [2, 'percentOf', 'agi'],
                         dodgepct: [levelData[9], 'percentOf', ['agi', -levelData[9] * ((raceData ? raceData[1] : 0) + levelData[1])]]
                     };
                 }
@@ -2794,7 +2796,9 @@ function ProfilerStatistics(_parent) {
             icmanargn: {},
 
             // ********* Defenses ********
-            armor: {
+            // armor: { - aowow replacement
+            fullarmor: {
+                label: 'pr_stats_armor', // - aowow added
                 getTooltip: function () {
                     return LANG['pr_statstt_armor' + (_profile.classs == 3 || _profile.classs == 9 ? 2 : '')];
                 },
@@ -2810,7 +2814,16 @@ function ProfilerStatistics(_parent) {
                 },
                 addModifiers: function () {
                     return {
-                        petarmor: [0.35, 'percentOf', 'armor']
+                        // petarmor: [0.35, 'percentOf', 'armor'] - aowow replacement
+                        petarmor: [0.35, 'percentOf', 'fullarmor']
+                    }
+                }
+            },
+
+            armor: { // aowow - added this so we can correctly calc talents that only modify equipped armor values
+                addModifiers: function () {
+                    return {
+                        fullarmor: [1, 'percentOf', 'armor']
                     }
                 }
             },
@@ -3067,7 +3080,8 @@ function ProfilerStatistics(_parent) {
         // Defenses
         [
             {id: 'defenses', type: 'title' },
-            { id: 'armor' },
+            // { id: 'armor' }, // - aowow replacement
+            { id: 'fullarmor' },
             { id: 'def' },
             { id: 'dodgepct' },
             { id: 'parrypct' },
@@ -3823,6 +3837,8 @@ function ProfilerStatistics(_parent) {
                             $WH.st(boxStat.bar.firstChild.firstChild, _getStatBoxLabel(statId) + ' ' + value);
                             boxStat.bar.style.display = (value > 0 ? '' : 'none');
                         }
+                        else
+                            boxStat.bar.style.display = 'none';
 
                         break;
                     case 'resist':
