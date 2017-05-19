@@ -260,7 +260,12 @@ class Lang
             if ($mask & (1 << $k) && $str)
                 $tmp[] = $str;
 
-        return implode(', ', $tmp);
+        if (!$tmp && $class == ITEM_CLASS_ARMOR)
+            return self::spell('cat', -11, 8);
+        else if (!$tmp && $class == ITEM_CLASS_WEAPON)
+            return self::spell('cat', -11, 6);
+        else
+            return implode(', ', $tmp);
     }
 
     public static function getStances($stanceMask)

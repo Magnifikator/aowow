@@ -1470,6 +1470,8 @@ function Profiler() {
         $WH.ae(li, div);
         $WH.ae(_ulQuickFacts, li);
 
+        _updateGearScore();
+
         // Spec
         li = $WH.ce('li');
         _divSpec = div = $WH.ce('div');
@@ -4379,7 +4381,8 @@ function ProfilerInventory(_parent) {
             if (item[2] && g_enchants[item[2]]) {
                 gearscore[i].ench += bonus;
             }
-            else {
+            // else {                                       // aowow - adds 20 even if the slot is empty .. what?
+            else if (item[0]) {
                 gearscore[i].item += bonus;
             }
 
@@ -9067,6 +9070,7 @@ Listview.templates.itempicker = {
                 }
 
                 return (
+                    -$WH.strcmp(a.gearscore, b.gearscore) ||
                     -$WH.strcmp(a.level, b.level) ||
                     -$WH.strcmp(a.quality, b.quality) ||
                     $WH.strcmp(a.name, b.name)
@@ -9353,6 +9357,7 @@ Listview.templates.gempicker = {
                 }
 
                 return (
+                    -$WH.strcmp(a.gearscore, b.gearscore) ||
                     -$WH.strcmp(a.quality, b.quality) ||
                     $WH.strcmp(a.colors, b.colors) ||
                     $WH.strcmp(a.icon, b.icon) ||
@@ -9522,7 +9527,10 @@ Listview.templates.enchantpicker = {
                     return 1;
                 }
 
-                return $WH.strcmp(a.name, b.name);
+                return (
+                    -$WH.strcmp(a.gearscore, b.gearscore) ||
+                    $WH.strcmp(a.name, b.name)
+                );
             }
         },
         {

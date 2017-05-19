@@ -63,7 +63,7 @@ class ProfilePage extends GenericPage
             // 1) already synced to aowow
             if ($subject = DB::Aowow()->selectRow('SELECT id, realmGUID, cuFlags FROM ?_profiler_profiles WHERE realm = ?d AND name = ?', $this->realmId, Util::ucFirst($this->subjectName)))
             {
-                if ($subject['cuFlags'] & PROFILER_CU_NEEDS_RESYC)
+                if ($subject['cuFlags'] & PROFILER_CU_NEEDS_RESYNC)
                 {
                     $this->handleIncompleteData($params, $subject['realmGUID']);
                     return;
@@ -86,7 +86,7 @@ class ProfilePage extends GenericPage
             else if ($char = DB::Characters($this->realmId)->selectRow('SELECT c.guid AS realmGUID, c.name, c.race, c.class, c.level, c.gender, IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.name = ? AND level <= ?d AND (extra_flags & ?d) = 0', Util::ucFirst($this->subjectName), MAX_LEVEL, 0x7D))
             {
                 $char['realm']   = $this->realmId;
-                $char['cuFlags'] = PROFILER_CU_NEEDS_RESYC;
+                $char['cuFlags'] = PROFILER_CU_NEEDS_RESYNC;
 
                 // create entry from realm with enough basic info to disply tooltips
                 DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES (?a)', array_keys($char), array_values($char));
@@ -112,7 +112,7 @@ class ProfilePage extends GenericPage
 /* ruby */  39863,
 /*          Valanar, Lana'thel, Saurfang, Festergut, Deathwisper, Marrowgar, Putricide, Rotface, Sindragosa, Valithria, Lich King */
 /* icc  */  37970,   37955,     37813,    36626,     36855,       36612,     36678,     36627,   36853,      36789,     36597,
-/*          Jaraxxus, Anub'arak                                                                             */
+/*          Jaraxxus, Anub'arak                                                                                                   */
 /* toc  */  34780,    34564,
 /*          Onyxia                                                                                                                */
 /* ony  */  10184

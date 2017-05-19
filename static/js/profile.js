@@ -411,17 +411,12 @@ function pr_getGearScoreQuality(level, gearScore, relics, slotId, use2h)
             totalMod *= 2;
     }
 
-    if(level > 80)
-        baseScore = ((level - 80) * 12) + 293;
-    else if(level > 70)
-        baseScore = ((level - 70) *  6) + 140;
+    if(level > 70)
+        baseScore = ((level - 70) *  9.5) + 105;
     else if(level > 60)
-        baseScore = ((level - 60) *  4) +  80;
+        baseScore = ((level - 60) *  4.5) +  60;
     else
         baseScore = level + 5;
-
-    if(level <= 80)
-        baseScore *= 1.2;
 
     if(gearScore >= baseScore * totalMod * 1.25)
         quality = 5; // Legendary

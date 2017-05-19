@@ -299,7 +299,7 @@ define('PROFILER_CU_PUBLISHED',             0x01);
 define('PROFILER_CU_PINNED',                0x02);
 define('PROFILER_CU_DELETED',               0x04);
 define('PROFILER_CU_PROFILE',               0x08);
-define('PROFILER_CU_NEEDS_RESYC',           0x10);
+define('PROFILER_CU_NEEDS_RESYNC',          0x10);
 
 define('MAX_LEVEL',                         80);
 define('WOW_BUILD',                         12340);

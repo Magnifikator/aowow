@@ -39,13 +39,14 @@ class ProfileList extends BaseType
                 'talenttree3'       => $this->getField('talenttree3'),
                 'talentspec'        => $this->getField('activespec') + 1,             // 0 => 1; 1 => 2
                 'achievementpoints' => $this->getField('achievementpoints'),
-                'guild'             => '$"'.$this->getField('guild').'"',       // force this so be a string
+                'guild'             => '$"'.$this->getField('guild').'"',       // force this to be a string
                 'guildrank'         => $this->getField('guildRank'),
                 'realm'             => Profiler::urlize($this->getField('realmName')),
                 'realmname'         => $this->getField('realmName'),
              // 'battlegroup'       => Profiler::urlize($this->getField('battlegroup')),  // was renamed to subregion somewhere around cata release
              // 'battlegroupname'   => $this->getField('battlegroup'),
-                'published'         => (int)!!($this->getField('cuFlags') & PROFILER_CU_PUBLISHED)
+                'published'         => (int)!!($this->getField('cuFlags') & PROFILER_CU_PUBLISHED),
+                'gearscore'         => $this->getField('gearscore')
             );
 
             // for the lv this determins if the link is profile=<id> or profile=<region>.<realm>.<name>
@@ -487,15 +488,15 @@ class RemoteProfileList extends ProfileList
                 'gender'    => $this->getField('gender'),
                 'guild'     => $this->getField('guild'),
                 'guildrank' => $this->getField('guild') ? $this->getField('guildRank') : null,
-                'cuFlags'   => PROFILER_CU_NEEDS_RESYC
+                'cuFlags'   => PROFILER_CU_NEEDS_RESYNC
             );
 
         foreach (Util::createSqlBatchInsert($data) as $ins)
             DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES '.$ins, array_keys(reset($data)));
 
         // merge back local ids
-        $localIds = DB::Aowow()->selectCol(
-            'SELECT CONCAT(realm, ":", realmGUID) AS ARRAY_KEY, id FROM ?_profiler_profiles WHERE (cuFlags & ?d) = 0 AND realm IN (?a) AND realmGUID IN (?a)',
+        $localIds = DB::Aowow()->select(
+            'SELECT CONCAT(realm, ":", realmGUID) AS ARRAY_KEY, id, gearscore FROM ?_profiler_profiles WHERE (cuFlags & ?d) = 0 AND realm IN (?a) AND realmGUID IN (?a)',
             PROFILER_CU_PROFILE,
             array_column($data, 'realm'),
             array_column($data, 'realmGUID')
@@ -503,7 +504,7 @@ class RemoteProfileList extends ProfileList
 
         foreach ($this->iterate() as $guid => &$_curTpl)
             if (isset($localIds[$guid]))
-                $_curTpl['id'] = $localIds[$guid];
+                $_curTpl = array_merge($_curTpl, $localIds[$guid]);
     }
 
     public function selectRealms($fi)

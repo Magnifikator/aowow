@@ -230,8 +230,84 @@ class Profiler
         if (!$char)
             return false;
 
+        // reminder: this query should not fail: a placeholder entry is created as soon as a char listview is created or profile detail page is called
+        $profileId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $char['guid']);
+
         CLI::write('fetching char #'.$charGuid.' from realm #'.$realmId);
         CLI::write('writing...');
+
+
+        /*************/
+        /* equipment */
+        /*************/
+
+        /* enchantment-Indizes
+         *  0: permEnchant
+         *  3: tempEnchant
+         *  6: gem1
+         *  9: gem2
+         * 12: gem3
+         * 15: socketBonus [not used]
+         * 18: extraSocket [only check existance]
+         * 21 - 30: randomProp enchantments
+         */
+
+
+        DB::Aowow()->query('DELETE FROM ?_profiler_items WHERE id = ?d', $profileId);
+        $items     = DB::Characters($realmId)->select('SELECT ci.slot AS ARRAY_KEY, ii.itemEntry, ii.enchantments, ii.randomPropertyId FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = ?d AND bag = 0 AND slot BETWEEN 0 AND 18', $char['guid']);
+
+        $gemItems = [];
+        $permEnch = [];
+        $mhItem   = 0;
+        $ohItem   = 0;
+
+        foreach ($items as $slot => $item)
+        {
+            $ench  = explode(' ', $item['enchantments']);
+            $gEnch = [];
+            foreach ([6, 9, 12] as $idx)
+                if ($ench[$idx])
+                    $gEnch[$idx] = $ench[$idx];
+
+            if ($gEnch)
+            {
+                $gi = DB::Aowow()->selectCol('SELECT gemEnchantmentId AS ARRAY_KEY, id FROM ?_items WHERE class = 3 AND gemEnchantmentId IN (?a)', $gEnch);
+                foreach ($gEnch as $eId)
+                {
+                    if (isset($gemItems[$eId]))
+                        $gemItems[$eId][1]++;
+                    else
+                        $gemItems[$eId] = [$gi[$eId], 1];
+                }
+            }
+
+            if ($slot + 1 == 16)
+                $mhItem = $item['itemEntry'];
+            if ($slot + 1 == 17)
+                $ohItem = $item['itemEntry'];
+
+            if ($ench[0])
+                $permEnch[$slot] = $ench[0];
+
+            $data = array(
+                'id'          => $profileId,
+                'slot'        => $slot + 1,
+                'item'        => $item['itemEntry'],
+                'subItem'     => $item['randomPropertyId'],
+                'permEnchant' => $ench[0],
+                'tempEnchant' => $ench[3],
+                'extraSocket' => (int)!!$ench[18],
+                'gem1'        => isset($gemItems[$ench[6]])  ? $gemItems[$ench[6]][0]  : 0,
+                'gem2'        => isset($gemItems[$ench[9]])  ? $gemItems[$ench[9]][0]  : 0,
+                'gem3'        => isset($gemItems[$ench[12]]) ? $gemItems[$ench[12]][0] : 0,
+                'gem4'        => 0                  // serverside items cant have more than 3 sockets. (custom profile thing)
+            );
+
+            DB::Aowow()->query('INSERT INTO ?_profiler_items (?#) VALUES (?a)', array_keys($data), array_values($data));
+        }
+
+        CLI::write(' ..inventory');
+
 
         /**************/
         /* basic info */
@@ -262,10 +338,15 @@ class Profiler
             'glyphs2'      => '',
             'activespec'   => $char['activespec'],
             'guild'        => $char['guild'],
-            'guildRank'    => $char['guildRank']
+            'guildRank'    => $char['guildRank'],
+            'gearscore'    => 0
         );
 
-        // talents + glyphs
+
+        /********************/
+        /* talents + glyphs */
+        /********************/
+
         $t = DB::Characters($realmId)->selectCol('SELECT spec AS ARRAY_KEY, spell AS ARRAY_KEY2, spell FROM character_talent WHERE guid = ?d', $char['guid']);
         $g = DB::Characters($realmId)->select('SELECT spec AS ARRAY_KEY, glyph1 AS g1, glyph2 AS g4, glyph3 AS g5, glyph4 AS g2, glyph5 AS g3, glyph6 AS g6 FROM character_glyphs WHERE guid = ?d', $char['guid']);
         for ($i = 0; $i < 2; $i++)
@@ -293,59 +374,53 @@ class Profiler
             }
         }
 
+        $t = array(
+            'spent' => [$data['talenttree1'], $data['talenttree2'], $data['talenttree3']],
+            'spec'  => 0
+        );
+        if ($t['spent'][0] > $t['spent'][1] && $t['spent'][0] > $t['spent'][2])
+            $t['spec'] = 1;
+        else if ($t['spent'][1] > $t['spent'][0] && $t['spent'][1] > $t['spent'][2])
+            $t['spec'] = 2;
+        else if ($t['spent'][2] > $t['spent'][1] && $t['spent'][2] > $t['spent'][0])
+            $t['spec'] = 3;
+
+        // calc gearscore
+        if ($items)
+            $data['gearscore'] += (new ItemList(array(['id', array_column($items, 'itemEntry')])))->getScoreTotal($data['class'], $t, $mhItem, $ohItem);
+        if ($gemItems)
+        {
+            $gemScores = new ItemList(array(['id', array_column($gemItems, 0)]));
+            foreach ($gemItems as list($itemId, $mult))
+                if (isset($gemScores->json[$itemId]['gearscore']))
+                    $data['gearscore'] += $gemScores->json[$itemId]['gearscore'] * $mult;
+        }
+        if ($permEnch)                                      // fuck this shit .. we are guestimating this!
+        {
+            // enchantId => multiple spells => multiple items with varying itemlevels, quality, whatevs
+            // cant reasonably get to the castItem from enchantId and slot
+
+            $profSpec = DB::Aowow()->selectCol('SELECT id AS ARRAY_KEY, skillLevel AS "1", skillLine AS "0" FROM ?_itemenchantment WHERE id IN (?a)', $permEnch);
+            foreach ($permEnch as $eId)
+            {
+                if ($x = Util::getEnchantmentScore(0, 0, !!$profSpec[$eId][1], $eId))
+                    $data['gearscore'] += $x;
+                else if ($profSpec[$eId][0] != 776)         // not runeforging
+                    $data['gearscore'] += 17;               // assume high quality enchantment for unknown cases
+            }
+        }
+
         $data['lastupdated'] = time();
 
         DB::Aowow()->query('UPDATE ?_profiler_profiles SET ?a WHERE realm = ?d AND realmGUID = ?d', $data, $realmId, $charGuid);
-        $profileId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $char['guid']);
 
         CLI::write(' ..basic info');
 
-        // equipment
-        /* enchantment-Indizes
-         *  0: permEnchant
-         *  3: tempEnchant
-         *  6: gem1
-         *  9: gem2
-         * 12: gem3
-         * 15: socketBonus [not used]
-         * 18: extraSocket [only check existance]
-         * 21 - 30: randomProp enchantments
-         */
-        DB::Aowow()->query('DELETE FROM ?_profiler_items WHERE id = ?d', $profileId);
-        $items = DB::Characters($realmId)->select('SELECT ci.slot AS ARRAY_KEY, ii.itemEntry, ii.enchantments, ii.randomPropertyId FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = ?d AND bag = 0 AND slot BETWEEN 0 AND 18', $char['guid']);
-        foreach ($items as $slot => $item)
-        {
-            $ench   = explode(' ', $item['enchantments']);
-            $gEnch  = [];
-            $gitems = [];
-            foreach ([6, 9, 12] as $idx)
-                if ($ench[$idx])
-                    $gEnch[$idx] = $ench[$idx];
 
-            if ($gEnch)
-                $gItems = DB::Aowow()->selectCol('SELECT gemEnchantmentId AS ARRAY_KEY, id FROM ?_items WHERE class = 3 AND gemEnchantmentId IN (?a)', $gEnch);
+        /***************/
+        /* hunter pets */
+        /***************/
 
-            $data = array(
-                'id'          => $profileId,
-                'slot'        => $slot + 1,
-                'item'        => $item['itemEntry'],
-                'subItem'     => $item['randomPropertyId'],
-                'permEnchant' => $ench[0],
-                'tempEnchant' => $ench[3],
-                'extraSocket' => (int)!!$ench[18],
-                'gem1'        => isset($gItems[$ench[6]])  ? $gItems[$ench[6]]  : 0,
-                'gem2'        => isset($gItems[$ench[9]])  ? $gItems[$ench[9]]  : 0,
-                'gem3'        => isset($gItems[$ench[12]]) ? $gItems[$ench[12]] : 0,
-                'gem4'        => 0                  // not used, items can have a max of 3 sockets (including extraSockets) but is expected by js
-            );
-
-            DB::Aowow()->query('INSERT INTO ?_profiler_items (?#) VALUES (?a)', array_keys($data), array_values($data));
-        }
-
-        CLI::write(' ..inventory');
-
-
-        // hunter pets
         if ((1 << ($char['class'] - 1)) == CLASS_HUNTER)
         {
             $pets = DB::Characters($realmId)->select('SELECT id AS ARRAY_KEY, id, entry, modelId, name FROM character_pet WHERE owner = ?d', $charGuid);
@@ -413,7 +488,7 @@ class Profiler
                 $sk['max'] += 15;
             }
         }
-
+        unset($sk);
 
         DB::Aowow()->query('DELETE FROM ?_profiler_completion WHERE `type` = ?d AND id = ?d', TYPE_SKILL, $profileId);
         foreach (Util::createSqlBatchInsert($skills) as $sk)
@@ -480,9 +555,44 @@ class Profiler
         // guilds
 
         // arena teams
+        $teams = DB::Characters($realmId)->select('SELECT at.arenaTeamId AS ARRAY_KEY, at.name, at.type, IF(at.captainGuid = atm.guid, 1, 0) AS captain, atm.* FROM arena_team at JOIN arena_team_member atm ON atm.arenaTeamId = at.arenaTeamId WHERE atm.guid = ?d', $char['guid']);
+        foreach ($teams as $rGuid => $t)
+        {
+            $teamId = 0;
+            if (!($teamId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_arena_team WHERE realm = ?d AND realmGUID = ?d', $realmId, $rGuid)))
+            {
+                $team = array(                                  // only most basic data
+                    'realm'     => $realmId,
+                    'realmGUID' => $rGuid,
+                    'name'      => $t['name'],
+                    'type'      => $t['type'],
+                    'cuFlags'   => PROFILER_CU_NEEDS_RESYNC
+                );
 
-        // mark char as done
-        DB::Aowow()->query('UPDATE ?_profiler_profiles SET cuFlags = cuFlags & ?d WHERE id = ?d', ~PROFILER_CU_NEEDS_RESYC, $profileId);
+                $teamId = DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_arena_team (?#) VALUES (?a)', array_keys($team), array_values($team));
+            }
+
+            $member = array(
+                'arenaTeamId'    => $teamId,
+                'profileId'      => $profileId,
+                'captain'        => $t['captain'],
+                'weekGames'      => $t['weekGames'],
+                'weekWins'       => $t['weekWins'],
+                'seasonGames'    => $t['seasonGames'],
+                'seasonWins'     => $t['seasonWins'],
+                'personalRating' => $t['personalRating']
+            );
+
+            DB::Aowow()->query('INSERT INTO ?_profiler_arena_team_member (?#) VALUES (?a) ON DUPLICATE KEY UPDATE ?a', array_keys($member), array_values($member), array_slice($member, 2));
+        }
+
+        CLI::write(' ..associated arena teams');
+
+        /*********************/
+        /* mark char as done */
+        /*********************/
+
+        DB::Aowow()->query('UPDATE ?_profiler_profiles SET cuFlags = cuFlags & ?d WHERE id = ?d', ~PROFILER_CU_NEEDS_RESYNC, $profileId);
 
         return true;
     }

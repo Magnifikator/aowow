@@ -150,7 +150,7 @@ class ProfilesPage extends GenericPage
             'name'        => '$LANG.tab_characters',
             'hideCount'   => 1,
             // 'roster'      => 3,
-            'visibleCols' => "$['race', 'classs', 'level', 'talents', 'achievementpoints']",
+            'visibleCols' => "$['race', 'classs', 'level', 'talents', 'achievementpoints', 'gearscore']",
             'onBeforeCreate' => '$pr_initRosterListview'        // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
         );
 

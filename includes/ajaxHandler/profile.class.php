@@ -34,6 +34,7 @@ class AjaxProfile extends AjaxHandler
         'source'       => [FILTER_SANITIZE_NUMBER_INT, null],
         'copy'         => [FILTER_SANITIZE_NUMBER_INT, null],
         'public'       => [FILTER_SANITIZE_NUMBER_INT, null],
+        'gearscore'    => [FILTER_SANITIZE_NUMBER_INT, null],
         'inv'          => [FILTER_CALLBACK, ['options' => 'AjaxProfile::checkItemString', 'flags' => FILTER_REQUIRE_ARRAY]],
     );
 
@@ -306,7 +307,7 @@ class AjaxProfile extends AjaxHandler
             'activespec'   => $this->_post['activespec'],
             'glyphs1'      => $this->_post['glyphs1'],
             'glyphs2'      => $this->_post['glyphs2'],
-            // 'gearscore'    => 0,                            // $this->_post['gearscore'],
+            'gearscore'    => $this->_post['gearscore'],
             'icon'         => $this->_post['icon'],
             'cuFlags'      => PROFILER_CU_PROFILE | ($this->_post['public'] ? PROFILER_CU_PUBLISHED : 0)
         );
@@ -543,6 +544,14 @@ class AjaxProfile extends AjaxHandler
         if ($_ = DB::Aowow()->selectCol('SELECT accountId FROM ?_account_profiles WHERE profileId = ?d', $pBase['id']))
             $profile['bookmarks'] = $_;
 
+        // arena teams - [size(2|3|5) => DisplayName]; DisplayName gets urlized to use as link
+        if ($at = DB::Aowow()->selectCol('SELECT type AS ARRAY_KEY, name FROM ?_profiler_arena_team at JOIN ?_profiler_arena_team_member atm ON atm.arenaTeamId = at.id WHERE atm.profileId = ?d', $pBase['id']))
+            $profile['arenateams'] = $at;
+
+        // pets if hunter fields: [name:name, family:petFamily, npc:npcId, displayId:modelId, talents:talentString]
+        if ($pets = DB::Aowow()->select('SELECT name, family, npc, displayId, talents FROM ?_profiler_pets WHERE owner = ?d', $pBase['id']))
+            $profile['pets'] = $pets;
+
         // source for custom profiles; profileId => [name, ownerId, iconString(optional)]
         if ($customs = DB::Aowow()->select('SELECT id AS ARRAY_KEY, name, user, icon FROM ?_profiler_profiles WHERE sourceId = ?d AND sourceId <> id', $pBase['id']))
         {
@@ -557,20 +566,12 @@ class AjaxProfile extends AjaxHandler
 
 
         /* $profile[]
-            // ToDo
-            'arenateams'        => [],                      // [size(2|3|5) => DisplayName]; DisplayName gets urlized to use as link
-
             // CUSTOM
             'auras'             => [],                      // custom list of buffs, debuffs [spellId]
 
             // UNUSED
             'glyphs'            => [],                      // provided list of already known glyphs (post cataclysm feature)
         */
-
-
-        // pets if hunter fields: [name:name, family:petFamily, npc:npcId, displayId:modelId, talents:talentString]
-        if ($pets = DB::Aowow()->select('SELECT name, family, npc, displayId, talents FROM ?_profiler_pets WHERE owner = ?d', $pBase['id']))
-            $profile['pets'] = $pets;
 
 
         $completion = DB::Aowow()->select('SELECT type AS ARRAY_KEY, typeId AS ARRAY_KEY2, cur, max FROM ?_profiler_completion WHERE id = ?d', $pBase['id']);
@@ -703,10 +704,6 @@ class AjaxProfile extends AjaxHandler
             // $buff .= "\n";
         // }
 
-        /* depending on progress-achievements
-            // required by progress in JScript move to handleLoad()?
-            Util::$pageTemplate->extendGlobalIds(TYPE_NPC, [29120, 31134, 29306, 29311, 23980, 27656, 26861, 26723, 28923, 15991]);
-        */
 
         // load available titles
         Util::loadStaticFile('p-titles-'.$pBase['gender'], $buff, true);

@@ -15694,6 +15694,24 @@ Listview.templates = {
                 hidden: 1
             },
             {
+                id: 'gearscore',
+                name: LANG.gearscore,
+                tooltip: LANG.gearscore_real,
+                value: 'gearscore',
+                compute: function(profile, td)
+                {
+                    var level = (profile.level ? profile.level : (profile.members !== undefined ? 80 : 0));
+
+                    if (isNaN(profile.gearscore) || !level)
+                        return;
+
+                    td.className = 'q' + pr_getGearScoreQuality(level, profile.gearscore, ($WH.in_array([2, 6, 7, 11], profile.classs) != -1));
+
+                    return (profile.gearscore ? $WH.number_format(profile.gearscore) : 0);
+                },
+                hidden: 1
+            },
+            {
                 id: 'achievementpoints',
                 name: LANG.points,
                 value: 'achievementpoints',

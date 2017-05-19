@@ -1464,7 +1464,7 @@ class SpellPage extends GenericPage
         $subClass = $this->subject->getField('equippedItemSubClassMask');
         $invType  = $this->subject->getField('equippedItemInventoryTypeMask');
 
-        if ($class <= 0 || $subClass <= 0)
+        if ($class <= 0)
             return;
 
         $title = ['Class: '.$class, 'SubClass: '.Util::asHex($subClass)];
@@ -1476,13 +1476,13 @@ class SpellPage extends GenericPage
             if ($invType & (1 << INVTYPE_ROBE))         // Robe => Chest
             {
                 $invType &= ~(1 << INVTYPE_ROBE);
-                $invType &=  (1 << INVTYPE_CHEST);
+                $invType |=  (1 << INVTYPE_CHEST);
             }
 
             if ($invType & (1 << INVTYPE_RANGEDRIGHT))  // Ranged2 => Ranged
             {
                 $invType &= ~(1 << INVTYPE_RANGEDRIGHT);
-                $invType &=  (1 << INVTYPE_RANGED);
+                $invType |=  (1 << INVTYPE_RANGED);
             }
 
             $_ = [];
