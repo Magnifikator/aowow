@@ -8,47 +8,95 @@ if (!defined('AOWOW_REVISION'))
 //  tabId 1: Tools    g_initHeader()
 class ArenaTeamPage extends GenericPage
 {
-    use ProfilerPage;
+    use TrProfiler;
 
+    protected $lvTabs   = [];
 
     protected $tabId    = 1;
     protected $path     = [1, 5, 3];
     protected $tpl      = 'arena-team';
+    protected $mode     = CACHE_TYPE_PAGE;
     protected $js       = ['profile_all.js', 'profile.js'];
     protected $css      = [['path' => 'Profiler.css']];
 
     public function __construct($pageCall, $pageParam)
     {
-        $this->getSubjectFromUrl($pageParam);
-        if (!$this->subjectName)
-            $this->notFound();
+        $params = array_map('urldecode', explode('.', $pageParam));
+        if ($params[0])
+            $params[0] = Profiler::urlize($params[0]);
+        if (isset($params[1]))
+            $params[1] = Profiler::urlize($params[1]);
 
         parent::__construct($pageCall, $pageParam);
 
-        $this->subject = new ArenaTeamList(array(['at.name', $this->subjectName]), ['sv' => $this->realm]);
-        if ($this->subject->error)
+        if (count($params) == 1 && intval($params[0]))
         {
-            $this->doResync = ['arena-team', 123456];
-            $this->initialSync();
-        }
+            $this->subject = new LocalArenaTeamList(array(['at.id', intval($params[0])]));
+            if ($this->subject->error)
+                $this->notFound();
 
-        $this->name = sprintf(Lang::profiler('arenaRoster'), $this->subject->getField('name'));
+            header('Location: '.$this->subject->getProfileUrl(), true, 302);
+        }
+        else if (count($params) == 3)
+        {
+            $this->getSubjectFromUrl($pageParam);
+            if (!$this->subjectName)
+                $this->notFound();
+
+            // 3 possibilities
+            // 1) already synced to aowow
+            if ($subject = DB::Aowow()->selectRow('SELECT id, realmGUID, cuFlags FROM ?_profiler_arena_team WHERE realm = ?d AND name = ?', $this->realmId, Util::ucFirst($this->subjectName)))
+            {
+                if ($subject['cuFlags'] & PROFILER_CU_NEEDS_RESYNC)
+                {
+                    $this->handleIncompleteData($subject['realmGUID']);
+                    return;
+                }
+
+                $this->subjectGUID = $subject['id'];
+                $this->subject     = new LocalArenaTeamList(array(['id', $subject['id']]));
+                if ($this->subject->error)
+                    $this->notFound();
+
+                $this->profile = $params;
+                $this->name = sprintf(Lang::profiler('arenaRoster'), $this->subject->getField('name'));
+            }
+            // 2) not yet synced but exists on realm
+            else if ($team = DB::Characters($this->realmId)->selectRow('SELECT at.arenaTeamId AS realmGUID, at.name, at.type FROM arena_team at WHERE at.name = ?', Util::ucFirst($this->subjectName)))
+            {
+                $team['realm']   = $this->realmId;
+                $team['cuFlags'] = PROFILER_CU_NEEDS_RESYNC;
+
+                // create entry from realm with basic info
+                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_arena_team (?#) VALUES (?a)', array_keys($team), array_values($team));
+
+                $this->handleIncompleteData($team['realmGUID']);
+            }
+            // 3) does not exist at all
+            else
+                $this->notFound();
+        }
+        else
+            $this->notFound();
     }
 
     protected function generateTitle()
     {
-        // poperly format $realm
-        $team  = ($this->subject->getField('name') ?: $this->subjectName);
+        // poperly format $realm; localize me
+        $team  = $this->subjectName;
         $team .= ' ('.$this->realm.' - '.($this->region == 'us' ? 'US &amp; Oceanic' : 'Europe').')';
 
-        array_unshift($this->title, $team, Lang::game('profiles'));
+        array_unshift($this->title, $team, 'Arena Team');
     }
 
     protected function generateContent()
     {
+        if ($this->mode == CACHE_TYPE_NONE)
+            return;
+
         $this->addJS('?data=realms.weight-presets&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
 
-        $this->redButtons[BUTTON_RESYNC] = [1056093, 'arena-team'];
+        $this->redButtons[BUTTON_RESYNC] = [$this->subjectGUID, 'arena-team'];
 
         /****************/
         /* Main Content */
@@ -63,15 +111,15 @@ class ArenaTeamPage extends GenericPage
         /**************/
 
         // tab: members
-        $member = new ProfileList(array(['atm.arenaTeamId', $this->subject->getField('arenaTeamId')]), ['sv' => $this->realm]);
+        $member = new LocalProfileList(array(['patm.arenaTeamId', $this->subjectGUID]));
         if (!$member->error)
         {
-            $info = 0;
+            $info = PROFILEINFO_CHARACTER;
             switch ($this->subject->getField('type'))
             {
-                case 2: $info = PROFILEINFO_ARENA_2S; break;
-                case 3: $info = PROFILEINFO_ARENA_3S; break;
-                case 5: $info = PROFILEINFO_ARENA_5S; break;
+                case 2: $info |= PROFILEINFO_ARENA_2S; break;
+                case 3: $info |= PROFILEINFO_ARENA_3S; break;
+                case 5: $info |= PROFILEINFO_ARENA_5S; break;
             }
 
             $this->lvTabs[] = ['profile', array(
@@ -81,6 +129,23 @@ class ArenaTeamPage extends GenericPage
                 'hiddenCols'  => "$['arenateam','guild','location']"
             )];
         }
+    }
+
+    public function notFound($title = '', $msg = '')
+    {
+        // (Util::ucFirst(Lang::game('emote')), Lang::emote('notFound'))
+        return parent::notFound('Arena Team', 'he\'s dead jim');
+    }
+
+    private function handleIncompleteData($teamGuid)
+    {
+        $this->mode = CACHE_TYPE_NONE;
+
+        //display empty page and queue status
+        $newId = Profiler::scheduleResync(TYPE_ARENA_TEAM, $this->realmId, $teamGuid);
+
+        $this->doResync = ['arena-team', $newId];
+        $this->initialSync();
     }
 }
 

@@ -23,7 +23,22 @@ if (!Profiler::queueLock(getmypid()))
 
 CLI::write('profiler queue started', CLI::LOG_OK);
 set_time_limit(0);
-$tCycle = 0.0;
+$tCycle = microtime(true);
+
+$error = function ($type, $typeId, $realmId)
+{
+    $what = '';
+    if ($type == TYPE_PROFILE)
+        $what = 'char';
+    if ($type == TYPE_GUILD)
+        $what = 'guild';
+    if ($type == TYPE_ARENA_TEAM)
+        $what  = 'arena team';
+
+    DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_CHAR, $realmId, $type, $typeId);
+    trigger_error('prQueue - unknown '.$what.' guid #'.$typeId.' on realm #'.$realmId.' to sync into profiler.', E_USER_WARNING);
+    CLI::write('unknown '.$what.' guid #'.$typeId.' on realm #'.$realmId.' to sync into profiler.', CLI::LOG_WARN);
+};
 
 
 // if (CFG_PROFILER_QUEUE) - wont work because it is not redefined if changed in config
@@ -52,7 +67,7 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
     if (empty(Profiler::getRealms()[$row['realm']]))
     {
         DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_ARMORY, $row['realm'], $row['type'], $row['typeId']);
-        CLI::write('realm #'.$row['realm'].' for character guid '.$row['realmGUID'].' is undefined', CLI::LOG_WARN);
+        CLI::write('realm #'.$row['realm'].' for subject guid '.$row['realmGUID'].' is undefined', CLI::LOG_WARN);
         continue;
     }
     else
@@ -63,9 +78,8 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
         case TYPE_PROFILE:
             if (!Profiler::getCharFromRealm($row['realm'], $row['realmGUID']))
             {
-                DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE realm = ?d AND type = ?d AND typeId = ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_CHAR, $row['realm'], $row['type'], $row['typeId']);
-                trigger_error('prQueue - unknown char guid #'.$row['typeId'].' on realm #'.$row['realm'].' to sync into profiler.', E_USER_WARNING);
-                CLI::write('unknown char guid #'.$row['typeId'].' on realm #'.$row['realm'].' to sync into profiler.', CLI::LOG_WARN);
+                $error(TYPE_PROFILE, $row['realmGUID'], $row['realm']);
+                continue 2;
             }
 
             break;
@@ -73,6 +87,11 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
 
             break;
         case TYPE_ARENA_TEAM:
+            if (!Profiler::getArenaTeamFromRealm($row['realm'], $row['realmGUID']))
+            {
+                $error(TYPE_ARENA_TEAM, $row['realmGUID'], $row['realm']);
+                continue 2;
+            }
 
             break;
         default:

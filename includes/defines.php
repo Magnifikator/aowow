@@ -210,11 +210,10 @@ define('ACHIEVEMENTINFO_PROFILE',           0x1);
 
 define('PROFILEINFO_PROFILE',               0x1);
 define('PROFILEINFO_CHARACTER',             0x2);
-
-// define('PROFILEINFO_GUILD',                 1);             // like &roster
-// define('PROFILEINFO_ARENA_2S',              2);
-// define('PROFILEINFO_ARENA_3S',              3);
-// define('PROFILEINFO_ARENA_5S',              4);
+define('PROFILEINFO_GUILD',                 0x10);          // like &roster
+define('PROFILEINFO_ARENA_2S',              0x20);
+define('PROFILEINFO_ARENA_3S',              0x40);
+define('PROFILEINFO_ARENA_5S',              0x80);
 
 define('SPAWNINFO_ZONES',                   1);             // not a mask, mutually exclusive
 define('SPAWNINFO_SHORT',                   2);

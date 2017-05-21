@@ -20,10 +20,10 @@ class ProfileList extends BaseType
             if ($this->getField('user') && User::$id != $this->getField('user') && !($this->getField('cuFlags') & PROFILER_CU_PUBLISHED))
                 continue;
 
-            if (($addInfo & PROFILEINFO_PROFILE) && !($this->getField('cuFlags') & PROFILER_CU_PROFILE))
+            if (($addInfo & PROFILEINFO_PROFILE) && !$this->isCustom())
                 continue;
 
-            if (($addInfo & PROFILEINFO_CHARACTER) && ($this->getField('cuFlags') & PROFILER_CU_PROFILE))
+            if (($addInfo & PROFILEINFO_CHARACTER) && $this->isCustom())
                 continue;
 
             $data[$this->id] = array(
@@ -45,20 +45,21 @@ class ProfileList extends BaseType
                 'realmname'         => $this->getField('realmName'),
              // 'battlegroup'       => Profiler::urlize($this->getField('battlegroup')),  // was renamed to subregion somewhere around cata release
              // 'battlegroupname'   => $this->getField('battlegroup'),
-                'published'         => (int)!!($this->getField('cuFlags') & PROFILER_CU_PUBLISHED),
                 'gearscore'         => $this->getField('gearscore')
             );
 
-            // for the lv this determins if the link is profile=<id> or profile=<region>.<realm>.<name>
-            if (!($this->getField('cuFlags') & PROFILER_CU_PROFILE))
-                $data[$this->id]['region'] = Profiler::urlize($this->getField('region'));
 
-            // if ($addInfo == PROFILEINFO_ARENA_2S)
-                // $data[$this->id]['rating'] = $this->getField('arenateams')[2]['rating'];
-            // else if ($addInfo == PROFILEINFO_ARENA_3S)
-                // $data[$this->id]['rating'] = $this->getField('arenateams')[3]['rating'];
-            // else if ($addInfo == PROFILEINFO_ARENA_5S)
-                // $data[$this->id]['rating'] = $this->getField('arenateams')[5]['rating'];
+            // for the lv this determins if the link is profile=<id> or profile=<region>.<realm>.<name>
+            if ($this->isCustom())
+                $data[$this->id]['published'] = (int)!!($this->getField('cuFlags') & PROFILER_CU_PUBLISHED);
+            else
+                $data[$this->id]['region']    = Profiler::urlize($this->getField('region'));
+
+            if ($addInfo & (PROFILEINFO_ARENA_2S | PROFILEINFO_ARENA_3S | PROFILEINFO_ARENA_5S))
+            {
+                $data[$this->id]['rating']  = $this->getField('rating');
+                $data[$this->id]['captain'] = $this->getField('captain');
+            }
             // else
                 // $data[$this->id]['arenateams'] = $this->getField('arenateams');
 
@@ -310,11 +311,12 @@ class ProfileListFilter extends Filter
     }
 }
 
+
 class RemoteProfileList extends ProfileList
 {
     protected   $queryBase = 'SELECT `c`.*, `c`.`guid` AS ARRAY_KEY FROM characters c';
     protected   $queryOpts = array(
-                    'c'   => [['gm', 'g', 'ca', 'ct', 'atm'], 'g' => 'ARRAY_KEY', 'o' => 'level DESC, name ASC'],
+                    'c'   => [['gm', 'g', 'ca', 'ct'], 'g' => 'ARRAY_KEY', 'o' => 'level DESC, name ASC'],
                     'gm'  => ['j' => ['guild_member gm ON gm.guid = c.guid', true], 's' => ', gm.rank AS guildRank'],
                     'g'   => ['j' => ['guild g ON g.guildid = gm.guildid', true], 's' => ', g.name AS guild'],
                     'ca'  => ['j' => ['character_achievement ca ON ca.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT ca.achievement SEPARATOR " ") AS _acvs'],
@@ -384,11 +386,12 @@ class RemoteProfileList extends ProfileList
                         $talentCache[$t] = $t;
 
             // arenateam membership
-            if ($arenaTeams = explode(' ', $curTpl['_teamData']))
-                foreach ($arenaTeams as $at)
-                    if ($_ = explode(':', $at))
-                        if (!isset($atCache[$_[0]]))
-                            $atCache[$_[0]] = $_[0];
+            if (isset($curTpl['_teamData']))
+                if ($arenaTeams = explode(' ', $curTpl['_teamData']))
+                    foreach ($arenaTeams as $at)
+                        if ($_ = explode(':', $at))
+                            if (!isset($atCache[$_[0]]))
+                                $atCache[$_[0]] = $_[0];
 
             // equalize distribution
             if (empty($distrib[$curTpl['realm']]))
@@ -430,10 +433,8 @@ class RemoteProfileList extends ProfileList
 
             $a  = explode(' ', $curTpl['_acvs']);
             $t  = explode(' ', $curTpl['_talents']);
-            $td = explode(' ', $curTpl['_teamData']);
             unset($curTpl['_acvs']);
             unset($curTpl['_talents']);
-            unset($curTpl['_teamData']);
 
             // achievement points post
             $curTpl['achievementpoints'] = array_sum(array_intersect_key($acvCache, array_combine($a, $a)));
@@ -447,17 +448,22 @@ class RemoteProfileList extends ProfileList
                     $curTpl['talenttree'.($data['tab'] + 1)] += $data['rank'];
 
             // arenateams
-            $curTpl['arenateams'] = [];
-            foreach ($td as $data)
+            if (isset($curTpl['_teamData']))
             {
-                $d = explode(':', $data);
-                if ($atCache->getEntry($d[0]))
+                $curTpl['arenateams'] = [];
+                foreach (explode(' ', $curTpl['_teamData']) as $data)
                 {
-                    $curTpl['arenateams'][$atCache->getField('type')] = array(
-                        'name'   => $atCache->getField('name'),
-                        'rating' => $d[1]
-                    );
+                    $d = explode(':', $data);
+                    if ($atCache->getEntry($d[0]))
+                    {
+                        $curTpl['arenateams'][$atCache->getField('type')] = array(
+                            'name'   => $atCache->getField('name'),
+                            'rating' => $d[1]
+                        );
+                    }
                 }
+
+                unset($curTpl['_teamData']);
             }
         }
     }
@@ -466,7 +472,7 @@ class RemoteProfileList extends ProfileList
     {
         $data = parent::getListviewData($addInfoMask, $reqCols);
 
-        // not wanted on eserver list
+        // not wanted on server list
         foreach ($data as &$d)
             unset($d['published']);
 
@@ -513,7 +519,7 @@ class RemoteProfileList extends ProfileList
 
         foreach(Profiler::getRealms() as $idx => $r)
         {
-            if (!empty($fi['sv']) && Profiler::urlize($r['name']) != Profiler::urlize($fi['sv']))
+            if (!empty($fi['sv']) && Profiler::urlize($r['name']) != Profiler::urlize($fi['sv']) && intVal($fi['sv']) != $idx)
                 continue;
 
             if (!empty($fi['rg']) && Profiler::urlize($r['region']) != Profiler::urlize($fi['rg']))
@@ -532,11 +538,11 @@ class LocalProfileList extends ProfileList
     protected       $queryBase = 'SELECT p.*, p.id AS ARRAY_KEY FROM ?_profiler_profiles p';
     protected       $queryOpts = array(
                         // 'p'  => [['ap']],
-                        'ap' => ['j' => ['?_account_profiles ap ON ap.profileId = p.id', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
-                        // 'pam' => [['?_profiles_arenateam_member pam ON pam.memberId = p.id', true], 's' => ', pam.status'],
-                        // 'pa'  => ['?_profiles_arenateam pa ON pa.id = pam.teamId', 's' => ', pa.mode, pa.name'],
-                        // 'pgm' => [['?_profiles_guid_member pgm ON pgm.memberId = p.Id', true], 's' => ', pgm.rankId'],
-                        // 'pg'  => ['?_profiles_guild pg ON pg.if = pgm.guildId', 's' => ', pg.name']
+                        'ap'   => ['j' => ['?_account_profiles ap ON ap.profileId = p.id', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
+                        'patm' => ['j' => ['?_profiler_arena_team_member patm ON patm.profileId = p.id', true], 's' => ', patm.captain, patm.personalRating AS rating'],
+                        'pat'  => ['?_profiler_arena_team pat ON pat.id = patm.arenaTeamId', 's' => ', pat.mode, pat.name'],
+                        // 'pgm' => [['?_profiler_guid_member pgm ON pgm.memberId = p.Id', true], 's' => ', pgm.rankId'],
+                        // 'pg'  => ['?_profiler_guild pg ON pg.if = pgm.guildId', 's' => ', pg.name']
                     );
 
     public function __construct($conditions = [], $miscData = null)
@@ -579,7 +585,7 @@ class LocalProfileList extends ProfileList
         return $url.implode('.', array(
             Profiler::urlize($this->getField('region')),
             Profiler::urlize($this->getField('realmName')),
-            Profiler::urlize($this->getField('name'))
+            urlencode($this->getField('name'))
         ));
     }
 }

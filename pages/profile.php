@@ -14,6 +14,7 @@ class ProfilePage extends GenericPage
     protected $tabId     = 1;
     protected $path      = [1, 5, 1];
     protected $tpl       = 'profile';
+    protected $mode     = CACHE_TYPE_PAGE;
     protected $js        = ['filters.js', 'TalentCalc.js', 'swfobject.js', 'profile_all.js', 'profile.js', 'Profiler.js'];
     protected $css       = array(
         ['path' => 'talentcalc.css'],
@@ -25,7 +26,11 @@ class ProfilePage extends GenericPage
 
     public function __construct($pageCall, $pageParam)
     {
-        $params = array_map(function ($x) { return Profiler::urlize(urldecode($x)); }, explode('.', $pageParam));
+        $params = array_map('urldecode', explode('.', $pageParam));
+        if ($params[0])
+            $params[0] = Profiler::urlize($params[0]);
+        if (isset($params[1]))
+            $params[1] = Profiler::urlize($params[1]);
 
         parent::__construct($pageCall, $pageParam);
 
@@ -70,13 +75,7 @@ class ProfilePage extends GenericPage
                 }
 
                 $this->subjectGUID = $subject['id'];
-                $realms = Profiler::getRealms();
-                $realm  = 0;
-                foreach ($realms as $rId => $r)
-                    if (Profiler::urlize($r['name']) == $params[1])
-                        $realm = $rId;
-
-                $this->subject = new LocalProfileList(array(['name', Util::ucFirst($this->subjectName)], ['realm', $realm]));
+                $this->subject     = new LocalProfileList(array(['id', $subject['id']]));
                 if ($this->subject->error)
                     $this->notFound();
 
@@ -103,6 +102,9 @@ class ProfilePage extends GenericPage
 
     protected function generateContent()
     {
+        if ($this->mode == CACHE_TYPE_NONE)
+            return;
+
         // + .titles ?
         $this->addJS('?data=enchants.gems.glyphs.itemsets.pets.pet-talents.quick-excludes.realms.statistics.weight-presets.achievements&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
 
@@ -141,7 +143,11 @@ class ProfilePage extends GenericPage
 
     protected function generateTooltip($asError = false)
     {
-        $x = '$WowheadPower.registerProfile('.($this->isCustom ? $this->profile : "'".implode('.', $this->profile)."'").', '.User::$localeId.', {';
+        $id = $this->profile;
+        if (!$this->isCustom)
+            $id = "'".$this->profile[0].'.'.$this->profile[1].'.'.urlencode($this->profile[2])."'";
+
+        $x = '$WowheadPower.registerProfile('.$id.', '.User::$localeId.', {';
         if ($asError)
             return $x."});";
 
@@ -203,6 +209,8 @@ class ProfilePage extends GenericPage
         }
         else                                        // display empty page and queue status
         {
+            $this->mode = CACHE_TYPE_NONE;
+
             // queue full fetch
             $newId = Profiler::scheduleResync(TYPE_PROFILE, $this->realmId, $guid);
 

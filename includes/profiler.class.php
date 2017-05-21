@@ -179,6 +179,21 @@ class Profiler
         return self::$realms;
     }
 
+    private static function queueInsert($realmId, $guid, $type, $localId)
+    {
+        if ($rData = DB::Aowow()->selectRow('SELECT requestTime AS time, status FROM ?_profiler_sync WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d AND status <> ?d', $realmId, $guid, $type, $localId, PR_QUEUE_STATUS_WORKING))
+        {
+            // not on already scheduled - recalc time and set status to PR_QUEUE_STATUS_WAITING
+            if ($rData['status'] != PR_QUEUE_STATUS_WAITING)
+            {
+                $newTime = time(); // max($rData['time'] + CFG_PROFILER_RESYNC_DELAY, time());
+                DB::Aowow()->query('UPDATE ?_profiler_sync SET requestTime = ?d, status = ?d, errorCode = 0 WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d', $newTime, PR_QUEUE_STATUS_WAITING, $realmId, $guid, $type, $localId);
+            }
+        }
+        else
+            DB::Aowow()->query('REPLACE INTO ?_profiler_sync (realm, realmGUID, `type`, typeId, requestTime, status, errorCode) VALUES (?d, ?d, ?d, ?d, UNIX_TIMESTAMP(), ?d, 0)', $realmId, $guid, $type, $localId, PR_QUEUE_STATUS_WAITING);
+    }
+
     public static function scheduleResync($type, $realmId, $guid)
     {
         $newId = 0;
@@ -186,46 +201,67 @@ class Profiler
         switch ($type)
         {
             case TYPE_PROFILE:
-                $newId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $guid);
-                if (!$newId)
-                {
-                    trigger_error('rofiler::scheduleResync() - tried to resync character without preload data', E_USER_ERROR);
-                    break;
-                }
-
-                if ($rData = DB::Aowow()->selectRow('SELECT requestTime AS time, status FROM ?_profiler_sync WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d AND status <> ?d', $realmId, $guid, $type, $newId, PR_QUEUE_STATUS_WORKING))
-                {
-                    // not on already scheduled - recalc time and set status to PR_QUEUE_STATUS_WAITING
-                    if ($rData['status'] != PR_QUEUE_STATUS_WAITING)
-                    {
-                        $newTime = time(); // max($rData['time'] + CFG_PROFILER_RESYNC_DELAY, time());
-                        DB::Aowow()->query('UPDATE ?_profiler_sync SET requestTime = ?d, status = ?d, errorCode = 0 WHERE realm = ?d AND realmGUID = ?d AND `type` = ?d AND typeId = ?d', $newTime, PR_QUEUE_STATUS_WAITING, $realmId, $guid, $type, $newId);
-                    }
-                }
-                else
-                    DB::Aowow()->query('REPLACE INTO ?_profiler_sync (realm, realmGUID, `type`, typeId, requestTime, status, errorCode) VALUES (?d, ?d, ?d, ?d, UNIX_TIMESTAMP(), ?d, 0)', $realmId, $guid, $type, $newId, PR_QUEUE_STATUS_WAITING);
-
-                if (!self::queueStart($msg))
-                    trigger_error('Profiler::scheduleResync() - '.$msg, E_USER_ERROR);
+                if ($newId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_profiles WHERE realm = ?d AND realmGUID = ?d', $realmId, $guid))
+                    self::queueInsert($realmId, $guid, TYPE_PROFILE, $newId);
 
                 break;
             case TYPE_GUILD:
+                if ($newId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_guild WHERE realm = ?d AND realmGUID = ?d', $realmId, $guid))
+                    self::queueInsert($realmId, $guid, TYPE_GUILD, $newId);
 
                 break;
             case TYPE_ARENA_TEAM:
+                if ($newId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_arena_team WHERE realm = ?d AND realmGUID = ?d', $realmId, $guid))
+                    self::queueInsert($realmId, $guid, TYPE_ARENA_TEAM, $newId);
 
                 break;
             default:
                 trigger_error('scheduling resync for unknown type #'.$type.' omiting..', E_USER_WARNING);
+                return 0;
         }
+
+        if (!$newId)
+            trigger_error('Profiler::scheduleResync() - tried to resync type #'.$type.' guid #'.$guid.' from realm #'.$realmId.' without preloaded data', E_USER_ERROR);
+        else if (!self::queueStart($msg))
+            trigger_error('Profiler::scheduleResync() - '.$msg, E_USER_ERROR);
 
         return $newId;
     }
 
+    public static function resyncStatus($type, array $subjectGUIDs)
+    {
+        $response = [CFG_PROFILER_QUEUE ? 2 : 0];        // in theory you could have multiple queues; used as devisor for: (15 / x) + 2
+        if (!$subjectGUIDs)
+            $response[] = [PR_QUEUE_STATUS_ENDED, 0, 0, PR_QUEUE_ERROR_CHAR];
+        else
+        {
+            // error out all profiles with status WORKING, older than 60sec
+            DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE status = ?d AND requestTime < ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_UNK, PR_QUEUE_STATUS_WORKING, time() - MINUTE);
+
+            $subjectStatus = DB::Aowow()->select('SELECT typeId AS ARRAY_KEY, status, realm FROM ?_profiler_sync WHERE `type` = ?d AND typeId IN (?a)', $type, $subjectGUIDs);
+            $queue         = DB::Aowow()->selectCol('SELECT typeId FROM ?_profiler_sync WHERE `type` = ?d AND status = ?d AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC', $type, PR_QUEUE_STATUS_WAITING);
+            foreach ($subjectGUIDs as $guid)
+            {
+                if (empty($subjectStatus[$guid]))           // whelp, thats some error..
+                    $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, PR_QUEUE_ERROR_UNK];
+                else if ($subjectStatus[$guid]['status'] == PR_QUEUE_STATUS_ERROR)
+                    $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, $subjectStatus[$guid]['errCode']];
+                else
+                    $response[] = array(
+                        $subjectStatus[$guid]['status'],
+                        $subjectStatus[$guid]['status'] != PR_QUEUE_STATUS_READY ? CFG_PROFILER_RESYNC_PING : 0,
+                        array_search($guid, $queue) + 1,
+                        0,
+                        1                                   // unsure about this one
+                    );
+            }
+        }
+
+        return $response;
+    }
+
     public static function getCharFromRealm($realmId, $charGuid)
     {
-        $tDiffs = [];
-
         $char = DB::Characters($realmId)->selectRow('SELECT IFNULL(g.name, "") AS guild, gm.rank AS guildRank, c.* FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.guid = ?d', $charGuid);
         if (!$char)
             return false;
@@ -254,7 +290,7 @@ class Profiler
 
 
         DB::Aowow()->query('DELETE FROM ?_profiler_items WHERE id = ?d', $profileId);
-        $items     = DB::Characters($realmId)->select('SELECT ci.slot AS ARRAY_KEY, ii.itemEntry, ii.enchantments, ii.randomPropertyId FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = ?d AND bag = 0 AND slot BETWEEN 0 AND 18', $char['guid']);
+        $items    = DB::Characters($realmId)->select('SELECT ci.slot AS ARRAY_KEY, ii.itemEntry, ii.enchantments, ii.randomPropertyId FROM character_inventory ci JOIN item_instance ii ON ci.item = ii.guid WHERE ci.guid = ?d AND bag = 0 AND slot BETWEEN 0 AND 18', $char['guid']);
 
         $gemItems = [];
         $permEnch = [];
@@ -593,6 +629,71 @@ class Profiler
         /*********************/
 
         DB::Aowow()->query('UPDATE ?_profiler_profiles SET cuFlags = cuFlags & ?d WHERE id = ?d', ~PROFILER_CU_NEEDS_RESYNC, $profileId);
+
+        return true;
+    }
+
+    public static function getArenaTeamFromRealm($realmId, $teamGuid)
+    {
+        $team = DB::Characters($realmId)->selectRow('SELECT arenaTeamId, name, captainGuid, rating, seasonGames, seasonWins, weekGames, weekWins, rank, backgroundColor, emblemStyle, emblemColor, borderStyle, borderColor FROM arena_team WHERE arenaTeamId = ?d', $teamGuid);
+        if (!$team)
+            return false;
+
+        // reminder: this query should not fail: a placeholder entry is created as soon as a team listview is created or team detail page is called
+        $teamId = DB::Aowow()->selectCell('SELECT id FROM ?_profiler_arena_team WHERE realm = ?d AND realmGUID = ?d', $realmId, $team['arenaTeamId']);
+
+        CLI::write('fetching arena team #'.$teamGuid.' from realm #'.$realmId);
+        CLI::write('writing...');
+
+
+        /*************/
+        /* Team Data */
+        /*************/
+
+        $captain = $team['captainGuid'];
+        unset($team['captainGuid']);
+        unset($team['arenaTeamId']);
+
+        DB::Aowow()->query('UPDATE ?_profiler_arena_team SET ?a WHERE realm = ?d AND realmGUID = ?d', $team, $realmId, $teamGuid);
+
+        CLI::write(' ..team data');
+
+
+        /***************/
+        /* Member Data */
+        /***************/
+
+        $members = DB::Characters($realmId)->select('SELECT guid AS ARRAY_KEY, arenaTeamId, weekGames, weekWins, seasonGames, seasonWins, personalrating FROM arena_team_member WHERE arenaTeamId = ?d', $teamGuid);
+
+        $mProfiles = new RemoteProfileList(array(['c.guid', array_keys($members)]), ['sv' => $realmId]);
+        if (!$mProfiles->error)
+        {
+            $mProfiles->initializeLocalEntries();
+            foreach ($mProfiles->iterate() as $__)
+            {
+                $mGuid = $mProfiles->getField('guid');
+
+                $members[$mGuid]['arenaTeamId'] = $teamId;
+                $members[$mGuid]['captain']     = (int)($mGuid == $captain);
+                $members[$mGuid]['profileId']   = $mProfiles->getField('id');
+            }
+
+            DB::Aowow()->query('DELETE FROM ?_profiler_arena_team_member WHERE arenaTeamId = ?d', $teamId);
+
+            foreach (Util::createSqlBatchInsert($members) as $m)
+                DB::Aowow()->query('INSERT INTO ?_profiler_arena_team_member (?#) VALUES '.$m, array_keys(reset($members)));
+
+        }
+        else
+            return false;
+
+        CLI::write(' ..team members');
+
+        /*********************/
+        /* mark team as done */
+        /*********************/
+
+        DB::Aowow()->query('UPDATE ?_profiler_arena_team SET cuFlags = cuFlags & ?d WHERE id = ?d', ~PROFILER_CU_NEEDS_RESYNC, $teamId);
 
         return true;
     }

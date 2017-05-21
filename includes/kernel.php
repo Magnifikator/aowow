@@ -47,6 +47,8 @@ spl_autoload_register(function ($class) {
         $cl = strtr($class, ['list' => '']);
         if ($cl == 'remoteprofile' || $cl == 'localprofile')
             $cl = 'profile';
+        if ($cl == 'remotearenateam' || $cl == 'localarenateam')
+            $cl = 'arenateam';
 
         if (file_exists('includes/types/'.$cl.'.class.php'))
             require_once 'includes/types/'.$cl.'.class.php';

@@ -248,34 +248,7 @@ class AjaxProfile extends AjaxHandler
     */
     protected function handleStatus()
     {
-        $response = [CFG_PROFILER_QUEUE ? 2 : 0];        // in theory you could have multiple queues; used as devisor for: (15 / x) + 2
-        if (!$this->_get['id'])
-            $response[] = [PR_QUEUE_STATUS_ENDED, 0, 0, PR_QUEUE_ERROR_CHAR];
-        else
-        {
-            // error out all profiles with status WORKING, older than 60sec
-            DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE status = ?d AND requestTime < ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_UNK, PR_QUEUE_STATUS_WORKING, time() - MINUTE);
-
-            $charGUIDs  = $this->_get['id'];
-            $charStatus = DB::Aowow()->select('SELECT typeId AS ARRAY_KEY, status, realm FROM ?_profiler_sync WHERE `type` = ?d AND typeId IN (?a)', TYPE_PROFILE, $charGUIDs);
-            $queue      = DB::Aowow()->selectCol('SELECT typeId FROM ?_profiler_sync WHERE `type` = ?d AND status = ?d AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC', TYPE_PROFILE, PR_QUEUE_STATUS_WAITING);
-            foreach ($charGUIDs as $guid)
-            {
-                if (empty($charStatus[$guid]))         // whelp, thats some error..
-                    $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, PR_QUEUE_ERROR_UNK];
-                else if ($charStatus[$guid]['status'] == PR_QUEUE_STATUS_ERROR)
-                    $response[] = [PR_QUEUE_STATUS_ERROR, 0, 0, $charStatus[$guid]['errCode']];
-                else
-                    $response[] = array(
-                        $charStatus[$guid]['status'],
-                        $charStatus[$guid]['status'] != PR_QUEUE_STATUS_READY ? CFG_PROFILER_RESYNC_PING : 0,
-                        array_search($guid, $queue) + 1,
-                        0,
-                        1                                   // unsure about this one
-                    );
-            }
-        }
-
+        $response = Profiler::resyncStatus(TYPE_PROFILE, $this->_get['id']);
         return Util::toJSON($response);
     }
 

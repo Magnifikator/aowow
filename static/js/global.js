@@ -15441,6 +15441,11 @@ Listview.templates = {
                 align: 'left',
                 span: 2,
                 compute: function(profile, td, tr) {
+                    // aowow - custom
+                    if (profile.captain) {
+                        tr.className = 'mergerow';
+                    }
+
                     if (profile.level) {
                         var i = $WH.ce('td');
                         i.style.width = '1px';

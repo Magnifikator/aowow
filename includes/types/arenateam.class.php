@@ -5,7 +5,7 @@ if (!defined('AOWOW_REVISION'))
 
 
 
-class ArenaTeamList extends RemoteProfileList
+class ArenaTeamList extends BaseType
 {
     use listviewHelper, profilerHelper;
 
@@ -13,14 +13,96 @@ class ArenaTeamList extends RemoteProfileList
     public static   $brickFile = 'profile';
     public static   $dataTable = '';                        // doesn't have community content
 
+    private     $rankOrder = [];
+
+    public function getListviewData()
+    {
+        $data = [];
+        foreach ($this->iterate() as $__)
+        {
+            $data[$this->id] = array(
+                'id'                => $this->curTpl['arenaTeamId'],
+                'name'              => $this->curTpl['name'],
+                'realm'             => Profiler::urlize($this->curTpl['realm']),
+                'realmname'         => $this->curTpl['realm'],
+                // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
+                // 'battlegroupname'   => $this->curTpl['battlegroup'],
+                'region'            => Profiler::urlize($this->curTpl['region']),
+                'faction'           => $this->curTpl['faction'],
+                'size'              => $this->curTpl['type'],
+                'rank'              => $this->curTpl['rank'],
+                'wins'              => $this->curTpl['seasonWins'],
+                'games'             => $this->curTpl['seasonGames'],
+                'rating'            => $this->curTpl['rating'],
+                'members'           => $this->curTpl['members']
+            );
+        }
+
+        return array_values($data);
+    }
+
+    public function renderTooltip() {}
+    public function getJSGlobals($addMask = 0) {}
+}
+
+
+class ArenaTeamListFilter extends Filter
+{
+    public    $extraOpts     = [];
+    protected $genericFilter = [];
+
+    protected function createSQLForCriterium(&$cr)
+    {
+        // there are none, if we et one, thats an error!
+        unset($cr);
+        return [0];
+    }
+
+    protected function createSQLForValues()
+    {
+        $parts = [];
+        $_v    = $this->fiData['v'];
+
+        // region (rg), battlegroup (bg) and server (sv) are passed to ArenaTeamList as miscData and handled there
+
+        // name [str]
+        if (!empty($_v['na']))
+            if ($_ = $this->modularizeString(['at.name'], $_v['na'], !empty($_v['ex']) && $_v['ex'] == 'on'))
+                $parts[] = $_;
+
+        // side [list]
+        if (!empty($_v['si']))
+        {
+            if ($_v['si'] == 1)
+                $parts[] = ['c.race', [1, 3, 4, 7, 11]];
+            else if ($_v['si'] == 2)
+                $parts[] = ['c.race', [2, 5, 6, 8, 10]];
+            else
+                unset($_v['ra']);
+        }
+
+        // size [int]
+        if (!empty($_v['sz']))
+        {
+            if (in_array($_v['sz'], [2, 3, 5]))
+                $parts[] = ['at.type', $_v['sz']];
+            else
+                unset($_v['sz']);
+        }
+
+        return $parts;
+    }
+}
+
+
+class RemoteArenaTeamList extends ArenaTeamList
+{
     protected   $queryBase = 'SELECT `at`.*, `at`.`arenaTeamId` AS ARRAY_KEY FROM arena_team at';
     protected   $queryOpts = array(
                     'at'  => [['atm', 'c'], 'g' => 'ARRAY_KEY', 'o' => 'rating DESC'],
                     'atm' => ['j' => 'arena_team_member atm ON atm.arenaTeamId = at.arenaTeamId'],
                     'c'   => ['j' => 'characters c ON c.guid = atm.guid', 's' => ', GROUP_CONCAT(c.name SEPARATOR " ") AS mNames, GROUP_CONCAT(IF(c.guid = at.captainGuid, -c.class, c.class) SEPARATOR " ") AS mClasses, BIT_OR(1 << (race - 1)) AS raceMask']
                 );
-
-    private     $rankOrder = [];
 
     public function __construct($conditions = [], $miscData = null)
     {
@@ -124,83 +206,54 @@ class ArenaTeamList extends RemoteProfileList
         }
     }
 
-    public function getListviewData()
-    {
-        $data = [];
-        foreach ($this->iterate() as $__)
-        {
-            $data[$this->id] = array(
-                'id'                => $this->curTpl['arenaTeamId'],
-                'name'              => $this->curTpl['name'],
-                'realm'             => Profiler::urlize($this->curTpl['realm']),
-                'realmname'         => $this->curTpl['realm'],
-                // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
-                // 'battlegroupname'   => $this->curTpl['battlegroup'],
-                'region'            => Profiler::urlize($this->curTpl['region']),
-                'faction'           => $this->curTpl['faction'],
-                'size'              => $this->curTpl['type'],
-                'rank'              => $this->curTpl['rank'],
-                'wins'              => $this->curTpl['seasonWins'],
-                'games'             => $this->curTpl['seasonGames'],
-                'rating'            => $this->curTpl['rating'],
-                'members'           => $this->curTpl['members']
-            );
-        }
-
-        return array_values($data);
-    }
-
-    public function renderTooltip() {}
-    public function getJSGlobals($addMask = 0) {}
 }
 
 
-class ArenaTeamListFilter extends Filter
+class LocalArenaTeamList extends ArenaTeamList
 {
-    public    $extraOpts     = [];
-    protected $genericFilter = [];
+    protected       $queryBase = 'SELECT at.*, at.id AS ARRAY_KEY FROM ?_profiler_arena_team at';
 
-    protected function createSQLForCriterium(&$cr)
+    public function __construct($conditions = [], $miscData = null)
     {
-        // there are none, if we et one, thats an error!
-        unset($cr);
-        return [0];
+        parent::__construct($conditions, $miscData);
+
+        if ($this->error)
+            return;
+
+        $realms = Profiler::getRealms();
+
+        // post processing
+        $members = DB::Aowow()->selectCol('SELECT *, arenaTeamId AS ARRAY_KEY, profileId AS ARRAY_KEY2 FROM ?_profiler_arena_team_member WHERE arenaTeamId IN (?a)', $this->getFoundIDs());
+
+        foreach ($this->iterate() as $id => &$curTpl)
+        {
+            if ($curTpl['realm'] && !isset($realms[$curTpl['realm']]))
+                continue;
+
+            if (isset($realms[$curTpl['realm']]))
+            {
+                $curTpl['realmName'] = $realms[$curTpl['realm']]['name'];
+                $curTpl['region']    = $realms[$curTpl['realm']]['region'];
+            }
+
+            // battlegroup
+            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
+
+            $curTpl['members'] = $members[$id];
+        }
     }
 
-    protected function createSQLForValues()
+    public function getProfileUrl()
     {
-        $parts = [];
-        $_v    = $this->fiData['v'];
+        $url = '?arena-team=';
 
-        // region (rg), battlegroup (bg) and server (sv) are passed to ArenaTeamList as miscData and handled there
-
-        // name [str]
-        if (!empty($_v['na']))
-            if ($_ = $this->modularizeString(['at.name'], $_v['na'], !empty($_v['ex']) && $_v['ex'] == 'on'))
-                $parts[] = $_;
-
-        // side [list]
-        if (!empty($_v['si']))
-        {
-            if ($_v['si'] == 1)
-                $parts[] = ['c.race', [1, 3, 4, 7, 11]];
-            else if ($_v['si'] == 2)
-                $parts[] = ['c.race', [2, 5, 6, 8, 10]];
-            else
-                unset($_v['ra']);
-        }
-
-        // size [int]
-        if (!empty($_v['sz']))
-        {
-            if (in_array($_v['sz'], [2, 3, 5]))
-                $parts[] = ['at.type', $_v['sz']];
-            else
-                unset($_v['sz']);
-        }
-
-        return $parts;
+        return $url.implode('.', array(
+            Profiler::urlize($this->getField('region')),
+            Profiler::urlize($this->getField('realmName')),
+            urlencode($this->getField('name'))
+        ));
     }
 }
+
 
 ?>

@@ -79,7 +79,7 @@ trait TrProfiler
     protected $region      = '';
     protected $realm       = '';
     protected $realmId     = 0;
-    protected $battlegroup = '';                            // not implementedm since no pserver supports it
+    protected $battlegroup = '';                            // not implemented, since no pserver supports it
     protected $subjectName = '';
     protected $subjectGUID = 0;
 
