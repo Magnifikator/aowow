@@ -801,6 +801,12 @@ abstract class Filter
         return ['formData'];
     }
 
+    public function mergeCat(&$cats)
+    {
+        foreach ($this->parentCats as $idx => $cat)
+            $cats[$idx] = $cat;
+    }
+
     private function &criteriaIterator()
     {
         if (!$this->fiData['c'])
@@ -911,13 +917,13 @@ abstract class Filter
             {
                 $buff = [];
                 foreach ((array)$val as $v)
-                    if ($v !== '' && $this->checkInput($type, $valid, $v))
+                    if ($v !== '' && $this->checkInput($type, $valid, $v) && $v !== '')
                        $buff[] = $v;
 
                 if ($buff)
                     $this->fiData[$k][$inp] = $buff;
             }
-            else if ($this->checkInput($type, $valid, $val))
+            else if ($val !== '' && $this->checkInput($type, $valid, $val) && $val !== '')
                 $this->fiData[$k][$inp] = $val;
         }
 
@@ -957,7 +963,7 @@ abstract class Filter
             {
                 $buff = [];
                 foreach (explode(':', $val) as $v)
-                    if ($v !== '' && $this->checkInput($type, $valid, $v))
+                    if ($v !== '' && $this->checkInput($type, $valid, $v) && $v !== '')
                        $buff[] = $v;
 
                 if ($buff)
@@ -968,7 +974,7 @@ abstract class Filter
                     $this->fiData[$k][$inp] = array_map(function ($x) { return strtr($x, Filter::$wCards); }, $buff);
                 }
             }
-            else if ($this->checkInput($type, $valid, $val))
+            else if ($val !== '' && $this->checkInput($type, $valid, $val) && $val !== '')
             {
                 if ($k == 'v')
                     $this->formData['form'][$inp] = $val;
@@ -1158,7 +1164,7 @@ abstract class Filter
         return false;
     }
 
-    protected function modularizeString(array $fields, $string = '', $exact = false)
+    protected function modularizeString(array $fields, $string = '', $exact = false, $shortStr = false)
     {
         if (!$string && !empty($this->fiData['v']['na']))
             $string = $this->fiData['v']['na'];
@@ -1171,9 +1177,9 @@ abstract class Filter
             $parts = array_filter(explode(' ', $string));
             foreach ($parts as $p)
             {
-                if ($p[0] == '-' && mb_strlen($p) > 3)
+                if ($p[0] == '-' && (mb_strlen($p) > 3 || $shortStr))
                     $sub[] = [$f, sprintf($exPH, mb_substr($p, 1)), '!'];
-                else if ($p[0] != '-' && mb_strlen($p) > 2)
+                else if ($p[0] != '-' && (mb_strlen($p) > 2 || $shortStr))
                     $sub[] = [$f, sprintf($exPH, $p)];
             }
 
@@ -1261,12 +1267,12 @@ abstract class Filter
         return null;
     }
 
-    private function genericString($field, $value, $localized)
+    private function genericString($field, $value, $strFlags)
     {
-        if ($localized)
+        if ($strFlags & STR_LOCALIZED)
             $field .= '_loc'.User::$localeId;
 
-        return $this->modularizeString([$field], (string)$value);
+        return $this->modularizeString([$field], (string)$value, $strFlags & STR_MATCH_EXACT, $strFlags & STR_ALLOW_SHORT);
     }
 
     private function genericNumeric($field, &$value, $op, $castInt)
@@ -1299,6 +1305,9 @@ abstract class Filter
         $gen    = $this->genericFilter[$cr[0]];
         $result = null;
 
+        if(!isset($gen[2]))
+            $gen[2] = 0;
+
         switch ($gen[0])
         {
             case FILTER_CR_NUMERIC:
@@ -1315,7 +1324,7 @@ abstract class Filter
                 $result = $this->genericBoolean($gen[1], $cr[1], !empty($gen[2]));
                 break;
             case FILTER_CR_STRING:
-                $result = $this->genericString($gen[1], $cr[2], !empty($gen[2]));
+                $result = $this->genericString($gen[1], $cr[2], $gen[2]);
                 break;
             case FILTER_CR_ENUM:
                 if (isset($this->enums[$cr[0]][$cr[1]]))

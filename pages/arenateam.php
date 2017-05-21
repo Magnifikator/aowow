@@ -114,16 +114,8 @@ class ArenaTeamPage extends GenericPage
         $member = new LocalProfileList(array(['patm.arenaTeamId', $this->subjectGUID]));
         if (!$member->error)
         {
-            $info = PROFILEINFO_CHARACTER;
-            switch ($this->subject->getField('type'))
-            {
-                case 2: $info |= PROFILEINFO_ARENA_2S; break;
-                case 3: $info |= PROFILEINFO_ARENA_3S; break;
-                case 5: $info |= PROFILEINFO_ARENA_5S; break;
-            }
-
             $this->lvTabs[] = ['profile', array(
-                'data'        => array_values($member->getListviewData($info)),
+                'data'        => array_values($member->getListviewData(PROFILEINFO_CHARACTER | PROFILEINFO_ARENA)),
                 'sort'        => "$[-15]",
                 'visibleCols' => "$['race','classs','level','talents','gearscore','achievementpoints','rating']",
                 'hiddenCols'  => "$['arenateam','guild','location']"

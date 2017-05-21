@@ -79,6 +79,8 @@ class AjaxFilter extends AjaxHandler
     {
         $url = '?'.$this->page;
 
+        $this->filter->mergeCat($this->cat);
+
         if ($this->cat)
             $url .= '='.implode('.', $this->cat);
 

@@ -15785,20 +15785,6 @@ Listview.templates = {
                 id: 'rating',
                 name: LANG.rating,
                 value: 'rating',
-                compute: function(profile, td) {
-                    if (profile.roster) {
-                        return profile.arenateam[profile.roster].rating;
-                    }
-
-                    return profile.rating;
-                },
-                sortFunc: function(a, b, col) {
-                    if (a.roster && b.roster) {
-                        return $WH.strcmp(a.arenateam[a.roster].rating, b.arenateam[b.roster].rating);
-                    }
-
-                    return $WH.strcmp(a.rating, b.rating);
-                },
                 hidden: 1
             },
             {

@@ -10,7 +10,7 @@ if (!defined('AOWOW_REVISION'))
 
 class ProfileList extends BaseType
 {
-    use profilerHelper;
+    use profilerHelper, listviewHelper;
 
     public function getListviewData($addInfo = 0, array $reqCols = [])
     {
@@ -55,7 +55,7 @@ class ProfileList extends BaseType
             else
                 $data[$this->id]['region']    = Profiler::urlize($this->getField('region'));
 
-            if ($addInfo & (PROFILEINFO_ARENA_2S | PROFILEINFO_ARENA_3S | PROFILEINFO_ARENA_5S))
+            if ($addInfo & PROFILEINFO_ARENA)
             {
                 $data[$this->id]['rating']  = $this->getField('rating');
                 $data[$this->id]['captain'] = $this->getField('captain');
@@ -173,9 +173,10 @@ class ProfileListFilter extends Filter
     public    $extraOpts     = [];
     protected $enums         = array(
         -1 => array(                                        // arena team sizes
-            12 => 2,
-            15 => 3,
-            18 => 5
+        //  by name     by rating   by contrib
+            12 => 2,    13 => 2,    14 => 2,
+            15 => 3,    16 => 3,    17 => 3,
+            18 => 5,    19 => 5,    20 => 5
         ),
         -2 => array(                                        // professions (by setting key #24, the next elements are increments of it)
             24 => null, 171, 164, 333, 202, 182, 773, 755, 165, 186, 393, 197
@@ -186,27 +187,36 @@ class ProfileListFilter extends Filter
         // { id: 2,   name: 'gearscore',               type: 'num' },
         // { id: 3,   name: 'achievementpoints',       type: 'num' },
         // { id: 21,  name: 'wearingitem',             type: 'str-small' },
-        // { id: 23,  name: 'completedachievement',    type: 'str-small' },
+        23 => [FILTER_CR_STRING,   'ca.achievement', STR_MATCH_EXACT | STR_ALLOW_SHORT ],  // completedachievement
         // { id: 5,   name: 'talenttree1',         type: 'num' },
         // { id: 6,   name: 'talenttree2',         type: 'num' },
         // { id: 7,   name: 'talenttree3',         type: 'num' },
-         9 => [FILTER_CR_STRING,    'g.name',                ], // guildname
-        10 => [FILTER_CR_NUMERIC,   'gm.rank',  NUM_CAST_INT ], // guildrank
+         9 => [FILTER_CR_STRING,   'g.name',                         ], // guildname
+        10 => [FILTER_CR_NUMERIC,  'gm.rank',      NUM_CAST_INT      ], // guildrank
+        13 => [FILTER_CR_CALLBACK, 'cbTeamRating', null,        null ], // teamrtng2v2
+        16 => [FILTER_CR_CALLBACK, 'cbTeamRating', null,        null ], // teamrtng3v3
+        19 => [FILTER_CR_CALLBACK, 'cbTeamRating', null,        null ], // teamrtng5v5
+        12 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname2v2
+        15 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname3v3
+        18 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname5v5
+        36 => [FILTER_CR_CALLBACK, 'cbHasGuild',   null,        null ], // hasguild [yn]
     );
 
     // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
-        'cr'     => [FILTER_V_RANGE,  [1, 36],                                       true ], // criteria ids
-        'crs'    => [FILTER_V_LIST,  [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 5000]], true ], // criteria operators
-        'crv'    => [FILTER_V_REGEX, '/[\p{C};]/ui',                                 true ], // criteria values - only numeric input values expected
-        'na'     => [FILTER_V_REGEX, '/[\p{C};]/ui',                                 false], // name - only printable chars, no delimiter
-        'ma'     => [FILTER_V_EQUAL, 1,                                              false], // match any / all filter
-        'ex'     => [FILTER_V_EQUAL, 'on',                                           false], // only match exact
-        'si'     => [FILTER_V_LIST, [1, 2],                                          false], // side
-        'ra'     => [FILTER_V_LIST, [[1, 8], 10, 11],                                true ], // race
-        'cl'     => [FILTER_V_LIST, [[1, 9], 11],                                    true ], // class
-        'minle'  => [FILTER_V_RANGE, [1, MAX_LEVEL],                                 false], // min level
-        'maxle'  => [FILTER_V_RANGE, [1, MAX_LEVEL],                                 false]  // max level
+        'cr'     => [FILTER_V_RANGE,    [1, 36],                                        true ], // criteria ids
+        'crs'    => [FILTER_V_LIST,     [FILTER_ENUM_NONE, FILTER_ENUM_ANY, [0, 5000]], true ], // criteria operators
+        'crv'    => [FILTER_V_REGEX,    '/[\p{C};]/ui',                                 true ], // criteria values
+        'na'     => [FILTER_V_REGEX,    '/[\p{C};]/ui',                                 false], // name - only printable chars, no delimiter
+        'ma'     => [FILTER_V_EQUAL,    1,                                              false], // match any / all filter
+        'ex'     => [FILTER_V_EQUAL,    'on',                                           false], // only match exact
+        'si'     => [FILTER_V_LIST,     [1, 2],                                         false], // side
+        'ra'     => [FILTER_V_LIST,     [[1, 8], 10, 11],                               true ], // race
+        'cl'     => [FILTER_V_LIST,     [[1, 9], 11],                                   true ], // class
+        'minle'  => [FILTER_V_RANGE,    [1, MAX_LEVEL],                                 false], // min level
+        'maxle'  => [FILTER_V_RANGE,    [1, MAX_LEVEL],                                 false], // max level
+        'rg'     => [FILTER_V_CALLBACK, 'cbRegionCheck',                                false], // region
+        'sv'     => [FILTER_V_CALLBACK, 'cbServerCheck',                                false], // server
     );
 
     protected function createSQLForCriterium(&$cr)
@@ -224,24 +234,13 @@ class ProfileListFilter extends Filter
         $skillId = 0;
         switch ($cr[0])
         {
-            case 36:                                        // hasguild [yn]
-                if ($this->int2Bool($cr[1]))
-                    return ['gm.guildId', null, $cr[1] ? '!' : null];
-                break;
-            case 12:                                        // teamname2v2
-            case 15:                                        // teamname3v3
-            case 18:                                        // teamname5v5
-                if ($_ = $this->modularizeString(['at.name'], $cr[2]))
-                    return ['AND', ['at.type', $this->enums[-1][$cr[0]]], $_];
-
-                break;
-            case 13:                                        // teamrtng2v2
-            case 16:                                        // teamrtng3v3
-            case 19:                                        // teamrtng5v5
             case 14:                                        // teamcontrib2v2
             case 17:                                        // teamcontrib3v3
             case 20:                                        // teamcontrib5v5
                 break;
+
+            //  F I X   M E ! ! !
+
             case 25:                                        // alchemy [num]
             case 26:                                        // blacksmithing [num]
             case 27:                                        // enchanting [num]
@@ -309,6 +308,63 @@ class ProfileListFilter extends Filter
 
         return $parts;
     }
+
+    protected function cbRegionCheck(&$v)
+    {
+        if ($v == 'eu' || $v == 'us')
+        {
+            $this->parentCats[0] = $v;                      // directly redirect onto this region
+            $v = '';                                        // remove from filter
+
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function cbServerCheck(&$v)
+    {
+        foreach (Profiler::getRealms() as $realm)
+            if ($realm['name'] == $v)
+            {
+                $this->parentCats[1] = Profiler::urlize($v);// directly redirect onto this server
+                $v = '';                                    // remove from filter
+
+                return true;
+            }
+
+        return false;
+    }
+
+    protected function cbHasGuild($cr)
+    {
+        if ($this->int2Bool($cr[1]))
+            return ['gm.guildId', null, $cr[1] ? '!' : null];
+
+        return false;
+    }
+
+    protected function cbTeamName($cr)
+    {
+        if ($_ = $this->modularizeString(['at.name'], $cr[2]))
+        {
+            // $this->formData['extraCols'][] = XXX something something teamname
+
+            return ['AND', ['at.type', $this->enums[-1][$cr[0]]], $_];
+        }
+
+        return false;
+    }
+
+    protected function cbTeamRating($cr)
+    {
+        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
+            return false;
+
+        // $this->formData['extraCols'][] = XXX something something teamname
+
+        return ['AND', ['at.type', $this->enums[-1][$cr[0]]], ['at.rating', $cr[2], $cr[1]]];
+    }
 }
 
 
@@ -321,8 +377,9 @@ class RemoteProfileList extends ProfileList
                     'g'   => ['j' => ['guild g ON g.guildid = gm.guildid', true], 's' => ', g.name AS guild'],
                     'ca'  => ['j' => ['character_achievement ca ON ca.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT ca.achievement SEPARATOR " ") AS _acvs'],
                     'ct'  => ['j' => ['character_talent ct ON ct.guid = c.guid AND ct.spec = c.activespec', true], 's' => ', GROUP_CONCAT(DISTINCT ct.spell SEPARATOR " ") AS _talents'],
-                    'atm' => ['j' => ['arena_team_member atm ON atm.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT CONCAT(atm.arenaTeamId, ":", atm.personalRating) SEPARATOR " ") AS _teamData'],
-                    'at'  => ['j' => 'arena_team at ON atm.arenaTeamId = at.arenaTeamId'],
+                    // 'atm' => ['j' => ['arena_team_member atm ON atm.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT CONCAT(atm.arenaTeamId, ":", atm.personalRating) SEPARATOR " ") AS _teamData'],
+                    'atm' => ['j' => ['arena_team_member atm ON atm.guid = c.guid', true], 's' => ', atm.personalRating AS rating'],
+                    'at'  => [['atm'], 'j' => 'arena_team at ON atm.arenaTeamId = at.arenaTeamId', 's' => ', at.name AS arenateam, IF(at.captainGuid = c.guid, 1, 0) AS captain'],
                     'sk'  => ['j' => 'character_skills sk ON sk.guid = c.guid'/*, 's' => ', sk.value AS skillValue'*/]
                 );
 
@@ -385,14 +442,6 @@ class RemoteProfileList extends ProfileList
                     if ($t && !isset($talentCache[$t]))
                         $talentCache[$t] = $t;
 
-            // arenateam membership
-            if (isset($curTpl['_teamData']))
-                if ($arenaTeams = explode(' ', $curTpl['_teamData']))
-                    foreach ($arenaTeams as $at)
-                        if ($_ = explode(':', $at))
-                            if (!isset($atCache[$_[0]]))
-                                $atCache[$_[0]] = $_[0];
-
             // equalize distribution
             if (empty($distrib[$curTpl['realm']]))
                 $distrib[$curTpl['realm']] = 1;
@@ -416,9 +465,6 @@ class RemoteProfileList extends ProfileList
 
         if ($acvCache)
             $acvCache = DB::Aowow()->selectCol('SELECT id AS ARRAY_KEY, points FROM ?_achievement WHERE id IN (?a)', $acvCache);
-
-        if ($atCache)
-            $atCache = new ArenaTeamList(array(['at.arenaTeamId', array_values($atCache)]), $miscData);
 
         foreach ($this->iterate() as $guid => &$curTpl)
         {
@@ -446,25 +492,6 @@ class RemoteProfileList extends ProfileList
             foreach ($talentData as $spell => $data)
                 if (in_array($spell, $t))
                     $curTpl['talenttree'.($data['tab'] + 1)] += $data['rank'];
-
-            // arenateams
-            if (isset($curTpl['_teamData']))
-            {
-                $curTpl['arenateams'] = [];
-                foreach (explode(' ', $curTpl['_teamData']) as $data)
-                {
-                    $d = explode(':', $data);
-                    if ($atCache->getEntry($d[0]))
-                    {
-                        $curTpl['arenateams'][$atCache->getField('type')] = array(
-                            'name'   => $atCache->getField('name'),
-                            'rating' => $d[1]
-                        );
-                    }
-                }
-
-                unset($curTpl['_teamData']);
-            }
         }
     }
 

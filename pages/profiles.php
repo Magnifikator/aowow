@@ -34,6 +34,7 @@ class ProfilesPage extends GenericPage
     protected $path     = [1, 5, 0];
     protected $region   = '';                               // seconded..
     protected $realm    = '';                               // not sure about the use
+    protected $roster   = 0;                                // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
 
     protected $sumChars = 0;
 
@@ -62,20 +63,6 @@ class ProfilesPage extends GenericPage
 
         $this->filterObj = new ProfileListFilter();
 
-        // clean search if possible
-        $form = $this->filterObj->getForm();
-        if (!empty($form['rg']))
-        {
-            $url = '?profiles='.$form['rg'];
-            if (!empty($form['sv']))
-                $url .= '.'.Profiler::urlize($form['sv']);
-
-            if ($_ = $this->filterObj->urlize(['sv' => '', 'rg' => '']))
-                $url .= '&filter='.$_;
-
-            header('Location: '.$url , true, 302);
-        }
-
         foreach (Profiler::getRealms() as $idx => $r)
         {
             if ($this->region && $r['region'] != $this->region)
@@ -95,18 +82,19 @@ class ProfilesPage extends GenericPage
 
     protected function generateTitle()
     {
-        $this->title[] = Util::ucFirst(Lang::game('profiles'));
-
         // -> battlegroup
         // -> server
         // -> region
         // Alonsus - Cruelty / Crueldad - Europe - Profiles - World of Warcraft
         // Norgannon - German - Europe - Profile - World of Warcraft
 
-        // direkt unter </form>
-        // &roster=1 => Guild
-        // &roster=[2-4] => Arena Team
-        // <div class="text"><h2 style="padding-top: 0;">sprintf($guildRoster/$arenaRoster, $name)</h2></div>
+        array_unshift($this->title, Util::ucFirst(Lang::game('profiles')));
+
+        if ($this->region)
+            array_unshift($this->title, Lang::profiler('regions', $this->region));
+
+        if ($this->realm)
+            array_unshift($this->title, $this->realm);
     }
 
     protected function generatePath()
@@ -143,15 +131,20 @@ class ProfilesPage extends GenericPage
         $this->filter['initData'] = ['init' => 'profiles'];
 
         if ($x = $this->filterObj->getSetCriteria())
+        {
             $this->filter['initData']['sc'] = $x;
+
+            if ($r = array_intersect([9, 12, 15, 18], $x['cr']))
+                if (count($r) == 1)
+                    $this->roster = (reset($r) - 6) / 3;        // 1, 2, 3, or 4
+        }
 
         $tabData = array(
             'id'          => 'characters',
             'name'        => '$LANG.tab_characters',
             'hideCount'   => 1,
-            // 'roster'      => 3,
-            'visibleCols' => "$['race', 'classs', 'level', 'talents', 'achievementpoints', 'gearscore']",
-            'onBeforeCreate' => '$pr_initRosterListview'        // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
+            'visibleCols' => ['race', 'classs', 'level', 'talents', 'achievementpoints', 'gearscore'],
+            'onBeforeCreate' => '$pr_initRosterListview'        // puts a resync button on the lv
         );
 
         $skillCols = $this->filterObj->getExtraCols();
@@ -178,21 +171,47 @@ class ProfilesPage extends GenericPage
             // init these chars on our side and get local ids
             $profiles->initializeLocalEntries();
 
+            $addInfoMask = PROFILEINFO_CHARACTER;
 
-            $tabData['data'] = array_values($profiles->getListviewData(null, $skillCols));
+            // init roster-listview
+            // $_GET['roster'] = 1|2|3|4 originally supplemented this somehow .. 2,3,4 arenateam-size (4 => 5-man), 1 guild
+            if ($this->roster == 1 && !$profiles->hasDiffFields(['guild']) && $profiles->getField('guild'))
+            {
+                $tabData['roster']        = $this->roster;
+                $tabData['visibleCols'][] = 'guildrank';
+
+                $this->roster  = Lang::profiler('guildRoster', [$profiles->getField('guild')]);
+            }
+            else if ($this->roster && !$profiles->hasDiffFields(['arenateam']) && $profiles->getField('arenateam'))
+            {
+                $tabData['roster']        = $this->roster;
+                $tabData['visibleCols'][] = 'rating';
+
+                $addInfoMask |= PROFILEINFO_ARENA;
+                $this->roster = Lang::profiler('arenaRoster', [$profiles->getField('arenateam')]);
+            }
+            else
+                $this->roster = 0;
+
+
+            $tabData['data'] = array_values($profiles->getListviewData($addInfoMask, $skillCols));
+
 
             // create note if search limit was exceeded
-            if (0 /* filter were applied */)
+            if ($this->filter['query'] && $profiles->getMatches() > CFG_SQL_LIMIT_DEFAULT)
             {
                 $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound2', $this->sumChars, $profiles->getMatches());
                 $tabData['_truncated'] = 1;
             }
-            else
+            else if ($profiles->getMatches() > CFG_SQL_LIMIT_DEFAULT)
                 $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound', $this->sumChars, 0);
 
             if ($this->filterObj->error)
                 $tabData['_errors'] = '$1';
         }
+        else
+            $this->roster = 0;
+
 
         $this->lvTabs[] = ['profile', $tabData];
 

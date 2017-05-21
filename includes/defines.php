@@ -211,9 +211,10 @@ define('ACHIEVEMENTINFO_PROFILE',           0x1);
 define('PROFILEINFO_PROFILE',               0x1);
 define('PROFILEINFO_CHARACTER',             0x2);
 define('PROFILEINFO_GUILD',                 0x10);          // like &roster
-define('PROFILEINFO_ARENA_2S',              0x20);
-define('PROFILEINFO_ARENA_3S',              0x40);
-define('PROFILEINFO_ARENA_5S',              0x80);
+define('PROFILEINFO_ARENA',                 0x20);
+// define('PROFILEINFO_ARENA_2S',              0x20);
+// define('PROFILEINFO_ARENA_3S',              0x40);
+// define('PROFILEINFO_ARENA_5S',              0x80);
 
 define('SPAWNINFO_ZONES',                   1);             // not a mask, mutually exclusive
 define('SPAWNINFO_SHORT',                   2);
@@ -240,6 +241,10 @@ define('NUM_CAST_INT',                      1);
 define('NUM_CAST_FLOAT',                    2);
 define('NUM_REQ_INT',                       3);
 define('NUM_REQ_FLOAT',                     4);
+
+define('STR_LOCALIZED',                     0x1);
+define('STR_MATCH_EXACT',                   0x2);
+define('STR_ALLOW_SHORT',                   0x4);
 
 /*
  * Game

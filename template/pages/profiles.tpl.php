@@ -96,7 +96,18 @@ endforeach;
                     </div>
 
                 </form>
+
+<?php
+    if ($this->roster):
+?>
+                <div class="text"><h2 style="padding-top: 0;"><?=$this->roster;?></h2></div>
+<?php
+    else:
+?>
                 <div class="pad"></div>
+<?php
+    endif;
+?>
             </div>
 
 <?php $this->brick('filter', ['fi' => $f['initData']]); ?>
