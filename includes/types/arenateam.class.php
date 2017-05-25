@@ -4,16 +4,11 @@ if (!defined('AOWOW_REVISION'))
     die('illegal access');
 
 
-
 class ArenaTeamList extends BaseType
 {
-    use listviewHelper, profilerHelper;
+    use profilerHelper, listviewHelper;
 
-    public static   $type      = 0;
-    public static   $brickFile = 'profile';
-    public static   $dataTable = '';                        // doesn't have community content
-
-    private     $rankOrder = [];
+    private $rankOrder = [];
 
     public function getListviewData()
     {
@@ -21,10 +16,10 @@ class ArenaTeamList extends BaseType
         foreach ($this->iterate() as $__)
         {
             $data[$this->id] = array(
-                'id'                => $this->curTpl['arenaTeamId'],
+                // 'id'                => $this->curTpl['arenaTeamId'],
                 'name'              => $this->curTpl['name'],
-                'realm'             => Profiler::urlize($this->curTpl['realm']),
-                'realmname'         => $this->curTpl['realm'],
+                'realm'             => Profiler::urlize($this->curTpl['realmName']),
+                'realmname'         => $this->curTpl['realmName'],
                 // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
                 // 'battlegroupname'   => $this->curTpl['battlegroup'],
                 'region'            => Profiler::urlize($this->curTpl['region']),
@@ -51,12 +46,18 @@ class ArenaTeamListFilter extends Filter
     public    $extraOpts     = [];
     protected $genericFilter = [];
 
-    protected function createSQLForCriterium(&$cr)
-    {
-        // there are none, if we et one, thats an error!
-        unset($cr);
-        return [0];
-    }
+    // fieldId => [checkType, checkValue[, fieldIsArray]]
+    protected $inputFields = array(
+        'na'     => [FILTER_V_REGEX,    '/[\p{C};]/ui',                                 false], // name - only printable chars, no delimiter
+        'ma'     => [FILTER_V_EQUAL,    1,                                              false], // match any / all filter
+        'ex'     => [FILTER_V_EQUAL,    'on',                                           false], // only match exact
+        'si'     => [FILTER_V_LIST,     [1, 2],                                         false], // side
+        'sz'     => [FILTER_V_LIST,     [2, 3, 5],                                      false], // tema size
+        'rg'     => [FILTER_V_CALLBACK, 'cbRegionCheck',                                false], // region
+        'sv'     => [FILTER_V_CALLBACK, 'cbServerCheck',                                false], // server
+    );
+
+    protected function createSQLForCriterium(&$cr) { }
 
     protected function createSQLForValues()
     {
@@ -77,20 +78,40 @@ class ArenaTeamListFilter extends Filter
                 $parts[] = ['c.race', [1, 3, 4, 7, 11]];
             else if ($_v['si'] == 2)
                 $parts[] = ['c.race', [2, 5, 6, 8, 10]];
-            else
-                unset($_v['ra']);
         }
 
         // size [int]
         if (!empty($_v['sz']))
-        {
-            if (in_array($_v['sz'], [2, 3, 5]))
-                $parts[] = ['at.type', $_v['sz']];
-            else
-                unset($_v['sz']);
-        }
+            $parts[] = ['at.type', $_v['sz']];
 
         return $parts;
+    }
+
+    protected function cbRegionCheck(&$v)
+    {
+        if ($v == 'eu' || $v == 'us')
+        {
+            $this->parentCats[0] = $v;                      // directly redirect onto this region
+            $v = '';                                        // remove from filter
+
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function cbServerCheck(&$v)
+    {
+        foreach (Profiler::getRealms() as $realm)
+            if ($realm['name'] == $v)
+            {
+                $this->parentCats[1] = Profiler::urlize($v);// directly redirect onto this server
+                $v = '';                                    // remove from filter
+
+                return true;
+            }
+
+        return false;
     }
 }
 
@@ -101,16 +122,14 @@ class RemoteArenaTeamList extends ArenaTeamList
     protected   $queryOpts = array(
                     'at'  => [['atm', 'c'], 'g' => 'ARRAY_KEY', 'o' => 'rating DESC'],
                     'atm' => ['j' => 'arena_team_member atm ON atm.arenaTeamId = at.arenaTeamId'],
-                    'c'   => ['j' => 'characters c ON c.guid = atm.guid', 's' => ', GROUP_CONCAT(c.name SEPARATOR " ") AS mNames, GROUP_CONCAT(IF(c.guid = at.captainGuid, -c.class, c.class) SEPARATOR " ") AS mClasses, BIT_OR(1 << (race - 1)) AS raceMask']
+                    'c'   => ['j' => 'characters c ON c.guid = atm.guid', 's' => ', BIT_OR(IF(c.race IN (1, 3, 4, 7, 11), 1, 2)) - 1 AS faction']
+                    // 'c'   => ['j' => 'characters c ON c.guid = atm.guid', 's' => ', GROUP_CONCAT(c.name SEPARATOR " ") AS mNames, GROUP_CONCAT(IF(c.guid = at.captainGuid, -c.class, c.class) SEPARATOR " ") AS mClasses, BIT_OR(1 << (race - 1)) AS raceMask']
                 );
+
+    private     $members   = [];
 
     public function __construct($conditions = [], $miscData = null)
     {
-        /********************/
-        /* TODO - IMPLEMENT */
-        /********************/
-        return;
-
         // select DB by realm
         if (!$this->selectRealms($miscData))
         {
@@ -140,34 +159,24 @@ class RemoteArenaTeamList extends ArenaTeamList
             $curTpl['battlegroup'] = CFG_BATTLEGROUP;
 
             // realm, rank
-            if (strpos($guid, ':'))
+            $r = explode(':', $guid);
+            if (!empty($realms[$r[0]]))
             {
-                $r = explode(':', $guid)[0];
-                if (!empty($realms[$r]))
-                {
-                    $curTpl['realm']  = $realms[$r]['name'];
-                    $curTpl['region'] = $realms[$r]['region'];
-                    $curTpl['rank']   = array_search($curTpl['arenaTeamId'], $this->rankOrder[$r][$curTpl['type']]) + 1;
-                }
-                else
-                {
-                    trigger_error('character "'.$curTpl['name'].'" belongs to nonexistant realm #'.$r, E_USER_WARNING);
-                    unset($this->templates[$guid]);
-                    continue;
-                }
+                $curTpl['realm']     = $r[0];
+                $curTpl['realmName'] = $realms[$r[0]]['name'];
+                $curTpl['region']    = $realms[$r[0]]['region'];
+                $curTpl['rank']      = array_search($curTpl['arenaTeamId'], $this->rankOrder[$r[0]][$curTpl['type']]) + 1;
             }
-            else if (count($this->dbNames) == 1)
+            else
             {
-                $curTpl['realm']  = $realms[$realmId]['name'];
-                $curTpl['region'] = $realms[$realmId]['region'];
-                $curTpl['rank']   = array_search($curTpl['arenaTeamId'], $this->rankOrder[$realmId][$curTpl['type']]) + 1;
+                trigger_error('arena team "'.$curTpl['name'].'" belongs to nonexistant realm #'.$r, E_USER_WARNING);
+                unset($this->templates[$guid]);
+                continue;
             }
-
-            // faction
-            $curTpl['faction'] = Game::sideByRaceMask($curTpl['raceMask']) - 1;
-            unset($curTpl['raceMask']);
 
             // team members
+            $this->members[$r[0]][$r[1]] = $r[1];
+        /*
             $_n = explode(' ', $curTpl['mNames']);
             $_c = explode(' ', $curTpl['mClasses']);
             $curTpl['members'] = [];
@@ -176,6 +185,7 @@ class RemoteArenaTeamList extends ArenaTeamList
             else
                 for ($i = 0; $i < count($_n); $i++)
                     $curTpl['members'][] = [$_n[$i], abs($_c[$i]), $_c[$i] < 0];
+        */
 
             // equalize distribution
             if (empty($distrib[$curTpl['realm']]))
@@ -184,6 +194,13 @@ class RemoteArenaTeamList extends ArenaTeamList
                 $distrib[$curTpl['realm']]++;
         }
 
+
+        // get team members
+        foreach ($this->members as $realmId => &$teams)
+            $teams = DB::Characters($realmId)->select('SELECT at.arenaTeamId AS ARRAY_KEY, c.guid AS ARRAY_KEY2, c.name AS "0", c.class AS "1", IF(at.captainguid = c.guid, 1, 0) AS "2" FROM arena_team at JOIN arena_team_member atm ON atm.arenaTeamId = at.arenaTeamId JOIN characters c ON c.guid = atm.guid WHERE at.arenaTeamId IN (?a)', $teams);
+
+
+        // equalize subject distribution across realms
         $limit = CFG_SQL_LIMIT_DEFAULT;
         foreach ($conditions as $c)
             if (is_int($c))
@@ -201,11 +218,14 @@ class RemoteArenaTeamList extends ArenaTeamList
                 continue;
             }
 
+            $r = explode(':', $guid);
+            if (isset($this->members[$r[0]][$r[1]]))
+                $curTpl['members'] = array_values($this->members[$r[0]][$r[1]]);  // [name, classId, isCaptain]
+
             $distrib[$curTpl['realm']]--;
             $limit--;
         }
     }
-
 }
 
 
@@ -250,7 +270,7 @@ class LocalArenaTeamList extends ArenaTeamList
         return $url.implode('.', array(
             Profiler::urlize($this->getField('region')),
             Profiler::urlize($this->getField('realmName')),
-            urlencode($this->getField('name'))
+            Profiler::urlize($this->getField('name'))
         ));
     }
 }

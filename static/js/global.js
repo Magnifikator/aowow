@@ -15441,11 +15441,6 @@ Listview.templates = {
                 align: 'left',
                 span: 2,
                 compute: function(profile, td, tr) {
-                    // aowow - custom
-                    if (profile.captain) {
-                        tr.className = 'mergerow';
-                    }
-
                     if (profile.level) {
                         var i = $WH.ce('td');
                         i.style.width = '1px';
@@ -15454,7 +15449,14 @@ Listview.templates = {
 
                      // $WH.ae(i, Icon.create($WH.g_getProfileIcon(profile.race, profile.classs, profile.gender, profile.level, profile.icon ? profile.icon : profile.id, 'medium'), 1, null, this.getItemLink(profile)));
                      // aowow . i dont know .. i dont know... char icon requests are strange
-                        $WH.ae(i, Icon.create($WH.g_getProfileIcon(profile.race, profile.classs, profile.gender, profile.level, profile.icon ? profile.icon : 0, 'medium'), 1, null, this.getItemLink(profile)));
+                        var ic = Icon.create($WH.g_getProfileIcon(profile.race, profile.classs, profile.gender, profile.level, profile.icon ? profile.icon : 0, 'medium'), 1, null, this.getItemLink(profile));
+                        // aowow - custom
+                        if (profile.captain) {
+                            tr.className = 'mergerow';
+                            ic.className += ' ' + ic.className + '-gold';
+                        }
+
+                        $WH.ae(i, ic);
                         $WH.ae(tr, i);
 
                         td.style.borderLeft = 'none';
@@ -15759,7 +15761,15 @@ Listview.templates = {
                 name: LANG.guildrank,
                 value: 'guildrank',
                 compute: function(profile, td) {
-                    if (profile.guildrank > 0) {
+                    // >>> aowow - real rank names >>>
+                    if (typeof guild_ranks !== "undefined" && guild_ranks[profile.guildrank]) {
+                        var sp = $WH.ce('span', null, $WH.ct(guild_ranks[profile.guildrank]));
+                        g_addTooltip(sp, $WH.sprintf(LANG.rankno, profile.guildrank));
+                        $WH.ae(td, sp);
+                    }
+                    // if (profile.guildrank > 0) {
+                    // <<< aowow - real rank names <<<
+                    else if (profile.guildrank > 0) {
                         return $WH.sprintf(LANG.rankno, profile.guildrank);
                     }
                     else if (profile.guildrank == 0) {

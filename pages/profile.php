@@ -11,10 +11,11 @@ class ProfilePage extends GenericPage
     use TrProfiler;
 
     protected $gDataKey  = true;
+    protected $mode     = CACHE_TYPE_PAGE;
+
     protected $tabId     = 1;
     protected $path      = [1, 5, 1];
     protected $tpl       = 'profile';
-    protected $mode     = CACHE_TYPE_PAGE;
     protected $js        = ['filters.js', 'TalentCalc.js', 'swfobject.js', 'profile_all.js', 'profile.js', 'Profiler.js'];
     protected $css       = array(
         ['path' => 'talentcalc.css'],
@@ -40,6 +41,10 @@ class ProfilePage extends GenericPage
 
         if (count($params) == 1 && intval($params[0]))
         {
+            // redundancy much?
+            $this->subjectGUID = intval($params[0]);
+            $this->profile     = intval($params[0]);
+
             $this->subject = new LocalProfileList(array(['id', intval($params[0])]));
             if ($this->subject->error)
                 $this->notFound();
@@ -51,10 +56,6 @@ class ProfilePage extends GenericPage
                 $this->isCustom  = true;
             else
                 header('Location: '.$this->subject->getProfileUrl(), true, 302);
-
-            // redundancy much?
-            $this->subjectGUID = $this->subject->getField('id');
-            $this->profile     = $this->subject->getField('id');
         }
         else if (count($params) == 3)
         {
@@ -63,6 +64,7 @@ class ProfilePage extends GenericPage
                 $this->notFound();
 
             // names MUST be ucFirst. Since we don't expect partial matches, search this way
+            $this->profile = $params;
 
             // 3 possibilities
             // 1) already synced to aowow
@@ -78,8 +80,6 @@ class ProfilePage extends GenericPage
                 $this->subject     = new LocalProfileList(array(['id', $subject['id']]));
                 if ($this->subject->error)
                     $this->notFound();
-
-                $this->profile = $params;
             }
             // 2) not yet synced but exists on realm (and not a gm character)
             else if ($char = DB::Characters($this->realmId)->selectRow('SELECT c.guid AS realmGUID, c.name, c.race, c.class, c.level, c.gender, IFNULL(g.name, "") AS guild, IFNULL(gm.rank, 0) AS guildRank FROM characters c LEFT JOIN guild_member gm ON gm.guid = c.guid LEFT JOIN guild g ON g.guildid = gm.guildid WHERE c.name = ? AND level <= ?d AND (extra_flags & ?d) = 0', Util::ucFirst($this->subjectName), MAX_LEVEL, 0x7D))
@@ -102,7 +102,7 @@ class ProfilePage extends GenericPage
 
     protected function generateContent()
     {
-        if ($this->mode == CACHE_TYPE_NONE)
+        if ($this->doResync)
             return;
 
         // + .titles ?

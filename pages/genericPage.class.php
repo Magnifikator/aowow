@@ -32,7 +32,6 @@ trait DetailPage
         return implode('_', $key);
     }
 
-
     protected function applyCCErrors()
     {
         if (!empty($_SESSION['error']['co']))
@@ -82,6 +81,9 @@ trait TrProfiler
     protected $battlegroup = '';                            // not implemented, since no pserver supports it
     protected $subjectName = '';
     protected $subjectGUID = 0;
+    protected $sumSubjects = 0;
+
+    protected $doResync    = null;
 
     protected function getSubjectFromUrl($str)
     {

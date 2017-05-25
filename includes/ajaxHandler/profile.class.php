@@ -9,9 +9,9 @@ class AjaxProfile extends AjaxHandler
 
     protected $validParams = ['link', 'unlink', 'pin', 'unpin', 'public', 'private', 'avatar', 'resync', 'status', 'save', 'delete', 'purge', 'summary', 'load'];
     protected $_get        = array(
-        'id'     => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkIdList']],
-        'items'  => [FILTER_CALLBACK,            ['options' => 'AjaxProfile::checkItemList']],
-        'size'   => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
+        'id'    => [FILTER_CALLBACK,        ['options' => 'AjaxHandler::checkIdList']],
+        'items' => [FILTER_CALLBACK,        ['options' => 'AjaxProfile::checkItemList']],
+        'size'  => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
     );
 
     protected $_post        = array(

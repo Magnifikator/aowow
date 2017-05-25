@@ -3,23 +3,6 @@
 if (!defined('AOWOW_REVISION'))
     die('illegal access');
 
-// !do not cache!
-/* older version
-new Listview({
-    template: 'profile',
-    id: 'characters',
-    name: LANG.tab_characters,
-    parent: 'lkljbjkb574',
-    visibleCols: ['race','classs','level','talents','gearscore','achievementpoints','rating'],
-    sort: [-15],
-    hiddenCols: ['arenateam','guild','location'],
-    onBeforeCreate: pr_initRosterListview,
-    data: [
-        {id:30577430,name:'Çircus',achievementpoints:0,guild:'swaggin',guildrank:5,arenateam:{2:{name:'the bird knows the word',rating:1845}},realm:'maiev',realmname:'Maiev',battlegroup:'whirlwind',battlegroupname:'Whirlwind',region:'us',roster:2,row:1},
-        {id:10602015,name:'Gremiss',achievementpoints:3130,guild:'Team Discovery Channel',guildrank:3,arenateam:{2:{name:'the bird knows the word',rating:1376}},realm:'maiev',realmname:'Maiev',battlegroup:'whirlwind',battlegroupname:'Whirlwind',region:'us',level:80,race:5,gender:1,classs:9,faction:1,gearscore:2838,talenttree1:54,talenttree2:17,talenttree3:0,talentspec:1,roster:2,row:2}
-    ]
-});
-*/
 
 // menuId 5: Profiler g_initPath()
 //  tabId 1: Tools    g_initHeader()
@@ -27,39 +10,17 @@ class ProfilesPage extends GenericPage
 {
     use TrProfiler;
 
+    protected $roster   = 0;                                // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
+
+    protected $tabId    = 1;
+    protected $path     = [1, 5, 0];
     protected $tpl      = 'profiles';
     protected $js       = ['filters.js', 'profile_all.js', 'profile.js'];
     protected $css      = [['path' => 'Profiler.css']];
-    protected $tabId    = 1;
-    protected $path     = [1, 5, 0];
-    protected $region   = '';                               // seconded..
-    protected $realm    = '';                               // not sure about the use
-    protected $roster   = 0;                                // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
-
-    protected $sumChars = 0;
 
     public function __construct($pageCall, $pageParam)
     {
-        $cat = explode('.', $pageParam);
-        if ($cat[0] && count($cat) < 3 && $cat[0] === 'eu' || $cat[0] === 'us')
-        {
-            $this->region = $cat[0];
-
-            // if ($cat[1] == Profiler::urlize(CFG_BATTLEGROUP))
-                // $this->realm = CFG_BATTLEGROUP;
-
-            if (isset($cat[1]))
-            {
-                foreach (Profiler::getRealms() as $r)
-                {
-                    if (Profiler::urlize($r['name']) == $cat[1])
-                    {
-                        $this->realm = $r['name'];
-                        break;
-                    }
-                }
-            }
-        }
+        $this->getSubjectFromUrl($pageParam);
 
         $this->filterObj = new ProfileListFilter();
 
@@ -71,7 +32,7 @@ class ProfilesPage extends GenericPage
             if ($this->realm && $r['name'] != $this->realm)
                 continue;
 
-            $this->sumChars += DB::Characters($idx)->selectCell('SELECT count(*) FROM characters WHERE deleteInfos_Name IS NULL');
+            $this->sumSubjects += DB::Characters($idx)->selectCell('SELECT count(*) FROM characters WHERE deleteInfos_Name IS NULL');
         }
 
         parent::__construct($pageCall, $pageParam);
@@ -82,34 +43,12 @@ class ProfilesPage extends GenericPage
 
     protected function generateTitle()
     {
-        // -> battlegroup
-        // -> server
-        // -> region
-        // Alonsus - Cruelty / Crueldad - Europe - Profiles - World of Warcraft
-        // Norgannon - German - Europe - Profile - World of Warcraft
-
-        array_unshift($this->title, Util::ucFirst(Lang::game('profiles')));
-
-        if ($this->region)
-            array_unshift($this->title, Lang::profiler('regions', $this->region));
-
         if ($this->realm)
-            array_unshift($this->title, $this->realm);
-    }
-
-    protected function generatePath()
-    {
-        if ($this->region)
-        {
-            $this->path[] = $this->region;
-
-            if ($this->realm)
-            {
-                $this->path[] = Profiler::urlize(CFG_BATTLEGROUP);
-                if ($this->realm != CFG_BATTLEGROUP)
-                    $this->path[] = Profiler::urlize($this->realm);
-            }
-        }
+            array_unshift($this->title, $this->realm,/* CFG_BATTLEGROUP,*/ Lang::profiler('regions', $this->region), Lang::game('profiles'));
+        else if ($this->region)
+            array_unshift($this->title, Lang::profiler('regions', $this->region), Lang::game('profiles'));
+        else
+            array_unshift($this->title, Lang::game('profiles'));
     }
 
     protected function generateContent()
@@ -141,7 +80,6 @@ class ProfilesPage extends GenericPage
 
         $tabData = array(
             'id'          => 'characters',
-            'name'        => '$LANG.tab_characters',
             'hideCount'   => 1,
             'visibleCols' => ['race', 'classs', 'level', 'talents', 'achievementpoints', 'gearscore'],
             'onBeforeCreate' => '$pr_initRosterListview'        // puts a resync button on the lv
@@ -179,8 +117,9 @@ class ProfilesPage extends GenericPage
             {
                 $tabData['roster']        = $this->roster;
                 $tabData['visibleCols'][] = 'guildrank';
+                $tabData['hiddenCols'][]  = 'guild';
 
-                $this->roster  = Lang::profiler('guildRoster', [$profiles->getField('guild')]);
+                $this->roster  = Lang::profiler('guildRoster', [$profiles->getField('guildname')]);
             }
             else if ($this->roster && !$profiles->hasDiffFields(['arenateam']) && $profiles->getField('arenateam'))
             {
@@ -193,18 +132,16 @@ class ProfilesPage extends GenericPage
             else
                 $this->roster = 0;
 
-
             $tabData['data'] = array_values($profiles->getListviewData($addInfoMask, $skillCols));
-
 
             // create note if search limit was exceeded
             if ($this->filter['query'] && $profiles->getMatches() > CFG_SQL_LIMIT_DEFAULT)
             {
-                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound2', $this->sumChars, $profiles->getMatches());
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound2', $this->sumSubjects, $profiles->getMatches());
                 $tabData['_truncated'] = 1;
             }
             else if ($profiles->getMatches() > CFG_SQL_LIMIT_DEFAULT)
-                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound', $this->sumChars, 0);
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_charactersfound', $this->sumSubjects, 0);
 
             if ($this->filterObj->error)
                 $tabData['_errors'] = '$1';

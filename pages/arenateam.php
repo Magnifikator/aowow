@@ -14,8 +14,7 @@ class ArenaTeamPage extends GenericPage
 
     protected $tabId    = 1;
     protected $path     = [1, 5, 3];
-    protected $tpl      = 'arena-team';
-    protected $mode     = CACHE_TYPE_PAGE;
+    protected $tpl      = 'roster';
     protected $js       = ['profile_all.js', 'profile.js'];
     protected $css      = [['path' => 'Profiler.css']];
 
@@ -45,7 +44,7 @@ class ArenaTeamPage extends GenericPage
 
             // 3 possibilities
             // 1) already synced to aowow
-            if ($subject = DB::Aowow()->selectRow('SELECT id, realmGUID, cuFlags FROM ?_profiler_arena_team WHERE realm = ?d AND name = ?', $this->realmId, Util::ucFirst($this->subjectName)))
+            if ($subject = DB::Aowow()->selectRow('SELECT id, realmGUID, cuFlags FROM ?_profiler_arena_team WHERE realm = ?d AND nameUrl = ?', $this->realmId, Profiler::urlize($this->subjectName)))
             {
                 if ($subject['cuFlags'] & PROFILER_CU_NEEDS_RESYNC)
                 {
@@ -61,7 +60,7 @@ class ArenaTeamPage extends GenericPage
                 $this->profile = $params;
                 $this->name = sprintf(Lang::profiler('arenaRoster'), $this->subject->getField('name'));
             }
-            // 2) not yet synced but exists on realm
+            // 2) not yet synced but exists on realm (wont work if we get passed an urlized name, but there is nothing we can do about it)
             else if ($team = DB::Characters($this->realmId)->selectRow('SELECT at.arenaTeamId AS realmGUID, at.name, at.type FROM arena_team at WHERE at.name = ?', Util::ucFirst($this->subjectName)))
             {
                 $team['realm']   = $this->realmId;
@@ -84,14 +83,14 @@ class ArenaTeamPage extends GenericPage
     {
         // poperly format $realm; localize me
         $team  = $this->subjectName;
-        $team .= ' ('.$this->realm.' - '.($this->region == 'us' ? 'US &amp; Oceanic' : 'Europe').')';
+        $team .= ' ('.$this->realm.' - '.Lang::profiler('regions', $this->region).')';
 
         array_unshift($this->title, $team, 'Arena Team');
     }
 
     protected function generateContent()
     {
-        if ($this->mode == CACHE_TYPE_NONE)
+        if ($this->doResync)
             return;
 
         $this->addJS('?data=realms.weight-presets&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
@@ -118,7 +117,7 @@ class ArenaTeamPage extends GenericPage
                 'data'        => array_values($member->getListviewData(PROFILEINFO_CHARACTER | PROFILEINFO_ARENA)),
                 'sort'        => "$[-15]",
                 'visibleCols' => "$['race','classs','level','talents','gearscore','achievementpoints','rating']",
-                'hiddenCols'  => "$['arenateam','guild','location']"
+                'hiddenCols'  => "$['guild','location']"
             )];
         }
     }
@@ -131,8 +130,6 @@ class ArenaTeamPage extends GenericPage
 
     private function handleIncompleteData($teamGuid)
     {
-        $this->mode = CACHE_TYPE_NONE;
-
         //display empty page and queue status
         $newId = Profiler::scheduleResync(TYPE_ARENA_TEAM, $this->realmId, $teamGuid);
 

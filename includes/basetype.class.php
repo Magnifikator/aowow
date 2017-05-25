@@ -96,7 +96,7 @@ abstract class BaseType
                         if ($x = $resolveCondition($foo, $supLink))
                             $sql[] = $x;
 
-                return '('.implode($subLink, $sql).')';
+                return $sql ? '('.implode($subLink, $sql).')' : null;
             }
             else
             {
@@ -742,9 +742,28 @@ trait spawnHelper
 
 trait profilerHelper
 {
-    public static $type      = 0;                           // arena teams dont actually have one
-    public static $brickFile = 'profile';                   // profile is multipurpose
-    public static $dataTable = '';                          // doesn't have community content
+    public  static $type        = 0;                        // arena teams dont actually have one
+    public  static $brickFile   = 'profile';                // profile is multipurpose
+
+    private static $subjectGUID = 0;
+
+    public function selectRealms($fi)
+    {
+        $this->dbNames = [];
+
+        foreach(Profiler::getRealms() as $idx => $r)
+        {
+            if (!empty($fi['sv']) && Profiler::urlize($r['name']) != Profiler::urlize($fi['sv']) && intVal($fi['sv']) != $idx)
+                continue;
+
+            if (!empty($fi['rg']) && Profiler::urlize($r['region']) != Profiler::urlize($fi['rg']))
+                continue;
+
+            $this->dbNames[$idx] = 'Characters';
+        }
+
+        return !!$this->dbNames;
+    }
 }
 
 /*

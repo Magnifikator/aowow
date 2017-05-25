@@ -1,7 +1,7 @@
 <?php
 
 if (!defined('AOWOW_REVISION'))
-    die('invalid access');
+    die('illegal access');
 
 
 // menuId 5: Profiler g_initPath()
@@ -10,33 +10,17 @@ class ArenaTeamsPage extends GenericPage
 {
     use TrProfiler;
 
-    protected $tpl      = 'gms';
-    protected $js       = ['filters.js', 'profile_all.js', 'profile.js'];
-    protected $css      = [['path' => 'Profiler.css']];
     protected $tabId    = 1;
     protected $path     = [1, 5, 3];
-
-    protected $sumTeams = 0;
+    protected $tpl      = 'arena-teams';
+    protected $js       = ['filters.js', 'profile_all.js', 'profile.js'];
+    // protected $css      = [['path' => 'Profiler.css']];
 
     public function __construct($pageCall, $pageParam)
     {
         $this->getSubjectFromUrl($pageParam);
 
         $this->filterObj = new ArenaTeamListFilter();
-
-        // clean search if possible
-        $form = $this->filterObj->getForm('form');
-        if (!empty($form['rg']))
-        {
-            $url = '?arena-teams='.$form['rg'];
-            if (!empty($form['sv']))
-                $url .= '.'.Profiler::urlize($form['sv']);
-
-            if ($_ = $this->filterObj->urlize(['sv' => '', 'rg' => '']))
-                $url .= '&filter='.$_;
-
-            header('Location: '.$url , true, 302);
-        }
 
         foreach (Profiler::getRealms() as $idx => $r)
         {
@@ -46,7 +30,7 @@ class ArenaTeamsPage extends GenericPage
             if ($this->realm && $r['name'] != $this->realm)
                 continue;
 
-            $this->sumTeams += DB::Characters($idx)->selectCell('SELECT count(*) FROM arena_team');
+            $this->sumSubjects += DB::Characters($idx)->selectCell('SELECT count(*) FROM arena_team');
         }
 
         parent::__construct($pageCall, $pageParam);
@@ -69,11 +53,6 @@ class ArenaTeamsPage extends GenericPage
     {
         $this->addJS('?data=realms&locale='.User::$localeId.'&t='.$_SESSION['dataKey']);
 
-        // recreate form selection
-        $this->filter = $this->filterObj->getForm('form');
-        $this->filter['query'] = isset($_GET['filter']) ? $_GET['filter'] : null;
-        $this->filter['fi']    =  $this->filterObj->getForm();
-
         $conditions = [];
         if (!User::isInGroup(U_GROUP_EMPLOYEE))
             $conditions[] = ['at.rating', 1000, '>'];
@@ -81,15 +60,18 @@ class ArenaTeamsPage extends GenericPage
         if ($_ = $this->filterObj->getConditions())
             $conditions[] = $_;
 
-        $hCols   = ['arenateam', 'guild'];
-        $vCols   = ['rank', 'wins', 'losses', 'rating'];
+        // recreate form selection
+        $this->filter = $this->filterObj->getForm();
+        $this->filter['query']    = isset($_GET['filter']) ? $_GET['filter'] : null;
+        $this->filter['initData'] = ['type' => 'arenateams'];
+
         $tabData = array(
             'id'          => 'arena-teams',
             'hideCount'   => 1,
-            'roster'      => 3,
-            'sort'        => "$[6]",
-            'extraCols'   => "$[Listview.extraCols.members]",
-            // 'onBeforeCreate' => '$pr_initRosterListview'        // $_GET['roster'] = 1|2|3|4 .. 2,3,4 arenateam-size (4 => 5-man), 1 guild .. it puts a resync button on the lv...
+            'sort'        => [-16],
+            'extraCols'   => ['$Listview.extraCols.members'],
+            'visibleCols' => ['rank', 'wins', 'losses', 'rating'],
+            'hiddenCols'  => ['arenateam', 'guild'],
         );
 
         $miscParams = [];
@@ -98,54 +80,35 @@ class ArenaTeamsPage extends GenericPage
         if ($this->region)
             $miscParams['rg'] = $this->region;
 
-        $teams = new ArenaTeamList($conditions, $miscParams);
+        $teams = new RemoteArenaTeamList($conditions, $miscParams);
         if (!$teams->error)
         {
             $dFields = $teams->hasDiffFields(['faction', 'type']);
             if (!($dFields & 0x1))
-                $hCols[] = 'faction';
+                $tabData['hiddenCols'][] = 'faction';
 
             if (($dFields & 0x2))
-                $vCols[] = 'size';
+                $tabData['visibleCols'][] = 'size';
 
             $tabData['data'] = array_values($teams->getListviewData());
 
             // create note if search limit was exceeded
-            if (0 /* filter were applied */)
+            if ($this->filter['query'] && $teams->getMatches() > CFG_SQL_LIMIT_DEFAULT)
             {
-                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound2', $this->sumTeams, $teams->getMatches());
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound2', $this->sumSubjects, $teams->getMatches());
                 $tabData['_truncated'] = 1;
             }
-            else
-                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound', $this->sumTeams, 0);
+            else if ($teams->getMatches() > CFG_SQL_LIMIT_DEFAULT)
+                $tabData['note'] = sprintf(Util::$tryFilteringString, 'LANG.lvnote_arenateamsfound', $this->sumSubjects, 0);
 
             if ($this->filterObj->error)
-                $tabData['_errors'] = '$1';
-
-            $tabData['hiddenCols']  = '$'.Util::toJSON($hCols);
-            $tabData['visibleCols'] = '$'.Util::toJSON($vCols);
+                $tabData['_errors'] = 1;
         }
 
         $this->lvTabs[] = ['profile', $tabData, 'membersCol'];
 
         Lang::sort('game', 'cl');
         Lang::sort('game', 'ra');
-    }
-
-    private function getTalentDistribution($tString)
-    {
-        $classMask = 1 << ($this->character['classs'] - 1);
-        $distrib   = DB::Aowow()->selectCol('SELECT COUNT(t.id) FROM dbc_talent t JOIN dbc_talenttab tt ON t.tabId = tt.id WHERE tt.classMask & ?d GROUP BY tt.id ORDER BY tt.tabNumber ASC', $classMask);
-        $result    = [0, 0, 0];
-
-        $start = 0;
-        foreach ($distrib as $idx => $len)
-        {
-            $result[$idx] = array_sum(str_split(substr($tString, $start, $len)));
-            $start += $len;
-        }
-
-        return $result;
     }
 }
 

@@ -44,10 +44,11 @@ $error = function ($type, $typeId, $realmId)
 // if (CFG_PROFILER_QUEUE) - wont work because it is not redefined if changed in config
 while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profiler_queue"'))
 {
-    if (($tDiff = ($tCycle + CFG_PROFILER_QUEUE_DELAY * 1000) - microtime(true)) > 0.0)
+    if (($tDiff = (microtime(true) - $tCycle)) < (CFG_PROFILER_QUEUE_DELAY / 1000))
     {
-        CLI::write('sleeping '.Lang::nf($tDiff / 1000000, 2).'s..');
-        usleep($tDiff);
+        $wait = (CFG_PROFILER_QUEUE_DELAY / 1000) - $tDiff;
+        CLI::write('sleeping '.Lang::nf($wait, 2).'s..');
+        usleep($wait * 1000 * 1000);
     }
 
     $tCycle = microtime(true);
@@ -84,6 +85,11 @@ while (DB::Aowow()->selectCell('SELECT value FROM ?_config WHERE `key` = "profil
 
             break;
         case TYPE_GUILD:
+            if (!Profiler::getGuildFromRealm($row['realm'], $row['realmGUID']))
+            {
+                $error(TYPE_ARENA_GUILD, $row['realmGUID'], $row['realm']);
+                continue 2;
+            }
 
             break;
         case TYPE_ARENA_TEAM:

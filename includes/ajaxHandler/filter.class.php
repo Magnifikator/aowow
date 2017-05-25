@@ -65,6 +65,12 @@ class AjaxFilter extends AjaxHandler
             case 'profiles':
                 $this->filter = (new ProfileListFilter(true, $opts));
                 break;
+            case 'guilds':
+                $this->filter = (new GuildListFilter(true, $opts));
+                break;
+            case 'arena-teams':
+                $this->filter = (new ArenaTeamListFilter(true, $opts));
+                break;
             default:
                 return;
         }

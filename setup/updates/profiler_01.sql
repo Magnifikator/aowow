@@ -1,99 +1,180 @@
 DROP TABLE IF EXISTS `aowow_profiler_sync`;
 CREATE TABLE `aowow_profiler_sync` (
-    `realm` TINYINT(3) UNSIGNED NOT NULL,
-    `realmGUID` INT(10) UNSIGNED NOT NULL,
-    `type` SMALLINT(5) UNSIGNED NOT NULL,
-    `typeId` MEDIUMINT(8) UNSIGNED NOT NULL,
-    `requestTime` INT(10) UNSIGNED NOT NULL,
-    `status` TINYINT(3) UNSIGNED NOT NULL,
-    `errorCode` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
-    UNIQUE INDEX `realm_realmGUID_type_typeId` (`realm`, `realmGUID`, `type`, `typeId`)
-) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+  `realm` tinyint(3) unsigned NOT NULL,
+  `realmGUID` int(10) unsigned NOT NULL,
+  `type` smallint(5) unsigned NOT NULL,
+  `typeId` int(10) unsigned NOT NULL,
+  `requestTime` int(10) unsigned NOT NULL,
+  `status` tinyint(3) unsigned NOT NULL,
+  `errorCode` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  UNIQUE KEY `realm_realmGUID_type_typeId` (`realm`,`realmGUID`,`type`),
+  UNIQUE KEY `type_typeId` (`type`,`typeId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `aowow_profiler_guild`;
+CREATE TABLE `aowow_profiler_guild` (
+  `id` int(10) unsigned NOT NULL,
+  `realm` int(10) unsigned NOT NULL DEFAULT '0',
+  `realmGUID` int(10) unsigned NOT NULL DEFAULT '0',
+  `cuFlags` int(10) unsigned NOT NULL DEFAULT '0',
+  `name` varchar(26) NOT NULL DEFAULT '',
+  `emblemStyle` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `emblemColor` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `borderStyle` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `borderColor` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `backgroundColor` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `info` varchar(500) NOT NULL DEFAULT '',
+  `createDate` int(10) unsigned NOT NULL DEFAULT '0',
+  KEY `name` (`name`),
+  KEY `guild` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `aowow_profiler_guild_rank`;
+CREATE TABLE `aowow_profiler_guild_rank` (
+  `guildId` int(10) unsigned NOT NULL DEFAULT '0',
+  `rank` tinyint(3) unsigned NOT NULL,
+  `name` varchar(20) NOT NULL DEFAULT '',
+  PRIMARY KEY (`guildId`,`rank`),
+  KEY `rank` (`rank`),
+  CONSTRAINT `FK_aowow_profiler_guild_rank_aowow_profiler_guild` FOREIGN KEY (`guildId`) REFERENCES `aowow_profiler_guild` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `aowow_profiler_profiles`;
 CREATE TABLE `aowow_profiler_profiles` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-    `realm` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
-    `realmGUID` INT(11) UNSIGNED NULL DEFAULT NULL,
-    `cuFlags` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-    `user` INT(11) UNSIGNED NULL DEFAULT NULL,
-    `name` VARCHAR(12) NOT NULL,
-    `race` TINYINT(3) UNSIGNED NOT NULL,
-    `class` TINYINT(3) UNSIGNED NOT NULL,
-    `level` TINYINT(3) UNSIGNED NOT NULL,
-    `gender` TINYINT(3) UNSIGNED NOT NULL,
-    `skincolor` TINYINT(3) UNSIGNED NOT NULL,
-    `hairstyle` TINYINT(3) UNSIGNED NOT NULL,
-    `haircolor` TINYINT(3) UNSIGNED NOT NULL,
-    `facetype` TINYINT(3) UNSIGNED NOT NULL,
-    `features` TINYINT(3) UNSIGNED NOT NULL,
-    `nomodelMask` INT(11) UNSIGNED NOT NULL DEFAULT '0',
-    `title` TINYINT(3) UNSIGNED NOT NULL,
-    `description` TEXT NULL,
-    `playedtime` INT(11) UNSIGNED NOT NULL,
-    `lastupdated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `spec1` TEXT NOT NULL,
-    `spec2` TEXT NOT NULL,
-    `activespec` TINYINT(3) UNSIGNED NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE INDEX `realm_realmGUID` (`realm`, `realmGUID`)
-) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `realm` tinyint(3) unsigned DEFAULT NULL,
+  `realmGUID` int(11) unsigned DEFAULT NULL,
+  `cuFlags` int(11) unsigned NOT NULL DEFAULT '0',
+  `sourceId` int(11) unsigned DEFAULT NULL,
+  `sourceName` varchar(50) DEFAULT NULL,
+  `copy` int(10) unsigned DEFAULT NULL,
+  `icon` varchar(50) DEFAULT NULL,
+  `user` int(11) unsigned DEFAULT NULL,
+  `name` varchar(50) NOT NULL,
+  `race` tinyint(3) unsigned NOT NULL,
+  `class` tinyint(3) unsigned NOT NULL,
+  `level` tinyint(3) unsigned NOT NULL,
+  `gender` tinyint(3) unsigned NOT NULL,
+  `guild` int(10) unsigned NULL,
+  `guildrank` tinyint(3) unsigned DEFAULT NULL COMMENT '0: guild master',
+  `skincolor` tinyint(3) unsigned NOT NULL,
+  `hairstyle` tinyint(3) unsigned NOT NULL,
+  `haircolor` tinyint(3) unsigned NOT NULL,
+  `facetype` tinyint(3) unsigned NOT NULL,
+  `features` tinyint(3) unsigned NOT NULL,
+  `nomodelMask` int(11) unsigned NOT NULL DEFAULT '0',
+  `title` tinyint(3) unsigned NOT NULL,
+  `description` text NULL,
+  `playedtime` int(11) unsigned NOT NULL,
+  `gearscore` smallint(5) unsigned NOT NULL,
+  `lastupdated` int(11) NOT NULL,
+  `talenttree1` tinyint(4) unsigned NOT NULL COMMENT 'points spend in 1st tree',
+  `talenttree2` tinyint(4) unsigned NOT NULL COMMENT 'points spend in 2nd tree',
+  `talenttree3` tinyint(4) unsigned NOT NULL COMMENT 'points spend in 3rd tree',
+  `talentbuild1` varchar(105) NOT NULL,
+  `talentbuild2` varchar(105) NOT NULL,
+  `glyphs1` varchar(45) NOT NULL,
+  `glyphs2` varchar(45) NOT NULL,
+  `activespec` tinyint(1) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `realm_realmGUID_name` (`realm`,`realmGUID`,`name`),
+  KEY `user` (`user`),
+  KEY `guild` (`guild`),
+  CONSTRAINT `FK_aowow_profiler_profiles_aowow_profiler_guild` FOREIGN KEY (`guild`) REFERENCES `aowow_profiler_guild` (`id`) ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `aowow_profiler_items`;
 CREATE TABLE `aowow_profiler_items` (
-    `id` INT(11) UNSIGNED NULL DEFAULT NULL,
-    `slot` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
-    `item` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL,
-    `subItem` SMALLINT(6) NULL DEFAULT NULL,
-    `permEnchant` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL,
-    `tempEnchant` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL,
-    `extraSocket` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
-    `gem1` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL,
-    `gem2` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL,
-    `gem3` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL,
-    `gem4` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL COMMENT 'not used',
-    UNIQUE INDEX `id_slot` (`id`, `slot`),
-    INDEX `id` (`id`),
-    CONSTRAINT `FK_pr_items` FOREIGN KEY (`id`) REFERENCES `aowow_profiler_profiles` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
-) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+  `id` int(11) unsigned DEFAULT NULL,
+  `slot` tinyint(3) unsigned DEFAULT NULL,
+  `item` mediumint(8) unsigned DEFAULT NULL,
+  `subItem` smallint(6) DEFAULT NULL,
+  `permEnchant` mediumint(8) unsigned DEFAULT NULL,
+  `tempEnchant` mediumint(8) unsigned DEFAULT NULL,
+  `extraSocket` tinyint(3) unsigned DEFAULT NULL COMMENT 'not used .. the appropriate gem slot is set to -1 instead',
+  `gem1` mediumint(8) DEFAULT NULL,
+  `gem2` mediumint(8) DEFAULT NULL,
+  `gem3` mediumint(8) DEFAULT NULL,
+  `gem4` mediumint(8) DEFAULT NULL,
+  UNIQUE KEY `id_slot` (`id`,`slot`),
+  KEY `id` (`id`),
+  CONSTRAINT `FK_pr_items` FOREIGN KEY (`id`) REFERENCES `aowow_profiler_profiles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `aowow_profiler_arena_team`;
+CREATE TABLE `aowow_profiler_arena_team` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `realm` tinyint(3) unsigned NOT NULL,
+  `realmGUID` int(10) unsigned NOT NULL,
+  `name` varchar(24) NOT NULL,
+  `type` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `cuFlags` int(11) unsigned NOT NULL,
+  `rating` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `seasonGames` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `seasonWins` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `weekGames` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `weekWins` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `rank` int(10) unsigned NOT NULL DEFAULT '0',
+  `backgroundColor` int(10) unsigned NOT NULL DEFAULT '0',
+  `emblemStyle` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `emblemColor` int(10) unsigned NOT NULL DEFAULT '0',
+  `borderStyle` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `borderColor` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `realm_realmGUID` (`realm`,`realmGUID`),
+  KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `aowow_profiler_arena_team_member`;
+CREATE TABLE `aowow_profiler_arena_team_member` (
+  `arenaTeamId` int(10) unsigned NOT NULL DEFAULT '0',
+  `profileId` int(10) unsigned NOT NULL DEFAULT '0',
+  `captain` tinyint(1) unsigned NOT NULL DEFAULT '0',
+  `weekGames` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `weekWins` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `seasonGames` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `seasonWins` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `personalRating` smallint(5) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`arenaTeamId`,`profileId`),
+  KEY `guid` (`profileId`),
+  CONSTRAINT `FK_aowow_profiler_arena_team_member_aowow_profiler_arena_team` FOREIGN KEY (`arenaTeamId`) REFERENCES `aowow_profiler_arena_team` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `FK_aowow_profiler_arena_team_member_aowow_profiler_profiles` FOREIGN KEY (`profileId`) REFERENCES `aowow_profiler_profiles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `aowow_profiler_completion`;
 CREATE TABLE `aowow_profiler_completion` (
-    `id` INT(11) UNSIGNED NOT NULL,
-    `type` SMALLINT(6) UNSIGNED NOT NULL,
-    `typeId` MEDIUMINT(9) NOT NULL,
-    `cur` INT(11) NULL DEFAULT NULL,
-    `max` INT(11) NULL DEFAULT NULL,
-    INDEX `id` (`id`),
-    CONSTRAINT `FK_pr_completion` FOREIGN KEY (`id`) REFERENCES `aowow_profiler_profiles` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
-) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+  `id` int(11) unsigned NOT NULL,
+  `type` smallint(6) unsigned NOT NULL,
+  `typeId` mediumint(9) NOT NULL,
+  `cur` int(11) DEFAULT NULL,
+  `max` int(11) DEFAULT NULL,
+  KEY `id` (`id`),
+  KEY `type` (`type`),
+  KEY `typeId` (`typeId`),
+  CONSTRAINT `FK_pr_completion` FOREIGN KEY (`id`) REFERENCES `aowow_profiler_profiles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-DROP TABLE IF EXISTS `aowow_profiler_achievement_progress`;
-CREATE TABLE `aowow_profiler_achievement_progress` (
-    `id` INT(11) NULL DEFAULT NULL,
-    `achievement` SMALLINT(6) NULL DEFAULT NULL,
-    `cirterium` SMALLINT(6) NULL DEFAULT NULL,
-    INDEX `id` (`id`)
-) COLLATE='utf8_general_ci' ENGINE=InnoDB;
-
+DROP TABLE IF EXISTS `aowow_profiler_pets`;
 CREATE TABLE `aowow_profiler_pets` (
-	`id` MEDIUMINT(8) UNSIGNED NOT NULL AUTO_INCREMENT,
-	`owner` INT(10) UNSIGNED NULL DEFAULT NULL,
-	`name` VARCHAR(50) NULL DEFAULT NULL,
-	`family` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
-	`displayId` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
-	`talents` VARCHAR(20) NULL DEFAULT NULL,
-	PRIMARY KEY (`id`),
-	INDEX `owner` (`owner`),
-	CONSTRAINT `FK_pr_pets` FOREIGN KEY (`owner`) REFERENCES `aowow_profiler_profiles` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
-) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+  `id` mediumint(8) unsigned NOT NULL AUTO_INCREMENT,
+  `owner` int(10) unsigned DEFAULT NULL,
+  `name` varchar(50) DEFAULT NULL,
+  `family` tinyint(3) unsigned DEFAULT NULL,
+  `npc` smallint(5) unsigned DEFAULT NULL,
+  `displayId` smallint(5) unsigned DEFAULT NULL,
+  `talents` varchar(20) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `owner` (`owner`),
+  CONSTRAINT `FK_pr_pets` FOREIGN KEY (`owner`) REFERENCES `aowow_profiler_profiles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `aowow_profiler_excludes` (
-    `type` smallint(5) unsigned NOT NULL,
-    `typeId` mediumint(8) unsigned NOT NULL,
-    `groups` smallint(5) unsigned NOT NULL COMMENT 'see exclude group defines',
-    `comment` varchar(50) NOT NULL,
-    PRIMARY KEY (`type`,`typeId`)
+DROP TABLE IF EXISTS `aowow_profiler_excludes`;
+CREATE TABLE `aowow_profiler_excludes` (
+  `type` smallint(5) unsigned NOT NULL,
+  `typeId` mediumint(8) unsigned NOT NULL,
+  `groups` smallint(5) unsigned NOT NULL COMMENT 'see exclude group defines',
+  `comment` varchar(50) NOT NULL COMMENT 'rebuilding profiler files will delete everything without a comment',
+  PRIMARY KEY (`type`,`typeId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `aowow_profiler_excludes` (`type`, `typeId`, `groups`, `comment`) VALUES

@@ -17,8 +17,12 @@ $this->brick('pageTemplate');
                 <h1 class="first"><?=$this->name; ?></h1>
 
 <?php
-    // arena team statistics here
+    // subject statistics here
+    if (isset($this->extraHTML)):
+        echo $this->extraHTML;
+    endif;
 ?>
+
             </div>
 <?php
     $this->brick('lvTabs');

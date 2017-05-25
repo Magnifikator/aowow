@@ -4,10 +4,6 @@ if (!defined('AOWOW_REVISION'))
     die('illegal access');
 
 
-// class CharacterList extends BaseType                     // new profiler-related parent: ProfilerType?; maybe a trait is enough => use ProfileHelper;
-// class GuildList extends BaseType
-// class ArenaTeamList extends BaseType
-
 class ProfileList extends BaseType
 {
     use profilerHelper, listviewHelper;
@@ -37,13 +33,13 @@ class ProfileList extends BaseType
                 'talenttree1'       => $this->getField('talenttree1'),
                 'talenttree2'       => $this->getField('talenttree2'),
                 'talenttree3'       => $this->getField('talenttree3'),
-                'talentspec'        => $this->getField('activespec') + 1,             // 0 => 1; 1 => 2
+                'talentspec'        => $this->getField('activespec') + 1,                   // 0 => 1; 1 => 2
                 'achievementpoints' => $this->getField('achievementpoints'),
-                'guild'             => '$"'.$this->getField('guild').'"',       // force this to be a string
-                'guildrank'         => $this->getField('guildRank'),
+                'guild'             => '$"'.$this->getField('guildname').'"',               // force this to be a string
+                'guildrank'         => $this->getField('guildrank'),
                 'realm'             => Profiler::urlize($this->getField('realmName')),
                 'realmname'         => $this->getField('realmName'),
-             // 'battlegroup'       => Profiler::urlize($this->getField('battlegroup')),  // was renamed to subregion somewhere around cata release
+             // 'battlegroup'       => Profiler::urlize($this->getField('battlegroup')),    // was renamed to subregion somewhere around cata release
              // 'battlegroupname'   => $this->getField('battlegroup'),
                 'gearscore'         => $this->getField('gearscore')
             );
@@ -102,7 +98,7 @@ class ProfileList extends BaseType
 
         $x  = '<table>';
         $x .= '<tr><td><b class="q">'.$name.'</b></td></tr>';
-        if ($g = $this->getField('guild'))
+        if ($g = $this->getField('guildname'))
             $x .= '<tr><td>&lt;'.$g.'&gt;</td></tr>';
         else if ($d = $this->getField('description'))
             $x .= '<tr><td>'.$d.'</td></tr>';
@@ -373,8 +369,8 @@ class RemoteProfileList extends ProfileList
     protected   $queryBase = 'SELECT `c`.*, `c`.`guid` AS ARRAY_KEY FROM characters c';
     protected   $queryOpts = array(
                     'c'   => [['gm', 'g', 'ca', 'ct'], 'g' => 'ARRAY_KEY', 'o' => 'level DESC, name ASC'],
-                    'gm'  => ['j' => ['guild_member gm ON gm.guid = c.guid', true], 's' => ', gm.rank AS guildRank'],
-                    'g'   => ['j' => ['guild g ON g.guildid = gm.guildid', true], 's' => ', g.name AS guild'],
+                    'gm'  => ['j' => ['guild_member gm ON gm.guid = c.guid', true], 's' => ', gm.rank AS guildrank'],
+                    'g'   => ['j' => ['guild g ON g.guildid = gm.guildid', true], 's' => ', g.guildid AS guild, g.name AS guildname'],
                     'ca'  => ['j' => ['character_achievement ca ON ca.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT ca.achievement SEPARATOR " ") AS _acvs'],
                     'ct'  => ['j' => ['character_talent ct ON ct.guid = c.guid AND ct.spec = c.activespec', true], 's' => ', GROUP_CONCAT(DISTINCT ct.spell SEPARATOR " ") AS _talents'],
                     // 'atm' => ['j' => ['arena_team_member atm ON atm.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT CONCAT(atm.arenaTeamId, ":", atm.personalRating) SEPARATOR " ") AS _teamData'],
@@ -409,6 +405,9 @@ class RemoteProfileList extends ProfileList
         // post processing
         foreach ($this->iterate() as $guid => &$curTpl)
         {
+            // battlegroup
+            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
+
             // realm
             $r = explode(':', $guid)[0];
             if (!empty($realms[$r]))
@@ -426,9 +425,6 @@ class RemoteProfileList extends ProfileList
 
             // temp id
             $curTpl['id'] = 0;
-
-            // battlegroup
-            $curTpl['battlegroup'] = CFG_BATTLEGROUP;
 
             // achievement points pre
             if ($acvs = explode(' ', $curTpl['_acvs']))
@@ -508,10 +504,10 @@ class RemoteProfileList extends ProfileList
 
     public function initializeLocalEntries()
     {
-        // absolute basic data (enough for tooltips)
-        $data = [];
+        $baseData = $guildData = [];
         foreach ($this->iterate() as $guid => $__)
-            $data[$guid] = array(
+        {
+            $baseData[$guid] = array(
                 'realm'     => $this->getField('realm'),
                 'realmGUID' => $this->getField('guid'),
                 'name'      => $this->getField('name'),
@@ -519,43 +515,52 @@ class RemoteProfileList extends ProfileList
                 'class'     => $this->getField('class'),
                 'level'     => $this->getField('level'),
                 'gender'    => $this->getField('gender'),
-                'guild'     => $this->getField('guild'),
-                'guildrank' => $this->getField('guild') ? $this->getField('guildRank') : null,
+                'guild'     => $this->getField('guild') ?: null,
+                'guildrank' => $this->getField('guild') ? $this->getField('guildrank') : null,
                 'cuFlags'   => PROFILER_CU_NEEDS_RESYNC
             );
 
-        foreach (Util::createSqlBatchInsert($data) as $ins)
-            DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES '.$ins, array_keys(reset($data)));
+            if ($this->getField('guild'))
+                $guildData[] = array(
+                    'realm'     => $this->getField('realm'),
+                    'realmGUID' => $this->getField('guild'),
+                    'name'      => $this->getField('guildname'),
+                    'nameUrl'   => Profiler::urlize($this->getField('guildname')),
+                    'cuFlags'   => PROFILER_CU_NEEDS_RESYNC
+                );
+        }
+
+        // basic guild data (satisfying table constraints)
+        if ($guildData)
+        {
+            foreach (Util::createSqlBatchInsert($guildData) as $ins)
+                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_guild (?#) VALUES '.$ins, array_keys(reset($guildData)));
+
+            // merge back local ids
+            $localGuilds = DB::Aowow()->selectCol('SELECT realm AS ARRAY_KEY, realmGUID AS ARRAY_KEY2, id FROM ?_profiler_guild WHERE realm IN (?a) AND realmGUID IN (?a)',
+                array_column($guildData, 'realm'), array_column($guildData, 'realmGUID')
+            );
+
+            foreach ($baseData as &$bd)
+                if ($bd['guild'])
+                    $bd['guild'] = $localGuilds[$bd['realm']][$bd['guild']];
+        }
+
+        // basic char data (enough for tooltips)
+        foreach (Util::createSqlBatchInsert($baseData) as $ins)
+            DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES '.$ins, array_keys(reset($baseData)));
 
         // merge back local ids
         $localIds = DB::Aowow()->select(
             'SELECT CONCAT(realm, ":", realmGUID) AS ARRAY_KEY, id, gearscore FROM ?_profiler_profiles WHERE (cuFlags & ?d) = 0 AND realm IN (?a) AND realmGUID IN (?a)',
             PROFILER_CU_PROFILE,
-            array_column($data, 'realm'),
-            array_column($data, 'realmGUID')
+            array_column($baseData, 'realm'),
+            array_column($baseData, 'realmGUID')
         );
 
         foreach ($this->iterate() as $guid => &$_curTpl)
             if (isset($localIds[$guid]))
                 $_curTpl = array_merge($_curTpl, $localIds[$guid]);
-    }
-
-    public function selectRealms($fi)
-    {
-        $this->dbNames = [];
-
-        foreach(Profiler::getRealms() as $idx => $r)
-        {
-            if (!empty($fi['sv']) && Profiler::urlize($r['name']) != Profiler::urlize($fi['sv']) && intVal($fi['sv']) != $idx)
-                continue;
-
-            if (!empty($fi['rg']) && Profiler::urlize($r['region']) != Profiler::urlize($fi['rg']))
-                continue;
-
-            $this->dbNames[$idx] = 'Characters';
-        }
-
-        return !!$this->dbNames;
     }
 }
 
@@ -564,16 +569,18 @@ class LocalProfileList extends ProfileList
 {
     protected       $queryBase = 'SELECT p.*, p.id AS ARRAY_KEY FROM ?_profiler_profiles p';
     protected       $queryOpts = array(
-                        // 'p'  => [['ap']],
-                        'ap'   => ['j' => ['?_account_profiles ap ON ap.profileId = p.id', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
+                        'p'  => [['pg']],
+                        'ap'   => ['j' => ['?_account_profiles ap ON ap.profileId = p.id AND ap.profileId = %d', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
                         'patm' => ['j' => ['?_profiler_arena_team_member patm ON patm.profileId = p.id', true], 's' => ', patm.captain, patm.personalRating AS rating'],
                         'pat'  => ['?_profiler_arena_team pat ON pat.id = patm.arenaTeamId', 's' => ', pat.mode, pat.name'],
-                        // 'pgm' => [['?_profiler_guid_member pgm ON pgm.memberId = p.Id', true], 's' => ', pgm.rankId'],
-                        // 'pg'  => ['?_profiler_guild pg ON pg.if = pgm.guildId', 's' => ', pg.name']
+                        'pg'   => ['j' => ['?_profiler_guild pg ON pg.id = p.guild', true], 's' => ', pg.name AS guildname']
                     );
 
     public function __construct($conditions = [], $miscData = null)
     {
+        // todo (med): beautify this shit
+        $this->queryOpts['ap']['j'][0] = sprintf($this->queryOpts['ap']['j'][0], User::$id);
+
         parent::__construct($conditions, $miscData);
 
         if ($this->error)
