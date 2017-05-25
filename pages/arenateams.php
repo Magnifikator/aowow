@@ -74,6 +74,9 @@ class ArenaTeamsPage extends GenericPage
             'hiddenCols'  => ['arenateam', 'guild'],
         );
 
+        if (empty($this->filter['sz']))
+            $tabData['visibleCols'][] = 'size';
+
         $miscParams = [];
         if ($this->realm)
             $miscParams['sv'] = $this->realm;
@@ -83,12 +86,11 @@ class ArenaTeamsPage extends GenericPage
         $teams = new RemoteArenaTeamList($conditions, $miscParams);
         if (!$teams->error)
         {
+            $teams->initializeLocalEntries();
+
             $dFields = $teams->hasDiffFields(['faction', 'type']);
             if (!($dFields & 0x1))
                 $tabData['hiddenCols'][] = 'faction';
-
-            if (($dFields & 0x2))
-                $tabData['visibleCols'][] = 'size';
 
             $tabData['data'] = array_values($teams->getListviewData());
 

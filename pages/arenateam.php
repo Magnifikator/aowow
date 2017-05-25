@@ -116,7 +116,7 @@ class ArenaTeamPage extends GenericPage
             $this->lvTabs[] = ['profile', array(
                 'data'        => array_values($member->getListviewData(PROFILEINFO_CHARACTER | PROFILEINFO_ARENA)),
                 'sort'        => "$[-15]",
-                'visibleCols' => "$['race','classs','level','talents','gearscore','achievementpoints','rating']",
+                'visibleCols' => "$['race','classs','level','talents','gearscore','rating', 'wins', 'losses']",
                 'hiddenCols'  => "$['guild','location']"
             )];
         }

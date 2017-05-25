@@ -248,7 +248,7 @@ class Profiler
             DB::Aowow()->query('UPDATE ?_profiler_sync SET status = ?d, errorCode = ?d WHERE status = ?d AND requestTime < ?d', PR_QUEUE_STATUS_ERROR, PR_QUEUE_ERROR_UNK, PR_QUEUE_STATUS_WORKING, time() - MINUTE);
 
             $subjectStatus = DB::Aowow()->select('SELECT typeId AS ARRAY_KEY, status, realm FROM ?_profiler_sync WHERE `type` = ?d AND typeId IN (?a)', $type, $subjectGUIDs);
-            $queue         = DB::Aowow()->selectCol('SELECT typeId FROM ?_profiler_sync WHERE `type` = ?d AND status = ?d AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC', $type, PR_QUEUE_STATUS_WAITING);
+            $queue         = DB::Aowow()->selectCol('SELECT CONCAT(type, ":", typeId) FROM ?_profiler_sync WHERE status = ?d AND requestTime < UNIX_TIMESTAMP() ORDER BY requestTime ASC', PR_QUEUE_STATUS_WAITING);
             foreach ($subjectGUIDs as $guid)
             {
                 if (empty($subjectStatus[$guid]))           // whelp, thats some error..
@@ -259,7 +259,7 @@ class Profiler
                     $response[] = array(
                         $subjectStatus[$guid]['status'],
                         $subjectStatus[$guid]['status'] != PR_QUEUE_STATUS_READY ? CFG_PROFILER_RESYNC_PING : 0,
-                        array_search($guid, $queue) + 1,
+                        array_search($type.':'.$guid, $queue) + 1,
                         0,
                         1                                   // nResycTries - unsure about this one
                     );
@@ -732,7 +732,7 @@ class Profiler
 
     public static function getArenaTeamFromRealm($realmId, $teamGuid)
     {
-        $team = DB::Characters($realmId)->selectRow('SELECT arenaTeamId, name, captainGuid, rating, seasonGames, seasonWins, weekGames, weekWins, rank, backgroundColor, emblemStyle, emblemColor, borderStyle, borderColor FROM arena_team WHERE arenaTeamId = ?d', $teamGuid);
+        $team = DB::Characters($realmId)->selectRow('SELECT arenaTeamId, name, type, captainGuid, rating, seasonGames, seasonWins, weekGames, weekWins, rank, backgroundColor, emblemStyle, emblemColor, borderStyle, borderColor FROM arena_team WHERE arenaTeamId = ?d', $teamGuid);
         if (!$team)
             return false;
 
@@ -761,7 +761,22 @@ class Profiler
         /* Member Data */
         /***************/
 
-        $members = DB::Characters($realmId)->select('SELECT guid AS ARRAY_KEY, arenaTeamId, weekGames, weekWins, seasonGames, seasonWins, personalrating FROM arena_team_member WHERE arenaTeamId = ?d', $teamGuid);
+        $members = DB::Characters($realmId)->select('
+            SELECT
+                atm.guid AS ARRAY_KEY, atm.arenaTeamId, atm.weekGames, atm.weekWins, atm.seasonGames, atm.seasonWins, atm.personalrating
+            FROM
+                arena_team_member atm
+            JOIN
+                characters c ON c.guid = atm.guid AND
+                c.deleteInfos_Name IS NULL AND
+                c.level <= ?d AND
+                (c.extra_flags & ?d) = 0
+            WHERE
+                arenaTeamId = ?d',
+            MAX_LEVEL,
+            0x7D,
+            $teamGuid
+        );
 
         $conditions = array(
             ['c.guid', array_keys($members)],
@@ -776,6 +791,7 @@ class Profiler
             $mProfiles->initializeLocalEntries();
             foreach ($mProfiles->iterate() as $__)
             {
+
                 $mGuid = $mProfiles->getField('guid');
 
                 $members[$mGuid]['arenaTeamId'] = $teamId;
@@ -793,7 +809,6 @@ class Profiler
             return false;
 
         CLI::write(' ..team members');
-
 
         /*********************/
         /* mark team as done */

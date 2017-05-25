@@ -9,13 +9,15 @@ class AjaxProfile extends AjaxHandler
 
     protected $validParams = ['link', 'unlink', 'pin', 'unpin', 'public', 'private', 'avatar', 'resync', 'status', 'save', 'delete', 'purge', 'summary', 'load'];
     protected $_get        = array(
-        'id'    => [FILTER_CALLBACK,        ['options' => 'AjaxHandler::checkIdList']],
-        'items' => [FILTER_CALLBACK,        ['options' => 'AjaxProfile::checkItemList']],
-        'size'  => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
+        'id'         => [FILTER_CALLBACK,        ['options' => 'AjaxHandler::checkIdList']],
+        'items'      => [FILTER_CALLBACK,        ['options' => 'AjaxProfile::checkItemList']],
+        'size'       => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
+        'guild'      => [FILTER_CALLBACK,        ['options' => 'AjaxHandler::checkEmptySet']],
+        'arena-team' => [FILTER_CALLBACK,        ['options' => 'AjaxHandler::checkEmptySet']],
     );
 
     protected $_post        = array(
-        'name'         => [FILTER_SANITIZE_STRING, 0xC], // FILTER_FLAG_STRIP_LOW | *_HIGH
+        'name'         => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkFulltext']],
         'level'        => [FILTER_SANITIZE_NUMBER_INT, null],
         'class'        => [FILTER_SANITIZE_NUMBER_INT, null],
         'race'         => [FILTER_SANITIZE_NUMBER_INT, null],
@@ -25,17 +27,17 @@ class AjaxProfile extends AjaxHandler
         'talenttree2'  => [FILTER_SANITIZE_NUMBER_INT, null],
         'talenttree3'  => [FILTER_SANITIZE_NUMBER_INT, null],
         'activespec'   => [FILTER_SANITIZE_NUMBER_INT, null],
-        'talentbuild1' => [FILTER_SANITIZE_STRING, 0xC],
-        'glyphs1'      => [FILTER_SANITIZE_STRING, 0xC],
-        'talentbuild2' => [FILTER_SANITIZE_STRING, 0xC],
-        'glyphs2'      => [FILTER_SANITIZE_STRING, 0xC],
-        'icon'         => [FILTER_SANITIZE_STRING, 0xC],
-        'description'  => [FILTER_SANITIZE_STRING, 0xC],
+        'talentbuild1' => [FILTER_SANITIZE_STRING,     0xC],// FILTER_FLAG_STRIP_LOW | *_HIGH
+        'glyphs1'      => [FILTER_SANITIZE_STRING,     0xC],
+        'talentbuild2' => [FILTER_SANITIZE_STRING,     0xC],
+        'glyphs2'      => [FILTER_SANITIZE_STRING,     0xC],
+        'icon'         => [FILTER_SANITIZE_STRING,     0xC],
+        'description'  => [FILTER_CALLBACK,            ['options' => 'AjaxHandler::checkFulltext']],
         'source'       => [FILTER_SANITIZE_NUMBER_INT, null],
         'copy'         => [FILTER_SANITIZE_NUMBER_INT, null],
         'public'       => [FILTER_SANITIZE_NUMBER_INT, null],
         'gearscore'    => [FILTER_SANITIZE_NUMBER_INT, null],
-        'inv'          => [FILTER_CALLBACK, ['options' => 'AjaxProfile::checkItemString', 'flags' => FILTER_REQUIRE_ARRAY]],
+        'inv'          => [FILTER_CALLBACK,            ['options' => 'AjaxProfile::checkItemString', 'flags' => FILTER_REQUIRE_ARRAY]],
     );
 
     public function __construct(array $params)
@@ -248,7 +250,15 @@ class AjaxProfile extends AjaxHandler
     */
     protected function handleStatus()
     {
-        $response = Profiler::resyncStatus(TYPE_PROFILE, $this->_get['id']);
+        // roster resync for this guild was requested -> get char list
+        if ($this->_get['guild'])
+            $ids = DB::Aowow()->selectCol('SELECT id FROM ?_profiler_profiles WHERE guild IN (?a)', $this->_get['id']);
+        else if ($this->_get['arena-team'])
+            $ids = DB::Aowow()->selectCol('SELECT profileId FROM ?_profiler_arena_team_member WHERE arenaTeamId IN (?a)', $this->_get['id']);
+        else
+            $ids = $this->_get['id'];
+
+        $response = Profiler::resyncStatus(TYPE_PROFILE, $ids);
         return Util::toJSON($response);
     }
 
@@ -422,7 +432,7 @@ class AjaxProfile extends AjaxHandler
         if (!$this->_get['id'])
             return;
 
-        $pBase = DB::Aowow()->selectRow('SELECT * FROM ?_profiler_profiles WHERE id = ?d', $this->_get['id'][0]);
+        $pBase = DB::Aowow()->selectRow('SELECT pg.name AS guildname, p.* FROM ?_profiler_profiles p LEFT JOIN ?_profiler_guild pg ON pg.id = p.guild WHERE p.id = ?d', $this->_get['id'][0]);
         if (!$pBase)
         {
             trigger_error('Profiler::handleLoad() - called with invalid profileId #'.$this->_get['id'][0], E_USER_WARNING);
@@ -453,7 +463,7 @@ class AjaxProfile extends AjaxHandler
             'features'          => $pBase['features'],
             'title'             => $pBase['title'],
             'name'              => $pBase['name'],
-            'guild'             => $pBase['guild'],
+            'guild'             => "$'".$pBase['guildname']."'",
             'published'         => !!($pBase['cuFlags'] & PROFILER_CU_PUBLISHED),
             'pinned'            => !!($pBase['cuFlags'] & PROFILER_CU_PINNED),
             'nomodel'           => $pBase['nomodelMask'],

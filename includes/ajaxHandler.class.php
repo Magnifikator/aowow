@@ -53,6 +53,11 @@ class AjaxHandler
         return $this->contentType;
     }
 
+    protected function checkEmptySet($val)
+    {
+        return $val === '';                                 // parameter is expected to be empty
+    }
+
     protected function checkLocale($val)
     {
         if (preg_match('/^'.implode('|', array_keys(array_filter(Util::$localeStrings))).'$/', $val))
@@ -75,6 +80,12 @@ class AjaxHandler
             return array_map('intval', explode(',', $val));
 
         return null;
+    }
+
+    protected function checkFulltext($val)
+    {
+        // trim non-printable chars
+        return preg_replace('/[\p{C}]/ui', '', $val);
     }
 }
 ?>

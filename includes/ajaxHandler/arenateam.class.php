@@ -8,6 +8,7 @@ class AjaxArenaTeam extends AjaxHandler
     protected $validParams = ['resync', 'status'];
     protected $_get        = array(
         'id'     => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkIdList']],
+        'profile' => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkEmptySet']],
     );
 
     public function __construct(array $params)
@@ -19,11 +20,11 @@ class AjaxArenaTeam extends AjaxHandler
 
         switch ($this->params[0])
         {
-            case 'status':
-                $this->handler = 'handleStatus';            // returns status object
-                break;
             case 'resync':
                 $this->handler = 'handleResync';
+                break;
+            case 'status':
+                $this->handler = 'handleStatus';
                 break;
         }
     }
@@ -31,6 +32,7 @@ class AjaxArenaTeam extends AjaxHandler
     /*  params
             id: <prId1,prId2,..,prIdN>
             user: <string> [optional, not used]
+            profile: <empty> [optional, also get related chars]
         return: 1
     */
     protected function handleResync()
@@ -38,6 +40,11 @@ class AjaxArenaTeam extends AjaxHandler
         if ($teams = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_arena_team WHERE id IN (?a)', $this->_get['id']))
             foreach ($teams as $t)
                 Profiler::scheduleResync(TYPE_ARENA_TEAM, $t['realm'], $t['realmGUID']);
+
+        if ($this->_get['profile'])
+            if ($chars = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_profiles p JOIN ?_profiler_arena_team_member atm ON atm.profileId = p.id WHERE atm.arenaTeamId IN (?a)', $this->_get['id']))
+                foreach ($chars as $c)
+                    Profiler::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
 
         return '1';
     }

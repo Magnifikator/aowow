@@ -55,9 +55,9 @@ class ProfileList extends BaseType
             {
                 $data[$this->id]['rating']  = $this->getField('rating');
                 $data[$this->id]['captain'] = $this->getField('captain');
+                $data[$this->id]['games']   = $this->getField('seasonGames');
+                $data[$this->id]['wins']    = $this->getField('seasonWins');
             }
-            // else
-                // $data[$this->id]['arenateams'] = $this->getField('arenateams');
 
             // Filter asked for skills - add them
             foreach ($reqCols as $col)
@@ -180,13 +180,7 @@ class ProfileListFilter extends Filter
     );
 
     protected $genericFilter = array(                       // misc (bool): _NUMERIC => useFloat; _STRING => localized; _FLAG => match Value; _BOOLEAN => stringSet
-        // { id: 2,   name: 'gearscore',               type: 'num' },
-        // { id: 3,   name: 'achievementpoints',       type: 'num' },
-        // { id: 21,  name: 'wearingitem',             type: 'str-small' },
         23 => [FILTER_CR_STRING,   'ca.achievement', STR_MATCH_EXACT | STR_ALLOW_SHORT ],  // completedachievement
-        // { id: 5,   name: 'talenttree1',         type: 'num' },
-        // { id: 6,   name: 'talenttree2',         type: 'num' },
-        // { id: 7,   name: 'talenttree3',         type: 'num' },
          9 => [FILTER_CR_STRING,   'g.name',                         ], // guildname
         10 => [FILTER_CR_NUMERIC,  'gm.rank',      NUM_CAST_INT      ], // guildrank
         13 => [FILTER_CR_CALLBACK, 'cbTeamRating', null,        null ], // teamrtng2v2
@@ -196,6 +190,14 @@ class ProfileListFilter extends Filter
         15 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname3v3
         18 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname5v5
         36 => [FILTER_CR_CALLBACK, 'cbHasGuild',   null,        null ], // hasguild [yn]
+
+        // NYI things than can only be run against local chars
+        21 => [FILTER_CR_CALLBACK, 'cbWearsItems', null,        null ], // wearingitem [str]
+        // { id: 5,   name: 'talenttree1',         type: 'num' },
+        // { id: 6,   name: 'talenttree2',         type: 'num' },
+        // { id: 7,   name: 'talenttree3',         type: 'num' },
+        // { id: 2,   name: 'gearscore',               type: 'num' },
+        // { id: 3,   name: 'achievementpoints',       type: 'num' },
     );
 
     // fieldId => [checkType, checkValue[, fieldIsArray]]
@@ -266,7 +268,7 @@ class ProfileListFilter extends Filter
         $parts = [];
         $_v    = $this->fiData['v'];
 
-        // region (rg), battlegroup (bg) and server (sv) are passed to ArenaTeamList as miscData and handled there
+        // region (rg), battlegroup (bg) and server (sv) are passed to ProflieList as miscData and handled there
 
         // name [str] - the table is case sensitive. Since i down't want to destroy indizes, lets alter the search terms
         if (!empty($_v['na']))
@@ -330,6 +332,18 @@ class ProfileListFilter extends Filter
             }
 
         return false;
+    }
+
+    // todo (med): too large .. think of something else
+    protected function cbWearsItems($cr)
+    {
+        if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
+            return false;
+
+        if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_items WHERE id = ?d', $cr[2]))
+            return false;
+
+        return [1];
     }
 
     protected function cbHasGuild($cr)
@@ -399,8 +413,13 @@ class RemoteProfileList extends ProfileList
         $acvCache    = [];
         $talentCache = [];
         $atCache     = [];
-        $distrib     = [];
+        $distrib     = null;
         $talentData  = [];
+        $limit       = CFG_SQL_LIMIT_DEFAULT;
+
+        foreach ($conditions as $c)
+            if (is_int($c))
+                $limit = $c;
 
         // post processing
         foreach ($this->iterate() as $guid => &$curTpl)
@@ -439,10 +458,13 @@ class RemoteProfileList extends ProfileList
                         $talentCache[$t] = $t;
 
             // equalize distribution
-            if (empty($distrib[$curTpl['realm']]))
-                $distrib[$curTpl['realm']] = 1;
-            else
-                $distrib[$curTpl['realm']]++;
+            if ($limit != CFG_SQL_LIMIT_NONE)
+            {
+                if (empty($distrib[$curTpl['realm']]))
+                    $distrib[$curTpl['realm']] = 1;
+                else
+                    $distrib[$curTpl['realm']]++;
+            }
 
             $curTpl['cuFlags'] = 0;
         }
@@ -450,28 +472,30 @@ class RemoteProfileList extends ProfileList
         if ($talentCache)
             $talentData = DB::Aowow()->select('SELECT spell AS ARRAY_KEY, tab, rank FROM ?_talents WHERE spell IN (?a)', $talentCache);
 
-        $limit = CFG_SQL_LIMIT_DEFAULT;
-        foreach ($conditions as $c)
-            if (is_int($c))
-                $limit = $c;
-
-        $total = array_sum($distrib);
-        foreach ($distrib as &$d)
-            $d = ceil($limit * $d / $total);
+        if ($distrib !== null)
+        {
+            $total = array_sum($distrib);
+            foreach ($distrib as &$d)
+                $d = ceil($limit * $d / $total);
+        }
 
         if ($acvCache)
             $acvCache = DB::Aowow()->selectCol('SELECT id AS ARRAY_KEY, points FROM ?_achievement WHERE id IN (?a)', $acvCache);
 
         foreach ($this->iterate() as $guid => &$curTpl)
         {
-            if ($limit <= 0 || $distrib[$curTpl['realm']] <= 0)
+            if ($distrib !== null)
             {
-                unset($this->templates[$guid]);
-                continue;
+                if ($limit <= 0 || $distrib[$curTpl['realm']] <= 0)
+                {
+                    unset($this->templates[$guid]);
+                    continue;
+                }
+
+                $distrib[$curTpl['realm']]--;
+                $limit--;
             }
 
-            $distrib[$curTpl['realm']]--;
-            $limit--;
 
             $a  = explode(' ', $curTpl['_acvs']);
             $t  = explode(' ', $curTpl['_talents']);
@@ -547,20 +571,23 @@ class RemoteProfileList extends ProfileList
         }
 
         // basic char data (enough for tooltips)
-        foreach (Util::createSqlBatchInsert($baseData) as $ins)
-            DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES '.$ins, array_keys(reset($baseData)));
+        if ($baseData)
+        {
+            foreach (Util::createSqlBatchInsert($baseData) as $ins)
+                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_profiles (?#) VALUES '.$ins, array_keys(reset($baseData)));
 
-        // merge back local ids
-        $localIds = DB::Aowow()->select(
-            'SELECT CONCAT(realm, ":", realmGUID) AS ARRAY_KEY, id, gearscore FROM ?_profiler_profiles WHERE (cuFlags & ?d) = 0 AND realm IN (?a) AND realmGUID IN (?a)',
-            PROFILER_CU_PROFILE,
-            array_column($baseData, 'realm'),
-            array_column($baseData, 'realmGUID')
-        );
+            // merge back local ids
+            $localIds = DB::Aowow()->select(
+                'SELECT CONCAT(realm, ":", realmGUID) AS ARRAY_KEY, id, gearscore FROM ?_profiler_profiles WHERE (cuFlags & ?d) = 0 AND realm IN (?a) AND realmGUID IN (?a)',
+                PROFILER_CU_PROFILE,
+                array_column($baseData, 'realm'),
+                array_column($baseData, 'realmGUID')
+            );
 
-        foreach ($this->iterate() as $guid => &$_curTpl)
-            if (isset($localIds[$guid]))
-                $_curTpl = array_merge($_curTpl, $localIds[$guid]);
+            foreach ($this->iterate() as $guid => &$_curTpl)
+                if (isset($localIds[$guid]))
+                    $_curTpl = array_merge($_curTpl, $localIds[$guid]);
+        }
     }
 }
 
@@ -570,17 +597,14 @@ class LocalProfileList extends ProfileList
     protected       $queryBase = 'SELECT p.*, p.id AS ARRAY_KEY FROM ?_profiler_profiles p';
     protected       $queryOpts = array(
                         'p'  => [['pg']],
-                        'ap'   => ['j' => ['?_account_profiles ap ON ap.profileId = p.id AND ap.profileId = %d', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
-                        'patm' => ['j' => ['?_profiler_arena_team_member patm ON patm.profileId = p.id', true], 's' => ', patm.captain, patm.personalRating AS rating'],
+                        'ap'   => ['j' => ['?_account_profiles ap ON ap.profileId = p.id', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
+                        'patm' => ['j' => ['?_profiler_arena_team_member patm ON patm.profileId = p.id', true], 's' => ', patm.captain, patm.personalRating AS rating, patm.seasonGames, patm.seasonWins'],
                         'pat'  => ['?_profiler_arena_team pat ON pat.id = patm.arenaTeamId', 's' => ', pat.mode, pat.name'],
                         'pg'   => ['j' => ['?_profiler_guild pg ON pg.id = p.guild', true], 's' => ', pg.name AS guildname']
                     );
 
     public function __construct($conditions = [], $miscData = null)
     {
-        // todo (med): beautify this shit
-        $this->queryOpts['ap']['j'][0] = sprintf($this->queryOpts['ap']['j'][0], User::$id);
-
         parent::__construct($conditions, $miscData);
 
         if ($this->error)

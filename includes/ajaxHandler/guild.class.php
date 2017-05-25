@@ -7,7 +7,8 @@ class AjaxGuild extends AjaxHandler
 {
     protected $validParams = ['resync', 'status'];
     protected $_get        = array(
-        'id' => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkIdList']],
+        'id'      => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkIdList']],
+        'profile' => [FILTER_CALLBACK, ['options' => 'AjaxHandler::checkEmptySet']],
     );
 
     public function __construct(array $params)
@@ -31,13 +32,19 @@ class AjaxGuild extends AjaxHandler
     /*  params
             id: <prId1,prId2,..,prIdN>
             user: <string> [optional, not used]
+            profile: <empty> [optional, also get related chars]
         return: 1
     */
     protected function handleResync()
     {
-        if ($chars = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_profiles WHERE id IN (?a)', $this->_get['id']))
-            foreach ($chars as $c)
-                Profiler::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
+        if ($guilds = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_guild WHERE id IN (?a)', $this->_get['id']))
+            foreach ($guilds as $g)
+                Profiler::scheduleResync(TYPE_GUILD, $g['realm'], $g['realmGUID']);
+
+        if ($this->_get['profile'])
+            if ($chars = DB::Aowow()->select('SELECT realm, realmGUID FROM ?_profiler_profiles WHERE guild IN (?a)', $this->_get['id']))
+                foreach ($chars as $c)
+                    Profiler::scheduleResync(TYPE_PROFILE, $c['realm'], $c['realmGUID']);
 
         return '1';
     }
