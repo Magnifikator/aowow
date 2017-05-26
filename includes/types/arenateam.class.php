@@ -19,8 +19,8 @@ class ArenaTeamList extends BaseType
                 'name'              => $this->curTpl['name'],
                 'realm'             => Profiler::urlize($this->curTpl['realmName']),
                 'realmname'         => $this->curTpl['realmName'],
-                // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
-                // 'battlegroupname'   => $this->curTpl['battlegroup'],
+             // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
+             // 'battlegroupname'   => $this->curTpl['battlegroup'],
                 'region'            => Profiler::urlize($this->curTpl['region']),
                 'faction'           => $this->curTpl['faction'],
                 'size'              => $this->curTpl['type'],
@@ -122,7 +122,6 @@ class RemoteArenaTeamList extends ArenaTeamList
                     'at'  => [['atm', 'c'], 'g' => 'ARRAY_KEY', 'o' => 'rating DESC'],
                     'atm' => ['j' => 'arena_team_member atm ON atm.arenaTeamId = at.arenaTeamId'],
                     'c'   => ['j' => 'characters c ON c.guid = atm.guid AND c.deleteInfos_Name IS NULL AND c.level <= 80 AND (c.extra_flags & 0x7D) = 0', 's' => ', BIT_OR(IF(c.race IN (1, 3, 4, 7, 11), 1, 2)) - 1 AS faction']
-                    // 'c'   => ['j' => 'characters c ON c.guid = atm.guid', 's' => ', GROUP_CONCAT(c.name SEPARATOR " ") AS mNames, GROUP_CONCAT(IF(c.guid = at.captainGuid, -c.class, c.class) SEPARATOR " ") AS mClasses, BIT_OR(1 << (race - 1)) AS raceMask']
                 );
 
     private     $members   = [];
@@ -175,16 +174,6 @@ class RemoteArenaTeamList extends ArenaTeamList
 
             // team members
             $this->members[$r[0]][$r[1]] = $r[1];
-        /*
-            $_n = explode(' ', $curTpl['mNames']);
-            $_c = explode(' ', $curTpl['mClasses']);
-            $curTpl['members'] = [];
-            if (!count($_n) || !count($_c))
-                trigger_error('arena team #'.$guid.' has no members', E_USER_WARNING);
-            else
-                for ($i = 0; $i < count($_n); $i++)
-                    $curTpl['members'][] = [$_n[$i], abs($_c[$i]), $_c[$i] < 0];
-        */
 
             // equalize distribution
             if (empty($distrib[$curTpl['realm']]))

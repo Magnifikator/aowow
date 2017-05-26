@@ -110,13 +110,6 @@ $lang = array(
         'chooseClass'   => "Choisissez une classe",
         'chooseFamily'  => "Choisissez un familier",
 
-        // help
-        'help'          => "Aide",
-        'helpTopics'    => array(
-            "Le guide du commentaire",              "Visionneuse 3D",                       "Captures d'écran : Trucs et astuces",  "Échelles de valeurs",
-            "Calculateur de talents",               "Comparaison d'objets",                 "Profiler",                             "Markup Guide"
-        ),
-
         // search
         'search'        => "Recherche",
         'searchButton'  => "Rechercher",
@@ -158,21 +151,25 @@ $lang = array(
         'realm'         => "Royaume",
         'region'        => "Région",
         'viewCharacter' => "Voir Personnage",
-        'profiler'      => "Profiler de Personnage",
         '_cpHint'       => "Le <b>Profiler de Personnage</b> vous permets de modifier votre personnage, trouver des améliorations d'équipement, vérifier votre score d'équipement et plus!",
         '_cpHelp'       => "Pour débuter, suivez simplement les étapes ci-dessous. Si vous voulez plus d'information, lisez notre <a href=\"?help=profiler\">page d'aide</a> détaillée.",
         '_cpFooter'     => "Si vous voulez une recherche plus raffinée, essayez nos options de <a href=\"?profiles\">recherche avancée</a>. Vous pouvez aussi créer un <a href=\"?profile&amp;new\">nouveau profile personnalisé</a>.",
+        'firstUseTitle' => "%s de %s",
 
         'resync'        => "Resynchronisation",
         'guildRoster'   => "Liste des membres pour la guilde de  &lt;%s&gt",
         'arenaRoster'   => "[Arena Team Roster for &lt;%s&gt]",     // string probably lost
+        'atCaptain'     => "Capitaine d'équipe",
+
+        'profiler'      => "Profiler de Personnage",
         'arenaTeams'    => "Équipes d'Aréna",
         'guilds'        => "Guildes",
 
-        'atCaptain'     => "Capitaine d'équipe",
-
-        'firstUseTitle' => "%s de %s",
-        'notFound'      => "[This character doesn't exist or is not yet in the database.]",
+        'notFound'      => array(
+            'guild'     => "[This Guild doesn't exist or is not yet in the database.]",
+            'arenateam' => "[This Arena Team doesn't exist or is not yet in the database.]",
+            'profile'   => "[This character doesn't exist or is not yet in the database.]"
+        ),
         'dummyNPCs'     => array(
             100001 => "Bataille des canonnières", 200001 => "Bêtes du Norfendre", 200002 => "Champions de faction", 200003 => "Les jumelles val'kyrs"
         ),

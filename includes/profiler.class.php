@@ -68,7 +68,6 @@ class Profiler
             return true;
         }
 
-        // exec('screen -c config/screen.conf -dmS ao-pr-queue php prQueue > /dev/null 2>/dev/null &');
         exec('php prQueue --log=cache/profiling.log > /dev/null 2>/dev/null &');
         usleep(500000);
         if (self::queueStatus())
@@ -179,9 +178,8 @@ class Profiler
                 if (DB::isConnectable(DB_CHARACTERS . $rId))
                     continue;
 
+                // realm in db but no connection info set
                 unset(self::$realms[$rId]);
-                // maybe remove; can get annoying
-                // trigger_error('Realm #'.$rId.' ('.$rData['name'].') has no connection info set.', E_USER_NOTICE);
             }
         }
 

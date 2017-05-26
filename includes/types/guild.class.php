@@ -23,8 +23,8 @@ class GuildList extends BaseType
                 'gearscore'         => $this->getField('gearscore'),
                 'realm'             => Profiler::urlize($this->curTpl['realmName']),
                 'realmname'         => $this->curTpl['realmName'],
-                // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
-                // 'battlegroupname'   => $this->curTpl['battlegroup'],
+             // 'battlegroup'       => Profiler::urlize($this->curTpl['battlegroup']),  // was renamed to subregion somewhere around cata release
+             // 'battlegroupname'   => $this->curTpl['battlegroup'],
                 'region'            => Profiler::urlize($this->curTpl['region'])
             );
         }

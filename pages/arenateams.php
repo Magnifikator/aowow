@@ -14,7 +14,6 @@ class ArenaTeamsPage extends GenericPage
     protected $path     = [1, 5, 3];
     protected $tpl      = 'arena-teams';
     protected $js       = ['filters.js', 'profile_all.js', 'profile.js'];
-    // protected $css      = [['path' => 'Profiler.css']];
 
     public function __construct($pageCall, $pageParam)
     {

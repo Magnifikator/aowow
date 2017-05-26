@@ -492,21 +492,9 @@ class AjaxProfile extends AjaxHandler
             'activity'          => [],                      // recent raid activity [achievementId => 1] (is a subset of statistics)
         );
 
-        // source: used if you create a profile from a genuine character. It inherites region, realm and bGroup
-        // _profile.genuine = (!_profile.sourcename && !_profile.user && !_profile.username);
-        // _isArmoryProfile(allowCustoms) => genuine is passed as allowCustoms ... how does this make sense?!
-        /*
-            return (
-                _profile.region && _profile.region[0] &&
-                _profile.battlegroup && _profile.battlegroup[0] &&
-                _profile.realm && _profile.realm[0] &&
-                (allowCustoms || !_profile.user)
-            );
-        */
-
         if ($pBase['cuFlags'] & PROFILER_CU_PROFILE)
         {
-            // this parameter is _really_ strange .. probably still not doint this right
+            // this parameter is _really_ strange .. probably still not doing this right
             $profile['source']      = $pBase['realm'] ? $pBase['sourceId'] : 0;
 
             $profile['sourcename']  = $pBase['sourceName'];

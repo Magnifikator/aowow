@@ -53,6 +53,7 @@ $lang = array(
         'back'          => "Back",
         'reputationTip' => "Reputation points",
         'byUserTimeAgo' => 'By <a href="'.HOST_URL.'/?user=%s">%1$s</a> %s ago',
+        'help'          => "Help",
 
         // filter
         'extSearch'     => "Extended search",
@@ -109,13 +110,6 @@ $lang = array(
         'chooseClass'   => "Choose a class",
         'chooseFamily'  => "Choose a pet family",
 
-        // help
-        'help'          => "Help",
-        'helpTopics'    => array(
-            "Commenting and You",                   "Model Viewer",                         "Screenshots: Tips & Tricks",          "Stat Weighting",
-            "Talent Calculator",                    "Item Comparison",                      "Profiler",                            "Markup Guide"
-        ),
-
         // search
         'search'        => "Search",
         'searchButton'  => "Search",
@@ -157,22 +151,27 @@ $lang = array(
         'realm'         => "Realm",
         'region'        => "Region",
         'viewCharacter' => "View Character",
-        'profiler'      => "Character Profiler",
         '_cpHint'       => "The <b>Character Profiler</b> lets you edit your character, find gear upgrades, check your gearscore and more!",
         '_cpHelp'       => "To get started, just follow the steps below. If you'd like more information, check out our extensive <a href=\"?help=profiler\">help page</a>.",
         '_cpFooter'     => "If you want a more refined search try out our <a href=\"?profiles\">advanced search</a> options. You can also create a <a href=\"?profile&amp;new\">new custom profile</a>.",
+        'firstUseTitle' => "%s of %s",
+
         'resync'        => "Resync",
         'guildRoster'   => "Guild Roster for &lt;%s&gt;",
         'arenaRoster'   => "Arena Team Roster for &lt;%s&gt",
+        'atCaptain'     => "Arena Team Captain",
+
+        'profiler'      => "Character Profiler",
         'arenaTeams'    => "Arena Teams",
         'guilds'        => "Guilds",
 
-        'atCaptain'     => "Arena Team Captain",
-
-        'firstUseTitle' => "%s of %s",
-        'notFound'      => "This character doesn't exist or is not yet in the database.",
+        'notFound'      => array(
+            'guild'     => "This Guild doesn't exist or is not yet in the database.",
+            'arenateam' => "This Arena Team doesn't exist or is not yet in the database.",
+            'profile'   => "This character doesn't exist or is not yet in the database."
+        ),
         'dummyNPCs'     => array(
-            100001 => "Gunship Battle", 200001 => "Northrend Beasts", 200002 => "Faction Champions  ", 200003 => "Val'kyr Twins"
+            100001 => "Gunship Battle", 200001 => "Northrend Beasts", 200002 => "Faction Champions", 200003 => "Val'kyr Twins"
         ),
     ),
     'screenshot' => array(

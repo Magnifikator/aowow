@@ -110,13 +110,6 @@ $lang = array(
         'chooseClass'   => "Escoge una clase",
         'chooseFamily'  => "Escoge una familia de mascota",
 
-        // help
-        'help'          => "Ayuda",
-        'helpTopics'    => array(
-            "Los comentarios y tú",                 "Visualizador de modelos",              "Capturas de pantalla: Sugerencias y trucos", "Medición de atributos",
-            "Calculadora de talentos",              "Comparación de objetos",               "Perfiles",                                   "Markup Guide"
-        ),
-
         // search
         'search'        => "Búsqueda",
         'searchButton'  => "búsqueda",
@@ -158,21 +151,25 @@ $lang = array(
         'realm'         => "Reino",
         'region'        => "Región",
         'viewCharacter' => "View Character",
-        'profiler'      => "Gestor de Perfiles", // Perfiles de Personaje? (character profiler)
         '_cpHint'       => "l <b>Gestor de perfiles</b> te permite editar tu personaje, encontrar mejoras de equipo, comprobar tu gearscore, ¡y más!",
         '_cpHelp'       => "Para comenzar, sigue los pasos abajo indicados. Si quieres más información, revisa nuestra amplia <a href=\"?help=profiler\">página de ayuda</a>.",
         '_cpFooter'     => "Si quieres una búsqueda más refinada, prueba con nuestras opciones de <a href=\"?profiles\">búsqueda avanzada</a>. También puedes crear un <a href=\"?profile&amp;new\">perfil nuevo personalizado</a>.",
+        'firstUseTitle' => "%s de %s",
 
         'resync'        => "Resincronizar",
         'guildRoster'   => "Lista de miembros de hermandad para &lt;%s&gt",
         'arenaRoster'   => "Personajes del Equipo de Arena para &lt;%s&gt",
+        'atCaptain'     => "Capitán de equipo de arena",
+
+        'profiler'      => "Gestor de Perfiles", // Perfiles de Personaje? (character profiler)
         'arenaTeams'    => "Equipos de Arena",
         'guilds'        => "Hermandades",
 
-        'atCaptain'     => "Capitán de equipo de arena",
-
-        'firstUseTitle' => "%s de %s",
-        'notFound'      => "Este personaje no existe o no está aun en la base de datos.", // profile
+        'notFound'      => array(
+            'guild'     => "[This Guild doesn't exist or is not yet in the database.]",
+            'arenateam' => "[This Arena Team doesn't exist or is not yet in the database.]",
+            'profile'   => "Este personaje no existe o no está aun en la base de datos.",
+        ),
         'dummyNPCs'     => array(
             100001 => "Batalla de naves de guerra", 200001 => "Bestias de Rasganorte", 200002 => "Campeones de facciones", 200003 => "Gemelas Val'kyr"
         ),

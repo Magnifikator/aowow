@@ -81,11 +81,10 @@ class ArenaTeamPage extends GenericPage
 
     protected function generateTitle()
     {
-        // poperly format $realm; localize me
-        $team  = $this->subjectName;
+        $team  = !empty($this->subject) ? $this->subject->getField('name') : $this->subjectName;
         $team .= ' ('.$this->realm.' - '.Lang::profiler('regions', $this->region).')';
 
-        array_unshift($this->title, $team, 'Arena Team');
+        array_unshift($this->title, $team, Util::ucFirst(Lang::profiler('profiler')));
     }
 
     protected function generateContent()
@@ -115,17 +114,16 @@ class ArenaTeamPage extends GenericPage
         {
             $this->lvTabs[] = ['profile', array(
                 'data'        => array_values($member->getListviewData(PROFILEINFO_CHARACTER | PROFILEINFO_ARENA)),
-                'sort'        => "$[-15]",
-                'visibleCols' => "$['race','classs','level','talents','gearscore','rating', 'wins', 'losses']",
-                'hiddenCols'  => "$['guild','location']"
+                'sort'        => [-15],
+                'visibleCols' => ['race', 'classs', 'level', 'talents', 'gearscore', 'rating', 'wins', 'losses'],
+                'hiddenCols'  => ['guild', 'location']
             )];
         }
     }
 
     public function notFound($title = '', $msg = '')
     {
-        // (Util::ucFirst(Lang::game('emote')), Lang::emote('notFound'))
-        return parent::notFound('Arena Team', 'he\'s dead jim');
+        return parent::notFound($title ?: Util::ucFirst(Lang::profiler('profiler')), $msg ?: Lang::profiler('notFound', 'arenateam'));
     }
 
     private function handleIncompleteData($teamGuid)
