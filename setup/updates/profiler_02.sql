@@ -6,6 +6,10 @@ INSERT INTO aowow_config (`key`, `value`, `cat`, `flags`, `comment`) VALUES
     ('profiler_resync_delay', 1*60*60, 7, 0x81, 'default: 1*60*60 - how often a character can be refreshed (in sec)');
 
 ALTER TABLE `aowow_talents`
-	ADD COLUMN `petTypeMask` TINYINT(3) UNSIGNED NOT NULL AFTER `class`;
+    ADD COLUMN `petTypeMask` TINYINT(3) UNSIGNED NOT NULL AFTER `class`;
+
+ALTER TABLE `aowow_account`
+    ADD COLUMN `excludeGroups` SMALLINT(5) UNSIGNED NOT NULL DEFAULT '1' COMMENT 'profiler - exclude bitmask' AFTER `description`;
+
 
 UPDATE aowow_dbversion SET `sql` = CONCAT(IFNULL(`sql`, ''), ' talents');

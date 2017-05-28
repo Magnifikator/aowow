@@ -340,3 +340,25 @@ INSERT INTO `aowow_profiler_excludes` (`type`, `typeId`, `groups`, `comment`) VA
 	(8, 87, 1024, 'Bloodsail Buccaneers - max rank is honored'),
 	(8, 92, 1024, 'Gelkis Clan Centaur - max rank is friendly'),
 	(8, 93, 1024, 'Magram Clan Centaur - max rank is friendly');
+
+CREATE TABLE `aowow_account_profiles` (
+  `accountId` INT(10) UNSIGNED NOT NULL,
+  `profileId` INT(10) UNSIGNED NOT NULL,
+  `extraFlags` INT(10) UNSIGNED NOT NULL,
+  UNIQUE INDEX `accountId_profileId` (`accountId`, `profileId`),
+  INDEX `accountId` (`accountId`),
+  INDEX `profileId` (`profileId`),
+  CONSTRAINT `FK_account_id` FOREIGN KEY (`accountId`) REFERENCES `aowow_account` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `FK_profile_id` FOREIGN KEY (`profileId`) REFERENCES `aowow_profiler_profiles` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+
+CREATE TABLE `aowow_account_excludes` (
+  `userId` INT(11) UNSIGNED NOT NULL,
+  `type` SMALLINT(5) UNSIGNED NOT NULL,
+  `typeId` MEDIUMINT(8) UNSIGNED NOT NULL,
+  `mode` TINYINT(2) UNSIGNED NOT NULL COMMENT '1: exclude; 2: include',
+  UNIQUE INDEX `userId_type_typeId` (`userId`, `type`, `typeId`),
+  INDEX `userId` (`userId`),
+  CONSTRAINT `FK_acc_excludes` FOREIGN KEY (`userId`) REFERENCES `aowow_account` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+) COLLATE='utf8_general_ci' ENGINE=InnoDB;
+

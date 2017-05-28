@@ -68,7 +68,11 @@ class Profiler
             return true;
         }
 
-        exec('php prQueue --log=cache/profiling.log > /dev/null 2>/dev/null &');
+        if (OS_WIN)                                         // here be gremlins! .. suggested was "start /B php prQueue" as background process. but that closes itself
+            pclose(popen('start php prQueue --log=cache/profiling.log', 'r'));
+        else
+            exec('php prQueue --log=cache/profiling.log > /dev/null 2>/dev/null &');
+
         usleep(500000);
         if (self::queueStatus())
             return true;
@@ -84,10 +88,11 @@ class Profiler
         if (!file_exists(self::$pidFile))
             return 0;
 
-        $pid = intval(file_get_contents(self::$pidFile));
+        $pid = file_get_contents(self::$pidFile);
+        $cmd = OS_WIN ? 'tasklist /NH /FO CSV /FI "PID eq %d"' : 'ps --no-headers p %d';
 
-        exec('ps --no-headers p '.$pid, $out);
-        if ($out)
+        exec(sprintf($cmd, $pid), $out);
+        if ($out && stripos($out[0], $pid) !== false)
             return $pid;
 
         // have pidFile but no process with this pid
