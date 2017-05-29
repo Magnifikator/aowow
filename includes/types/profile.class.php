@@ -166,39 +166,53 @@ class ProfileList extends BaseType
 
 class ProfileListFilter extends Filter
 {
-    public    $extraOpts     = [];
-    protected $enums         = array(
+    public    $useLocalList = false;
+    public    $extraOpts    = [];
+
+    private   $realms       = [];
+
+    protected $enums        = array(
         -1 => array(                                        // arena team sizes
         //  by name     by rating   by contrib
             12 => 2,    13 => 2,    14 => 2,
             15 => 3,    16 => 3,    17 => 3,
             18 => 5,    19 => 5,    20 => 5
-        ),
-        -2 => array(                                        // professions (by setting key #24, the next elements are increments of it)
-            24 => null, 171, 164, 333, 202, 182, 773, 755, 165, 186, 393, 197
-        ),
+        )
     );
 
     protected $genericFilter = array(                       // misc (bool): _NUMERIC => useFloat; _STRING => localized; _FLAG => match Value; _BOOLEAN => stringSet
-        23 => [FILTER_CR_STRING,   'ca.achievement', STR_MATCH_EXACT | STR_ALLOW_SHORT ],  // completedachievement
-         9 => [FILTER_CR_STRING,   'g.name',                         ], // guildname
-        10 => [FILTER_CR_NUMERIC,  'gm.rank',      NUM_CAST_INT      ], // guildrank
-        13 => [FILTER_CR_CALLBACK, 'cbTeamRating', null,        null ], // teamrtng2v2
-        16 => [FILTER_CR_CALLBACK, 'cbTeamRating', null,        null ], // teamrtng3v3
-        19 => [FILTER_CR_CALLBACK, 'cbTeamRating', null,        null ], // teamrtng5v5
-        12 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname2v2
-        15 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname3v3
-        18 => [FILTER_CR_CALLBACK, 'cbTeamName',   null,        null ], // teamname5v5
-        36 => [FILTER_CR_CALLBACK, 'cbHasGuild',   null,        null ], // hasguild [yn]
-
-        // NYI things than can only be run against local chars
-        21 => [FILTER_CR_CALLBACK, 'cbWearsItems', null,        null ], // wearingitem [str]
-        // { id: 5,   name: 'talenttree1',         type: 'num' },
-        // { id: 6,   name: 'talenttree2',         type: 'num' },
-        // { id: 7,   name: 'talenttree3',         type: 'num' },
-        // { id: 2,   name: 'gearscore',               type: 'num' },
-        // { id: 3,   name: 'achievementpoints',       type: 'num' },
+         2 => [FILTER_CR_NUMERIC,  'gearscore',         NUM_CAST_INT     ], // gearscore [num]
+         3 => [FILTER_CR_NUMERIC,  'achievementpoints', NUM_CAST_INT     ], // achievementpoints [num]
+         5 => [FILTER_CR_NUMERIC,  'talenttree1',       NUM_CAST_INT     ], // talenttree1 [num]
+         6 => [FILTER_CR_NUMERIC,  'talenttree2',       NUM_CAST_INT     ], // talenttree2 [num]
+         7 => [FILTER_CR_NUMERIC,  'talenttree3',       NUM_CAST_INT     ], // talenttree3 [num]
+         9 => [FILTER_CR_STRING,   'g.name',                             ], // guildname
+        10 => [FILTER_CR_CALLBACK, 'cbHasGuildRank',    null,        null], // guildrank
+        12 => [FILTER_CR_CALLBACK, 'cbTeamName',        null,        null], // teamname2v2
+        15 => [FILTER_CR_CALLBACK, 'cbTeamName',        null,        null], // teamname3v3
+        18 => [FILTER_CR_CALLBACK, 'cbTeamName',        null,        null], // teamname5v5
+        13 => [FILTER_CR_CALLBACK, 'cbTeamRating',      null,        null], // teamrtng2v2
+        16 => [FILTER_CR_CALLBACK, 'cbTeamRating',      null,        null], // teamrtng3v3
+        19 => [FILTER_CR_CALLBACK, 'cbTeamRating',      null,        null], // teamrtng5v5
+        14 => [FILTER_CR_NYI_PH,   0                                     ], // teamcontrib2v2 [num]
+        17 => [FILTER_CR_NYI_PH,   0                                     ], // teamcontrib3v3 [num]
+        20 => [FILTER_CR_NYI_PH,   0                                     ], // teamcontrib5v5 [num]
+        21 => [FILTER_CR_CALLBACK, 'cbWearsItems',      null,        null], // wearingitem [str]
+        23 => [FILTER_CR_CALLBACK, 'cbCompletedAcv',    null,        null], // completedachievement
+        25 => [FILTER_CR_CALLBACK, 'cbProfession',      171,         null], // alchemy [num]
+        26 => [FILTER_CR_CALLBACK, 'cbProfession',      164,         null], // blacksmithing [num]
+        27 => [FILTER_CR_CALLBACK, 'cbProfession',      333,         null], // enchanting [num]
+        28 => [FILTER_CR_CALLBACK, 'cbProfession',      202,         null], // engineering [num]
+        29 => [FILTER_CR_CALLBACK, 'cbProfession',      182,         null], // herbalism [num]
+        30 => [FILTER_CR_CALLBACK, 'cbProfession',      773,         null], // inscription [num]
+        31 => [FILTER_CR_CALLBACK, 'cbProfession',      755,         null], // jewelcrafting [num]
+        32 => [FILTER_CR_CALLBACK, 'cbProfession',      165,         null], // leatherworking [num]
+        33 => [FILTER_CR_CALLBACK, 'cbProfession',      186,         null], // mining [num]
+        34 => [FILTER_CR_CALLBACK, 'cbProfession',      393,         null], // skinning [num]
+        35 => [FILTER_CR_CALLBACK, 'cbProfession',      197,         null], // tailoring [num]
+        36 => [FILTER_CR_CALLBACK, 'cbHasGuild',        null,        null]  // hasguild [yn]
     );
+
 
     // fieldId => [checkType, checkValue[, fieldIsArray]]
     protected $inputFields = array(
@@ -217,49 +231,33 @@ class ProfileListFilter extends Filter
         'sv'     => [FILTER_V_CALLBACK, 'cbServerCheck',                                false], // server
     );
 
+    /*  heads up!
+        a couple of filters are too complex to be run against the characters database
+        if they are selected, force useage of LocalProfileList
+    */
+
+    public function __construct($fromPOST = false, $opts = [])
+    {
+        if (!empty($opts['realms']))
+            $this->realms = $opts['realms'];
+        else
+            $this->realms = array_keys(Profiler::getRealms());
+
+        parent::__construct($fromPOST, $opts);
+
+        if (!empty($this->fiData['c']['cr']))
+            if (array_intersect($this->fiData['c']['cr'], [2, 3, 5, 6, 7, 21]))
+                $this->useLocalList = true;
+    }
+
     protected function createSQLForCriterium(&$cr)
     {
         if (in_array($cr[0], array_keys($this->genericFilter)))
-        {
             if ($genCR = $this->genericCriterion($cr))
                 return $genCR;
 
-            unset($cr);
-            $this->error = true;
-            return [1];
-        }
-
-        $skillId = 0;
-        switch ($cr[0])
-        {
-            case 14:                                        // teamcontrib2v2
-            case 17:                                        // teamcontrib3v3
-            case 20:                                        // teamcontrib5v5
-                break;
-
-            //  F I X   M E ! ! !
-
-            case 25:                                        // alchemy [num]
-            case 26:                                        // blacksmithing [num]
-            case 27:                                        // enchanting [num]
-            case 28:                                        // engineering [num]
-            case 29:                                        // herbalism [num]
-            case 30:                                        // inscription [num]
-            case 31:                                        // jewelcrafting [num]
-            case 32:                                        // leatherworking [num]
-            case 33:                                        // mining [num]
-            case 34:                                        // skinning [num]
-            case 35:                                        // tailoring [num]
-                if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]) || empty($this->enums[-2][$cr[0]]))
-                    break;
-                $skill = $this->enums[-2][$cr[0]];
-                $this->extraOpts['sk']['s'][] = ', sk.value AS skill'.$skill;
-                $this->formData['extraCols'][$skill] = 'skill'.$skill;
-                return ['AND', ['sk.skill', $skill], ['sk.value', $cr[2], $cr[1]]];
-        }
-
         unset($cr);
-        $this->error = 1;
+        $this->error = true;
         return [1];
     }
 
@@ -270,11 +268,14 @@ class ProfileListFilter extends Filter
 
         // region (rg), battlegroup (bg) and server (sv) are passed to ProflieList as miscData and handled there
 
+        // table key differs between remote and local :<
+        $k = $this->useLocalList ? 'p' : 'c';
+
         // name [str] - the table is case sensitive. Since i down't want to destroy indizes, lets alter the search terms
         if (!empty($_v['na']))
         {
-            $lower  = $this->modularizeString(['c.name'], Util::lower($_v['na']),   !empty($_v['ex']) && $_v['ex'] == 'on');
-            $proper = $this->modularizeString(['c.name'], Util::ucWords($_v['na']), !empty($_v['ex']) && $_v['ex'] == 'on');
+            $lower  = $this->modularizeString([$k.'.name'], Util::lower($_v['na']),   !empty($_v['ex']) && $_v['ex'] == 'on');
+            $proper = $this->modularizeString([$k.'.name'], Util::ucWords($_v['na']), !empty($_v['ex']) && $_v['ex'] == 'on');
 
             $parts[] = ['OR', $lower, $proper];
         }
@@ -283,26 +284,26 @@ class ProfileListFilter extends Filter
         if (!empty($_v['si']))
         {
             if ($_v['si'] == 1)
-                $parts[] = ['c.race', [1, 3, 4, 7, 11]];
+                $parts[] = [$k.'.race', [1, 3, 4, 7, 11]];
             else if ($_v['si'] == 2)
-                $parts[] = ['c.race', [2, 5, 6, 8, 10]];
+                $parts[] = [$k.'.race', [2, 5, 6, 8, 10]];
         }
 
         // race [list]
         if (!empty($_v['ra']))
-            $parts[] = ['c.race', $_v['ra']];
+            $parts[] = [$k.'.race', $_v['ra']];
 
         // class [list]
         if (!empty($_v['cl']))
-            $parts[] = ['c.class', $_v['cl']];
+            $parts[] = [$k.'.class', $_v['cl']];
 
         // min level [int]
         if (isset($_v['minle']))
-            $parts[] = ['c.level', $_v['minle'], '>='];
+            $parts[] = [$k.'.level', $_v['minle'], '>='];
 
         // max level [int]
         if (isset($_v['maxle']))
-            $parts[] = ['c.level', $_v['maxle'], '<='];
+            $parts[] = [$k.'.level', $_v['maxle'], '<='];
 
         return $parts;
     }
@@ -334,7 +335,56 @@ class ProfileListFilter extends Filter
         return false;
     }
 
-    // todo (med): too large .. think of something else
+    protected function cbProfession($cr, $skillId)
+    {
+        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
+            return;
+
+        $k   = 'sk_'.Util::createHash(12);
+        $col = 'skill'.$skillId;
+
+        $this->formData['extraCols'][$skillId] = $col;
+
+        if ($this->useLocalList)
+        {
+            $this->extraOpts[$k] = array(
+                'j' => ['?_profiler_completion '.$k.' ON '.$k.'.id = p.id AND '.$k.'.`type` = '.TYPE_SKILL.' AND '.$k.'.typeId = '.$skillId.' AND '.$k.'.cur '.$cr[1].' '.$cr[2], true],
+                's' => [', '.$k.'.cur AS '.$col]
+            );
+            return [$k.'.typeId', null, '!'];
+        }
+        else
+        {
+            $this->extraOpts[$k] = array(
+                'j' => ['character_skills '.$k.' ON '.$k.'.guid = c.guid AND '.$k.'.skill = '.$skillId.' AND '.$k.'.value '.$cr[1].' '.$cr[2], true],
+                's' => [', '.$k.'.value AS '.$col]
+            );
+            return [$k.'.skill', null, '!'];
+        }
+    }
+
+    protected function cbCompletedAcv($cr)
+    {
+        if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
+            return false;
+
+        if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_achievement WHERE id = ?d', $cr[2]))
+            return false;
+
+        $k = 'acv_'.Util::createHash(12);
+
+        if ($this->useLocalList)
+        {
+            $this->extraOpts[$k] = ['j' => ['?_profiler_completion '.$k.' ON '.$k.'.id = p.id AND '.$k.'.`type` = '.TYPE_ACHIEVEMENT.' AND '.$k.'.typeId = '.$cr[2], true]];
+            return [$k.'.typeId', null, '!'];
+        }
+        else
+        {
+            $this->extraOpts[$k] = ['j' => ['character_achievement '.$k.' ON '.$k.'.guid = c.guid AND '.$k.'.achievement = '.$cr[2], true]];
+            return [$k.'.achievement', null, '!'];
+        }
+    }
+
     protected function cbWearsItems($cr)
     {
         if (!Util::checkNumeric($cr[2], NUM_CAST_INT))
@@ -343,25 +393,38 @@ class ProfileListFilter extends Filter
         if (!DB::Aowow()->selectCell('SELECT 1 FROM ?_items WHERE id = ?d', $cr[2]))
             return false;
 
-        return [1];
+        $k = 'i_'.Util::createHash(12);
+
+        $this->extraOpts[$k] = ['j' => ['?_profiler_items '.$k.' ON '.$k.'.id = p.id AND '.$k.'.item = '.$cr[2], true]];
+        return [$k.'.item', null, '!'];
     }
 
     protected function cbHasGuild($cr)
     {
-        if ($this->int2Bool($cr[1]))
-            return ['gm.guildId', null, $cr[1] ? '!' : null];
+        if (!$this->int2Bool($cr[1]))
+            return false;
 
-        return false;
+        if ($this->useLocalList)
+            return ['p.guild', null, $cr[1] ? '!' : null];
+        else
+            return ['gm.guildId', null, $cr[1] ? '!' : null];
+    }
+
+    protected function cbHasGuildRank($cr)
+    {
+        if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
+            return false;
+
+        if ($this->useLocalList)
+            return ['p.guildrank', $cr[2], $cr[1]];
+        else
+            return ['gm.rank', $cr[2], $cr[1]];
     }
 
     protected function cbTeamName($cr)
     {
         if ($_ = $this->modularizeString(['at.name'], $cr[2]))
-        {
-            // $this->formData['extraCols'][] = XXX something something teamname
-
             return ['AND', ['at.type', $this->enums[-1][$cr[0]]], $_];
-        }
 
         return false;
     }
@@ -370,8 +433,6 @@ class ProfileListFilter extends Filter
     {
         if (!Util::checkNumeric($cr[2], NUM_CAST_INT) || !$this->int2Op($cr[1]))
             return false;
-
-        // $this->formData['extraCols'][] = XXX something something teamname
 
         return ['AND', ['at.type', $this->enums[-1][$cr[0]]], ['at.rating', $cr[2], $cr[1]]];
     }
@@ -383,14 +444,12 @@ class RemoteProfileList extends ProfileList
     protected   $queryBase = 'SELECT `c`.*, `c`.`guid` AS ARRAY_KEY FROM characters c';
     protected   $queryOpts = array(
                     'c'   => [['gm', 'g', 'ca', 'ct'], 'g' => 'ARRAY_KEY', 'o' => 'level DESC, name ASC'],
-                    'gm'  => ['j' => ['guild_member gm ON gm.guid = c.guid', true], 's' => ', gm.rank AS guildrank'],
-                    'g'   => ['j' => ['guild g ON g.guildid = gm.guildid', true], 's' => ', g.guildid AS guild, g.name AS guildname'],
                     'ca'  => ['j' => ['character_achievement ca ON ca.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT ca.achievement SEPARATOR " ") AS _acvs'],
                     'ct'  => ['j' => ['character_talent ct ON ct.guid = c.guid AND ct.spec = c.activespec', true], 's' => ', GROUP_CONCAT(DISTINCT ct.spell SEPARATOR " ") AS _talents'],
-                    // 'atm' => ['j' => ['arena_team_member atm ON atm.guid = c.guid', true], 's' => ', GROUP_CONCAT(DISTINCT CONCAT(atm.arenaTeamId, ":", atm.personalRating) SEPARATOR " ") AS _teamData'],
+                    'gm'  => ['j' => ['guild_member gm ON gm.guid = c.guid', true], 's' => ', gm.rank AS guildrank'],
+                    'g'   => ['j' => ['guild g ON g.guildid = gm.guildid', true], 's' => ', g.guildid AS guild, g.name AS guildname'],
                     'atm' => ['j' => ['arena_team_member atm ON atm.guid = c.guid', true], 's' => ', atm.personalRating AS rating'],
-                    'at'  => [['atm'], 'j' => 'arena_team at ON atm.arenaTeamId = at.arenaTeamId', 's' => ', at.name AS arenateam, IF(at.captainGuid = c.guid, 1, 0) AS captain'],
-                    'sk'  => ['j' => 'character_skills sk ON sk.guid = c.guid'/*, 's' => ', sk.value AS skillValue'*/]
+                    'at'  => [['atm'], 'j' => 'arena_team at ON atm.arenaTeamId = at.arenaTeamId', 's' => ', at.name AS arenateam, IF(at.captainGuid = c.guid, 1, 0) AS captain']
                 );
 
     public function __construct($conditions = [], $miscData = null)
@@ -596,11 +655,11 @@ class LocalProfileList extends ProfileList
 {
     protected       $queryBase = 'SELECT p.*, p.id AS ARRAY_KEY FROM ?_profiler_profiles p';
     protected       $queryOpts = array(
-                        'p'  => [['pg']],
-                        'ap'   => ['j' => ['?_account_profiles ap ON ap.profileId = p.id', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
-                        'patm' => ['j' => ['?_profiler_arena_team_member patm ON patm.profileId = p.id', true], 's' => ', patm.captain, patm.personalRating AS rating, patm.seasonGames, patm.seasonWins'],
-                        'pat'  => ['?_profiler_arena_team pat ON pat.id = patm.arenaTeamId', 's' => ', pat.mode, pat.name'],
-                        'pg'   => ['j' => ['?_profiler_guild pg ON pg.id = p.guild', true], 's' => ', pg.name AS guildname']
+                        'p'   => [['g'], 'g' => 'p.id'],
+                        'ap'  => ['j' => ['?_account_profiles ap ON ap.profileId = p.id', true], 's' => ', (IFNULL(ap.ExtraFlags, 0) | p.cuFlags) AS cuFlags'],
+                        'atm' => ['j' => ['?_profiler_arena_team_member atm ON atm.profileId = p.id', true], 's' => ', atm.captain, atm.personalRating AS rating, atm.seasonGames, atm.seasonWins'],
+                        'at'  => [['atm'], 'j' => ['?_profiler_arena_team at ON at.id = atm.arenaTeamId', true], 's' => ', at.type'],
+                        'g'   => ['j' => ['?_profiler_guild g ON g.id = p.guild', true], 's' => ', g.name AS guildname']
                     );
 
     public function __construct($conditions = [], $miscData = null)

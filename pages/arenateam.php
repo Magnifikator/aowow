@@ -109,7 +109,7 @@ class ArenaTeamPage extends GenericPage
         /**************/
 
         // tab: members
-        $member = new LocalProfileList(array(['patm.arenaTeamId', $this->subjectGUID]));
+        $member = new LocalProfileList(array(['atm.arenaTeamId', $this->subjectGUID]));
         if (!$member->error)
         {
             $this->lvTabs[] = ['profile', array(

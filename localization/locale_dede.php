@@ -155,6 +155,7 @@ $lang = array(
         '_cpHelp'       => "Um loszulegen, folgt einfach den untenstehenden Schritten. Falls Ihr mehr Informationen benötigt, schaut auf unserer ausführlichen <a href=\"?help=profiler\">Hilfeseite</a> nach.",
         '_cpFooter'     => "Falls Ihr eine genauere Suche möchtet, probiert unsere <a href=\"?profiles\">erweiterten Suchoptionen</a>. Ihr könnt außerdem ein <a href=\"?profile&amp;new\">neues individuelles Profil</a> erstellen.",
         'firstUseTitle' => "%s von %s",
+        'complexFilter' => "Komplexer Filter ausgewählt! Suchergebnisse sind auf gecachte Charaktere beschränkt.",
 
         'resync'        => "Resynchronisieren",
         'guildRoster'   => "Gildenliste für &lt;%s&gt;",

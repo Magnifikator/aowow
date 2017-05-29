@@ -384,12 +384,8 @@ abstract class BaseType
 
     protected function extendQueryOpts($extra)              // needs to be called from __construct
     {
-
         foreach ($extra as $tbl => $sets)
         {
-            if (!isset($this->queryOpts[$tbl]))             // allow adding only to known tables
-                continue;
-
             foreach ($sets as $module => $value)
             {
                 if (!$value || !is_array($value))
@@ -415,7 +411,7 @@ abstract class BaseType
                         break;
                     // additional (arr)
                     case 'j':                               // join
-                        if (is_array($this->queryOpts[$tbl][$module]))
+                        if (!empty($this->queryOpts[$tbl][$module]) && is_array($this->queryOpts[$tbl][$module]))
                             $this->queryOpts[$tbl][$module][0][] = $value;
                         else
                             $this->queryOpts[$tbl][$module] = $value;
@@ -1025,10 +1021,10 @@ abstract class Filter
         $_crs = &$this->fiData['c']['crs'];
         $_crv = &$this->fiData['c']['crv'];
 
-        if (count($_cr) != count($_crv) || count($_cr) != count($_crs))
+        if (count($_cr) != count($_crv) || count($_cr) != count($_crs) || count($_cr) > 5 || count($_crs) > 5 /*|| count($_crv) > 5*/)
         {
-            // use min provided criterion as basis
-            $min = min(count($_cr), count($_crv), count($_crs));
+            // use min provided criterion as basis; 5 criteria at most
+            $min = max(5, min(count($_cr), count($_crv), count($_crs)));
             if (count($_cr) > $min)
                 array_splice($_cr, $min);
 

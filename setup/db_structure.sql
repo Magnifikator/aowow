@@ -300,28 +300,6 @@ CREATE TABLE `aowow_articles` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `aowow_characters`
---
-
-DROP TABLE IF EXISTS `aowow_characters`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `aowow_characters` (
-  `id` int(11) NOT NULL,
-  `name` varchar(50) NOT NULL,
-  `race` tinyint(3) unsigned NOT NULL,
-  `class` tinyint(3) unsigned NOT NULL,
-  `gender` tinyint(3) unsigned NOT NULL,
-  `level` tinyint(3) unsigned NOT NULL,
-  `description` varchar(150) NOT NULL,
-  `iconString` varchar(50) NOT NULL,
-  `titleId` tinyint(3) unsigned NOT NULL,
-  `guildId` mediumint(8) unsigned NOT NULL,
-  `guildRank` tinyint(3) unsigned NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `aowow_classes`
 --
 

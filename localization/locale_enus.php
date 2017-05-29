@@ -155,6 +155,7 @@ $lang = array(
         '_cpHelp'       => "To get started, just follow the steps below. If you'd like more information, check out our extensive <a href=\"?help=profiler\">help page</a>.",
         '_cpFooter'     => "If you want a more refined search try out our <a href=\"?profiles\">advanced search</a> options. You can also create a <a href=\"?profile&amp;new\">new custom profile</a>.",
         'firstUseTitle' => "%s of %s",
+        'complexFilter' => "Complex filter selected! Search results are limited to cached Characters.",
 
         'resync'        => "Resync",
         'guildRoster'   => "Guild Roster for &lt;%s&gt;",

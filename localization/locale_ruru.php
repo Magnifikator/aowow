@@ -155,6 +155,7 @@ $lang = array(
         '_cpHelp'       => "Чтобы начать использовать профили персонажей, следуйте инструкциям ниже. Если вам потребуется помощь, вы можете обратиться к <a href=\"?help=profiler\">справке</a>.",
         '_cpFooter'     => "Если вам нужен более точный поиск, вы можете использовать <a href=\"?profiles\">дополнительные опции</a>. Также, вы можете создать <a href=\"?profile&amp;new\">новый собственный профиль</a>.",
         'firstUseTitle' => "%s",                                    // yes, thats correct. No nonsense, just the name
+        'complexFilter' => "[Complex filter selected! Search results are limited to cached Characters.]",
 
         'resync'        => "Ресинхронизация",
         'guildRoster'   => "Список членов гильдии &lt;%s&gt",
