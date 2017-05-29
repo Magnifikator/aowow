@@ -230,6 +230,7 @@ class RemoteArenaTeamList extends ArenaTeamList
 
     public function initializeLocalEntries()
     {
+        $profiles = [];
         // init members for tooltips
         foreach ($this->members as $realmId => $teams)
         {
@@ -237,10 +238,10 @@ class RemoteArenaTeamList extends ArenaTeamList
             foreach ($teams as $team)
                 $gladiators = array_merge($gladiators, array_keys($team));
 
-            $profiles = new RemoteProfileList(array(['c.guid', $gladiators], CFG_SQL_LIMIT_NONE), ['sv' => $realmId]);
+            $profiles[$realmId] = new RemoteProfileList(array(['c.guid', $gladiators], CFG_SQL_LIMIT_NONE), ['sv' => $realmId]);
 
-            if (!$profiles->error)
-                $profiles->initializeLocalEntries();
+            if (!$profiles[$realmId]->error)
+                $profiles[$realmId]->initializeLocalEntries();
         }
 
         $data = [];
@@ -251,6 +252,8 @@ class RemoteArenaTeamList extends ArenaTeamList
                 'realmGUID' => $this->getField('arenaTeamId'),
                 'name'      => $this->getField('name'),
                 'nameUrl'   => Profiler::urlize($this->getField('name')),
+                'type'      => $this->getField('type'),
+                'rating'    => $this->getField('rating'),
                 'cuFlags'   => PROFILER_CU_NEEDS_RESYNC
             );
         }
@@ -269,6 +272,26 @@ class RemoteArenaTeamList extends ArenaTeamList
         foreach ($this->iterate() as $guid => &$_curTpl)
             if (isset($localIds[$guid]))
                 $_curTpl['id'] = $localIds[$guid];
+
+
+        // profiler_arena_team_member requires profiles and arena teams to be filled
+        foreach ($this->members as $realmId => $teams)
+        {
+            if (empty($profiles[$realmId]))
+                continue;
+
+            $memberData = [];
+            foreach ($teams as $teamId => $team)
+                foreach ($team as $memberId => $member)
+                    $memberData[] = array(
+                        'arenaTeamId' => $localIds[$realmId.':'.$teamId],
+                        'profileId'   => $profiles[$realmId]->getEntry($realmId.':'.$memberId)['id'],
+                        'captain'     => $member[2]
+                    );
+
+            foreach (Util::createSqlBatchInsert($memberData) as $ins)
+                DB::Aowow()->query('INSERT IGNORE INTO ?_profiler_arena_team_member (?#) VALUES '.$ins, array_keys(reset($memberData)));
+        }
     }
 }
 
